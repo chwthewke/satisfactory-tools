@@ -1,4 +1,4 @@
-package net.chwthewke.satisfactorytools
+package net.chwthewke.satisfactorytools.load
 
 import cats.effect.Blocker
 import cats.effect.ContextShift
@@ -8,8 +8,10 @@ import fs2.Stream
 import fs2.io.file
 import io.circe.Json
 import io.circe.fs2.byteArrayParser
+import io.circe.fs2.decoder
 import java.nio.file.Path
 import java.nio.file.Paths
+import net.chwthewke.satisfactorytools.model.Model
 
 trait Loader[F[_]] {
 
@@ -23,6 +25,12 @@ trait Loader[F[_]] {
     file
       .readAll( path, blocker, 32768 )
       .through( byteArrayParser[F] )
+
+  def load( path: Path = defaultPath ): F[Model] =
+    streamDocsJson( path )
+      .through( decoder[F, Model] )
+      .compile
+      .foldMonoid
 
 }
 

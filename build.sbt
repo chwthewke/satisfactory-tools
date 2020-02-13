@@ -16,7 +16,19 @@ val compilerPlugins = libraryDependencies ++= silencer ++ kindProjector ++ splai
 
 val `satisfactory-tools-core` = project
   .settings( compilerPlugins )
-  .settings( libraryDependencies ++= cats ++ mouse ++ kittens ++ catsEffect ++ atto ++ fs2 ++ circe ++ circeFs2 )
+  .settings(
+    libraryDependencies ++=
+      cats ++
+        mouse ++
+        kittens ++
+        catsEffect ++
+        atto ++
+        fs2 ++
+        circe ++
+        circeFs2 ++
+        enumeratum ++
+        enumeratumCirce
+  )
   .enablePlugins( SbtBuildInfo, ScalacPlugin )
 
 val `satisfactory-tools-tests` = project
