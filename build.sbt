@@ -19,6 +19,7 @@ val `satisfactory-tools-core` = project
   .settings(
     libraryDependencies ++=
       cats ++
+        alleycatsCore ++
         mouse ++
         kittens ++
         catsEffect ++
@@ -27,7 +28,10 @@ val `satisfactory-tools-core` = project
         circe ++
         circeFs2 ++
         enumeratum ++
-        enumeratumCirce
+        enumeratumCirce ++
+        graphs ++
+        breeze ++
+        pureconfig
   )
   .enablePlugins( SbtBuildInfo, ScalacPlugin )
 

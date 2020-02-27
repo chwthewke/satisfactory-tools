@@ -27,12 +27,13 @@ object DependenciesPlugin extends AutoPlugin {
       "com.github.ghik" % "silencer-lib" % silencerVersion % Provided cross CrossVersion.full
     )
 
-    val catsVersion    = "2.1.0"
-    val cats: Deps     = "org.typelevel" %% Seq( "cats-core", "cats-kernel", "cats-macros" ) % catsVersion
-    val catsFree: Deps = Seq( "org.typelevel" %% "cats-free" % catsVersion )
-    val catsMtl: Deps  = Seq( "org.typelevel" %% "cats-mtl-core" % "0.7.0" )
-    val mouse: Deps    = Seq( "org.typelevel" %% "mouse" % "0.24" )
-    val kittens: Deps  = Seq( "org.typelevel" %% "kittens" % "2.0.0" )
+    val catsVersion         = "2.1.0"
+    val cats: Deps          = "org.typelevel" %% Seq( "cats-core", "cats-kernel", "cats-macros" ) % catsVersion
+    val catsFree: Deps      = Seq( "org.typelevel" %% "cats-free" % catsVersion )
+    val catsMtl: Deps       = Seq( "org.typelevel" %% "cats-mtl-core" % "0.7.0" )
+    val mouse: Deps         = Seq( "org.typelevel" %% "mouse" % "0.24" )
+    val kittens: Deps       = Seq( "org.typelevel" %% "kittens" % "2.0.0" )
+    val alleycatsCore: Deps = Seq( "org.typelevel" %% "alleycats-core" % catsVersion )
 
     val catsEffect: Deps = Seq( "org.typelevel" %% "cats-effect" % "2.1.0" )
 
@@ -57,6 +58,19 @@ object DependenciesPlugin extends AutoPlugin {
 
     val atto: Deps = Seq( "org.tpolecat" %% "atto-core" % "0.7.2" )
 
+    val graphs: Deps = "com.flowtick" %% Seq( "graphs-core", "graphs-cats" ) % "0.2.4"
+
+    val spire: Deps    = Seq( "org.typelevel" %% "spire"         % "0.17.0-M1" )
+    val algebird: Deps = Seq( "com.twitter"   %% "algebird-core" % "0.13.6" )
+    val algebra: Deps  = Seq( "org.typelevel" %% "algebra"       % "2.0.0" )
+
+    val breeze: Deps = "org.scalanlp" %% Seq( "breeze", "breeze-natives" ) % "1.0"
+    val breezeDependencyOverrides: Deps =
+      Seq(
+        "org.apache.commons"       % "commons-math3" % "3.5",
+        "com.github.fommil.netlib" % "core"          % "1.1.2"
+      )
+
     val enumeratum: Deps =
       Seq( "com.beachape" %% "enumeratum" % "1.5.15", "com.beachape" %% "enumeratum-cats" % "1.5.16" )
     val enumeratumCirce: Deps = Seq( "com.beachape" %% "enumeratum-circe" % "1.5.22" )
@@ -68,17 +82,17 @@ object DependenciesPlugin extends AutoPlugin {
 
     val logging: Deps = Seq( "org.slf4j" % "slf4j-api" % "1.7.28", "ch.qos.logback" % "logback-classic" % "1.2.3" )
 
-    val pureconfigVersion = "0.12.2"
+    val pureconfigVersion = "0.12.3"
     val pureconfig: Deps = "com.github.pureconfig" %% Seq(
       "pureconfig-core",
       "pureconfig-cats",
-      "pureconfig-cats-effect"
+      "pureconfig-cats-effect",
+      "pureconfig-generic"
     ) % pureconfigVersion
 
     val pureconfigEnumeratum: Deps = Seq( "com.github.pureconfig" %% "pureconfig-enumeratum" % pureconfigVersion )
     val pureconfigFs2: Deps        = Seq( "com.github.pureconfig" %% "pureconfig-fs2"        % pureconfigVersion )
-// TODO
-//    val pureconfigHttp4s: Deps        = Seq( "com.github.pureconfig" %% "pureconfig-http4s" % pureconfigVersion )
+    val pureconfigHttp4s: Deps     = Seq( "com.github.pureconfig" %% "pureconfig-http4s"     % pureconfigVersion )
 
     private[DependenciesPlugin] val typesafeConfig: Deps = Seq( "com.typesafe" % "config" % "1.4.0" )
 
@@ -118,13 +132,14 @@ object DependenciesPlugin extends AutoPlugin {
     cats ++
       catsFree ++
       catsMtl ++
-      mouse ++
       catsEffect ++
+      mouse ++
+      kittens ++
+      alleycatsCore ++
       fs2 ++
       http4s ++
       http4sBlazeServer ++
       http4sBlazeClient ++
-      kittens ++
       monocle ++
       monocleState ++
       monocleGeneric ++
@@ -134,6 +149,12 @@ object DependenciesPlugin extends AutoPlugin {
       circeOptics ++
       enumeratum ++
       enumeratumCirce ++
+      graphs ++
+      algebra ++
+      spire ++
+      algebird ++
+      breeze ++
+      breezeDependencyOverrides ++
       shapeless ++
       java8compat ++
       jawnParser ++
@@ -142,7 +163,7 @@ object DependenciesPlugin extends AutoPlugin {
       pureconfig ++
       pureconfigEnumeratum ++
       pureconfigFs2 ++
-//      pureconfigHttp4s ++
+      pureconfigHttp4s ++
       typesafeConfig ++
       decline ++
       doobie ++

@@ -1,5 +1,10 @@
-package net.chwthewke.satisfactorytools.model
+package net.chwthewke.satisfactorytools
+package model
 
+import cats.Show
+import cats.instances.double._
+import cats.instances.string._
+import cats.syntax.show._
 import io.circe.Decoder
 
 final case class Item(
@@ -7,23 +12,26 @@ final case class Item(
     className: ClassName,
     displayName: String,
     form: Form /* maybe not */,
-    energyValue: Double,
-    resourceSinkPoints: Int
+    energyValue: Double
 )
 
 object Item {
   def itemDecoder( itemType: ItemType ): Decoder[Item] =
-    Decoder.forProduct5(
+    Decoder.forProduct4(
       "ClassName",
       "mDisplayName",
       "mForm",
-      "mEnergyValue",
-      "mResourceSinkPoints"
-    )( ( cn: ClassName, dn: String, fm: Form, ev: Double, sp: Int ) => Item( itemType, cn, dn, fm, ev, sp ) )(
+      "mEnergyValue"
+    )( ( cn: ClassName, dn: String, fm: Form, ev: Double ) => Item( itemType, cn, dn, fm, ev ) )(
       Decoder[ClassName],
       Decoder[String],
       Decoder[Form],
-      Decoders.doubleStringDecoder,
-      Decoders.intStringDecoder
+      Decoders.doubleStringDecoder
     )
+
+  implicit val showItem: Show[Item] = Show.show( item => show"""${item.displayName} # ${item.className}
+                                                               |Type: ${item.itemType}
+                                                               |Form: ${item.form}
+                                                               |Energy: ${item.energyValue} MJ
+                                                               |""".stripMargin )
 }

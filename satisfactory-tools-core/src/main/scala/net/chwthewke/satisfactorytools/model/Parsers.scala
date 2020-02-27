@@ -1,4 +1,5 @@
-package net.chwthewke.satisfactorytools.model
+package net.chwthewke.satisfactorytools
+package model
 
 import atto._
 import Atto._
@@ -38,11 +39,11 @@ object Parsers {
   val buildablesList: Parser[NonEmptyList[ClassName]] =
     char( '(' ) ~> buildableClass.sepBy1( char( ',' ) ) <~ char( ')' )
 
-  val countable: Parser[Countable[ClassName]] =
+  val countable: Parser[Countable[ClassName, Int]] =
     ((string( "(ItemClass=" ) ~> bpGeneratedClass <~ string( ",Amount=" )) ~ int <~ char( ')' ))
-      .map( (Countable[ClassName] _).tupled )
+      .map( (Countable[ClassName, Int] _).tupled )
 
-  val countableList: Parser[NonEmptyList[Countable[ClassName]]] =
+  val countableList: Parser[NonEmptyList[Countable[ClassName, Int]]] =
     char( '(' ) ~> countable.sepBy1( char( ',' ) ) <~ char( ')' )
 
   def listOf[A]( p: Parser[A] ): Parser[List[A]]          = char( '(' ) ~> p.sepBy( char( ',' ) ) <~ char( ')' )

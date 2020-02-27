@@ -1,5 +1,9 @@
-package net.chwthewke.satisfactorytools.model
+package net.chwthewke.satisfactorytools
+package model
 
+import cats.Show
+import cats.instances.string._
+import cats.syntax.show._
 import io.circe.Decoder
 
 final case class Manufacturer(
@@ -26,10 +30,15 @@ object Manufacturer {
     "Build_ConstructorMk1_C",
     "Build_SmelterMk1_C",
     "Build_AssemblerMk1_C",
-    "Build_Converter_C",
     "Build_OilRefinery_C",
     "Build_FoundryMk1_C",
     "Build_ManufacturerMk1_C"
   ).map( ClassName( _ ) )
+
+  implicit val manufacturerShow: Show[Manufacturer] = Show { manufacturer =>
+    show"""${manufacturer.displayName} # ${manufacturer.className}
+          |Power: ${f"${manufacturer.powerConsumption}%.0f"} MW
+          |""".stripMargin
+  }
 
 }

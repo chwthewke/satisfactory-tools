@@ -1,5 +1,7 @@
-package net.chwthewke.satisfactorytools.model
+package net.chwthewke.satisfactorytools
+package model
 
+import cats.Show
 import enumeratum.Circe
 import enumeratum.Enum
 import enumeratum.EnumEntry
@@ -15,4 +17,5 @@ object Form extends Enum[Form] {
   override val values: IndexedSeq[Form] = findValues
 
   implicit val formDecoder: Decoder[Form] = Circe.decoder( this )
+  implicit val formShow: Show[Form]       = Show.show( _.entryName )
 }

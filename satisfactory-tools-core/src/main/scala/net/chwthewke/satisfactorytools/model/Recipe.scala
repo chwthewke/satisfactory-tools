@@ -1,4 +1,5 @@
-package net.chwthewke.satisfactorytools.model
+package net.chwthewke.satisfactorytools
+package model
 
 import cats.Applicative
 import cats.Eval
@@ -6,10 +7,12 @@ import cats.Foldable
 import cats.Show
 import cats.Traverse
 import cats.data.NonEmptyList
+import cats.instances.int._
 import cats.instances.list._
 import cats.instances.string._
 import cats.instances.finiteDuration._
 import cats.syntax.apply._
+import cats.syntax.foldable._
 import cats.syntax.functor._
 import cats.syntax.show._
 import cats.syntax.traverse._
@@ -17,37 +20,45 @@ import io.circe.Decoder
 import scala.concurrent.duration._
 //
 
-final case class Recipe[N](
+final case class Recipe[M, N](
     className: ClassName,
     displayName: String,
-    ingredients: List[Countable[N]],
-    product: NonEmptyList[Countable[N]],
+    ingredients: List[Countable[N, Int]],
+    product: NonEmptyList[Countable[N, Int]],
     duration: FiniteDuration,
-    producers: List[N]
-)
+    producers: List[M]
+) {
+  def ingredientsPerMinute: List[Countable[N, Double]]      = ingredients.map( perMinute )
+  def productsPerMinute: NonEmptyList[Countable[N, Double]] = product.map( perMinute )
+
+  private def perMinute( ct: Countable[N, Int] ): Countable[N, Double] =
+    Countable( ct.item, ct.amount.toDouble * 60000 / duration.toMillis )
+
+}
 
 object Recipe {
 
-  implicit val recipeTraverse: Traverse[Recipe] = new Traverse[Recipe] {
-    private def itemList[A]( fa: Recipe[A] ): List[A] =
-      fa.ingredients.map( _.item ) ++ fa.product.toList.map( _.item ) ++ fa.producers
+  implicit def recipeTraverse[M]: Traverse[Recipe[M, *]] = new Traverse[Recipe[M, *]] {
+    private def itemList[A]( fa: Recipe[M, A] ): List[A] =
+      fa.ingredients.map( _.item ) ++ fa.product.toList.map( _.item )
 
-    override def traverse[G[_], A, B]( fa: Recipe[A] )( f: A => G[B] )( implicit A: Applicative[G] ): G[Recipe[B]] =
+    override def traverse[G[_], A, B](
+        fa: Recipe[M, A]
+    )( f: A => G[B] )( implicit A: Applicative[G] ): G[Recipe[M, B]] =
       (
         fa.ingredients.traverse( i => f( i.item ).map( Countable( _, i.amount ) ) ),
-        fa.product.traverse( i => f( i.item ).map( Countable( _, i.amount ) ) ),
-        fa.producers.traverse( f )
-      ).mapN( ( in, out, bds ) => Recipe( fa.className, fa.displayName, in, out, fa.duration, bds ) )
+        fa.product.traverse( i => f( i.item ).map( Countable( _, i.amount ) ) )
+      ).mapN( ( in, out ) => Recipe( fa.className, fa.displayName, in, out, fa.duration, fa.producers ) )
 
-    override def foldLeft[A, B]( fa: Recipe[A], b: B )( f: ( B, A ) => B ): B =
+    override def foldLeft[A, B]( fa: Recipe[M, A], b: B )( f: ( B, A ) => B ): B =
       Foldable[List].foldLeft( itemList( fa ), b )( f )
 
-    override def foldRight[A, B]( fa: Recipe[A], lb: Eval[B] )( f: ( A, Eval[B] ) => Eval[B] ): Eval[B] =
+    override def foldRight[A, B]( fa: Recipe[M, A], lb: Eval[B] )( f: ( A, Eval[B] ) => Eval[B] ): Eval[B] =
       Foldable[List].foldRight( itemList( fa ), lb )( f )
 
   }
 
-  implicit val recipeDecoder: Decoder[Recipe[ClassName]] = {
+  implicit val recipeDecoder: Decoder[Recipe[ClassName, ClassName]] = {
     import Parsers._
 
     Decoder.forProduct6(
@@ -61,8 +72,8 @@ object Recipe {
       (
           cn: ClassName,
           dn: String,
-          in: List[Countable[ClassName]],
-          out: NonEmptyList[Countable[ClassName]],
+          in: List[Countable[ClassName, Int]],
+          out: NonEmptyList[Countable[ClassName, Int]],
           dur: FiniteDuration,
           mch: List[ClassName]
       ) => Recipe( cn, dn, in, out, dur, mch )
@@ -76,17 +87,17 @@ object Recipe {
     )
   }
 
-  implicit def recipeShow[N: Show]: Show[Recipe[N]] =
+  implicit def recipeShow[M: Show, N: Show]: Show[Recipe[M, N]] =
     Show.show {
       case Recipe( className, displayName, ingredients, products, duration, producers ) =>
         show"""  $displayName # $className
               |  Ingredients: 
-              |    ${ingredients.map( _.show ).mkString( "\n    " )}
+              |    ${ingredients.map( _.show ).intercalate( "\n    " )}
               |  Products:
-              |    ${products.map( _.show ).toList.mkString( "\n    " )}
+              |    ${products.map( _.show ).intercalate( "\n    " )}
               |  Duration $duration
               |  Producers:
-              |    ${producers.map( _.show ).mkString( "\n    " )}
+              |    ${producers.map( _.show ).intercalate( "\n    " )}
               |""".stripMargin
     }
 
