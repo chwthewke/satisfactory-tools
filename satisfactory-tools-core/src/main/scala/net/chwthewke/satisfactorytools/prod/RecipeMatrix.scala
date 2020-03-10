@@ -13,7 +13,6 @@ import cats.instances.vector._
 import cats.syntax.either._
 import cats.syntax.foldable._
 import cats.syntax.show._
-import com.flowtick.graphs.Graph
 import com.flowtick.graphs.algorithm._
 import mouse.boolean._
 import mouse.option._
@@ -138,15 +137,15 @@ object RecipeMatrix {
         .filter( _.amount != 0d )
         .flatMap { case Countable( cn, amount ) => model.items.get( cn ).map( Countable( _, amount ) ) }
 
-    val graph: Graph[Unit, RecipeGraph.N, Unit] = RecipeGraph.of( activeRecipes )
+    val recipeGraph: RecipeGraph = RecipeGraph.of( activeRecipes )
 
-    val orderedNodes = graph.topologicalSort
+    val orderedNodes = recipeGraph.graph.topologicalSort
 
     val ( producedItems, usedRecipes ): ( Vector[Item], Vector[Recipe[Machine, Item]] ) = {
       val reachable =
         new DepthFirstSearch[Unit, RecipeGraph.N, Unit](
           wantedItems.map( ci => RecipeGraph.ItemNode( ci.item ) ),
-          graph
+          recipeGraph.graph
         ).run.toVector
 
       reachable.foldLeft( ( Vector.empty[Item], Vector.empty[Recipe[Machine, Item]] ) ) {

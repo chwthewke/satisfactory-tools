@@ -84,7 +84,7 @@ object Explore extends IOApp {
       .intercalate( "\n" )
 
   def makeGraph( proto: ProtoModel ): ValidatedNel[String, Graph[Unit, RecipeGraph.N, Unit]] =
-    proto.toModel.map( m => RecipeGraph.of( m.recipes ) )
+    proto.toModel.map( m => RecipeGraph.of( m.recipes ).graph )
 
   def showModelWith[A: Show]( data: ProtoModel, f: Model => A ): String =
     data.toModel.fold(
