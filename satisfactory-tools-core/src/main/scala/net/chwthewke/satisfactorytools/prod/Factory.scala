@@ -2,16 +2,21 @@ package net.chwthewke.satisfactorytools
 package prod
 
 import alleycats.std.iterable._
+import cats.Order.catsKernelOrderingForOrder
 import cats.Show
 import cats.data.ZipVector
 import cats.instances.double._
-import cats.instances.map._
+import cats.instances.sortedMap._
+import cats.instances.sortedSet._
 import cats.instances.string._
+import cats.instances.tuple._
 import cats.instances.vector._
 import cats.syntax.apply._
 import cats.syntax.foldable._
 import cats.syntax.semigroup._
 import cats.syntax.show._
+import scala.collection.immutable.SortedMap
+import scala.collection.immutable.SortedSet
 //
 import model.Countable
 import model.Item
@@ -55,24 +60,29 @@ final case class Factory( bill: Bill, blocks: Vector[FactoryBlock] ) {
 
   }
 
-  def ingredientTree( item: Item, destinations: Vector[( String, Double )] ): String = {
-    def destinationLine( dest: String, amount: Double ): String = {
+  def ingredientTree( item: Item, destinations: SortedSet[( FactoryBlock.Direction, String, Double )] ): String = {
+    def destinationLine( direction: FactoryBlock.Direction, dest: String, amount: Double ): String = {
       val amountText = f"$amount%4.3f".reverse.padTo( 8, ' ' ).reverse
-      show"  $amountText -> $dest"
+      show"  $amountText ${direction.arrow} $dest"
     }
 
     show"""${item.displayName}
-          |${destinations.map( (destinationLine _).tupled ).intercalate( "\n" )}
+          |${destinations.toVector.map( (destinationLine _).tupled ).intercalate( "\n" )}
           |""".stripMargin
   }
 
   def ingredientsTree: String = {
-    val internalDestinations: Map[Item, Vector[( String, Double )]] =
-      blocks.foldMap( _.ingredients )
+    val internalDestinations: SortedMap[Item, SortedSet[( FactoryBlock.Direction, String, Double )]] =
+      blocks.foldMap( _.inputsOutputs )
 
-    val billDestinations: Map[Item, Vector[( String, Double )]] =
+    val billDestinations: SortedMap[Item, SortedSet[( FactoryBlock.Direction, String, Double )]] =
       bill.items.foldMap {
-        case Countable( item, amount ) => Map( item -> Vector( "STORAGE" -> amount ) )
+        case Countable( item, amount ) =>
+          SortedMap(
+            item -> SortedSet[( FactoryBlock.Direction, String, Double )](
+              ( FactoryBlock.Direction.In, "STORAGE", amount )
+            )
+          )
       }
 
     (internalDestinations |+| billDestinations)

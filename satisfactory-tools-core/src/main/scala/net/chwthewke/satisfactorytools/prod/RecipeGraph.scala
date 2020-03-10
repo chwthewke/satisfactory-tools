@@ -9,6 +9,8 @@ import model.Item
 import model.Machine
 import model.Recipe
 
+case class RecipeGraph( graph: Graph[Unit, RecipeGraph.N, Unit] )
+
 object RecipeGraph {
   sealed trait N extends Product with Serializable
 
@@ -25,13 +27,17 @@ object RecipeGraph {
   def itemNode( item: Item ): N                      = ItemNode( item )
   def recipeNode( recipe: Recipe[Machine, Item] ): N = RecipeNode( recipe )
 
-  def of( recipes: Vector[Recipe[Machine, Item]] ): Graph[Unit, N, Unit] = Graph.fromEdges(
-    recipes
-      .sortBy( r => ( r.product.head.item.className.name, r.className.name ) )
-      .flatMap(
-        rec =>
-          rec.ingredients.map( ci => n( recipeNode( rec ) ) --> n( itemNode( ci.item ) ) ) ++
-            rec.product.toList.map( ci => n( itemNode( ci.item ) ) --> n( recipeNode( rec ) ) )
+  def of( recipes: Vector[Recipe[Machine, Item]] ): RecipeGraph =
+    RecipeGraph(
+      Graph.fromEdges(
+        recipes
+          .sortBy( r => ( r.product.head.item.className.name, r.className.name ) )
+          .flatMap(
+            rec =>
+              rec.ingredients.map( ci => n( recipeNode( rec ) ) --> n( itemNode( ci.item ) ) ) ++
+                rec.product.toList.map( ci => n( itemNode( ci.item ) ) --> n( recipeNode( rec ) ) )
+          )
       )
-  )
+    )
+
 }

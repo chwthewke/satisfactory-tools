@@ -1,8 +1,12 @@
 package net.chwthewke.satisfactorytools
 
 import alleycats.std.iterable._
+import cats.Eval
 import cats.Monoid
 import cats.Show
+import cats.data.NonEmptyVector
+import cats.data.State
+import cats.data.StateT
 import cats.data.ValidatedNel
 import cats.effect.Blocker
 import cats.effect.ExitCode
@@ -29,8 +33,8 @@ object Explore extends IOApp {
       .map( _._1 )
 //      .map( showItems )
 //      .map( showSortedRecipeNodes )
-      .map( showModelWith( _, _.show ) )
-//      .map( _.show )
+//      .map( showModelWith( _, _.show ) )
+      .map( showItemSortedByDepths )
 //
 //      .map( (showRecipeMatrix _).tupled )
       .flatMap( m => IO( println( m ) ) )
@@ -84,7 +88,7 @@ object Explore extends IOApp {
       .intercalate( "\n" )
 
   def makeGraph( proto: ProtoModel ): ValidatedNel[String, Graph[Unit, RecipeGraph.N, Unit]] =
-    proto.toModel.map( m => RecipeGraph.of( m.recipes ) )
+    proto.toModel.map( m => RecipeGraph.of( m.recipes ).graph )
 
   def showModelWith[A: Show]( data: ProtoModel, f: Model => A ): String =
     data.toModel.fold(
@@ -148,7 +152,98 @@ object Explore extends IOApp {
       }
     )
 
+  def showItemSortedByDepths( data: ProtoModel ): String =
+    showModelWith(
+      data,
+      model => {
+        val recipeGraph = RecipeGraph.of( model.recipes )
+        val depths      = computeDepths( recipeGraph )
+        val sortedNodes = recipeGraph.graph.nodes.toVector.sortBy( depths.getOrElse( _, Int.MaxValue ) )
+        sortedNodes
+          .collect {
+            case n @ RecipeGraph.ItemNode( item ) =>
+              show"${item.displayName.padTo( 36, ' ' )} ${depths( n )}"
+          }
+          .intercalate( "\n" )
+      }
+    )
+
   def index( model: ProtoModel, recipes: Vector[Recipe[ClassName, ClassName]] ): Vector[ClassName] =
     recipes.flatMap( r => r.ingredients ++ r.product.toList ).map( _.item ).filter( model.items.keySet )
+
+  def computeDepths( recipeGraph: RecipeGraph ): Map[RecipeGraph.N, Int] = {
+    import recipeGraph.graph
+
+    import prod.RecipeGraph.N
+    import prod.RecipeGraph.ItemNode
+    import prod.RecipeGraph.RecipeNode
+
+    val depths: Map[N, Int] = {
+      def seenAnd( seen: Set[RecipeNode], x: N ): Set[RecipeNode] =
+        x match {
+          case ItemNode( _ )       => seen
+          case r @ RecipeNode( _ ) => seen + r
+        }
+
+      def wasSeen( seen: Set[RecipeNode] ): N => Boolean = {
+        case ItemNode( _ )       => false
+        case r @ RecipeNode( _ ) => seen( r )
+      }
+
+      def succMerge( x: N ): ( Int, Int ) => Int =
+        x match {
+          case ItemNode( _ )   => _ min _
+          case RecipeNode( _ ) => _ max _
+        }
+
+      def zero( x: N ): Int =
+        x match {
+          case ItemNode( _ )   => 1
+          case RecipeNode( _ ) => 0
+        }
+
+      def computeFromSuccessors(
+          seen: Set[RecipeNode],
+          succs: NonEmptyVector[N],
+          op: ( Int, Int ) => Int
+      ): State[Map[N, Int], Int] =
+        succs
+          .traverse(
+            x =>
+              StateT.liftF[Eval, Map[N, Int], Unit]( Eval.always( println( show"$x REC" ) ) ) *> compute(
+                seenAnd( seen, x ),
+                x
+              )
+          )
+          .map( _.reduceLeft( op ) + 1 )
+
+      def compute( seen: Set[RecipeNode], node: N ): State[Map[N, Int], Int] =
+        StateT.liftF[Eval, Map[N, Int], Unit]( Eval.always( println( show"$node ASK" ) ) ) *>
+          State
+            .get[Map[N, Int]]
+            .flatMap(
+              m =>
+                m.get( node )
+                  .map(
+                    x => StateT.liftF[Eval, Map[N, Int], Int]( Eval.always( println( show"$node MEMO $x" ) ).as( x ) )
+                  )
+                  .orElse(
+                    NonEmptyVector
+                      .fromVector( graph.successors( node ).filterNot( wasSeen( seen ) ).toVector )
+                      .map( computeFromSuccessors( seen, _, succMerge( node ) ) )
+                  )
+                  .getOrElse( State.pure[Map[N, Int], Int]( zero( node ) ) )
+                  .flatTap(
+                    d =>
+                      StateT.liftF[Eval, Map[N, Int], Unit]( Eval.always( println( show"$node PUT $d" ) ) ) *>
+                        State.modify( _ + (node -> d) )
+                  )
+            )
+
+      graph.nodes.traverse_( x => compute( seenAnd( Set.empty, x ), x ) ).runS( Map.empty ).value
+    }
+
+    depths
+  }
 
 }
