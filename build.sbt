@@ -33,7 +33,14 @@ val `satisfactory-tools-core` = project
         breeze ++
         pureconfig
   )
+  .settings( mainClass := Some( "net.chwthewke.satisfactory.BatchMain" ) )
   .enablePlugins( SbtBuildInfo, ScalacPlugin )
+
+val `satisfactory-production-calculator` = project
+  .settings( compilerPlugins )
+  .settings( mainClass := Some( "net.chwthewke.satisfactory.ProdCalculator" ) )
+  .dependsOn( `satisfactory-tools-core` )
+  .enablePlugins( ScalacPlugin )
 
 val `satisfactory-tools-tests` = project
   .settings( compilerPlugins )
