@@ -1,15 +1,22 @@
 package net.chwthewke.satisfactorytools
 package prod
 
+import alleycats.std.iterable._
 import cats.Show
 import cats.data.ZipVector
 import cats.instances.double._
+import cats.instances.map._
 import cats.instances.string._
 import cats.instances.vector._
 import cats.syntax.apply._
 import cats.syntax.foldable._
+import cats.syntax.semigroup._
+import cats.syntax.show._
+//
+import model.Countable
+import model.Item
 
-final case class Factory( blocks: Vector[FactoryBlock] ) extends AnyVal {
+final case class Factory( bill: Bill, blocks: Vector[FactoryBlock] ) {
 
   import FactoryTable.alignment
   import FactoryTable.headers
@@ -48,8 +55,44 @@ final case class Factory( blocks: Vector[FactoryBlock] ) extends AnyVal {
 
   }
 
+  def ingredientTree( item: Item, destinations: Vector[( String, Double )] ): String = {
+    def destinationLine( dest: String, amount: Double ): String = {
+      val amountText = f"$amount%4.3f".reverse.padTo( 8, ' ' ).reverse
+      show"  $amountText -> $dest"
+    }
+
+    show"""${item.displayName}
+          |${destinations.map( (destinationLine _).tupled ).intercalate( "\n" )}
+          |""".stripMargin
+  }
+
+  def ingredientsTree: String = {
+    val internalDestinations: Map[Item, Vector[( String, Double )]] =
+      blocks.foldMap( _.ingredients )
+
+    val billDestinations: Map[Item, Vector[( String, Double )]] =
+      bill.items.foldMap {
+        case Countable( item, amount ) => Map( item -> Vector( "STORAGE" -> amount ) )
+      }
+
+    (internalDestinations |+| billDestinations)
+      .map( (ingredientTree _).tupled )
+      .to( Iterable )
+      .intercalate( "\n" )
+  }
+
 }
 
 object Factory {
-  implicit val factoryShow: Show[Factory] = Show.show( _.blocksTable )
+  implicit val factoryShow: Show[Factory] = Show.show { factory =>
+    show"""BLOCKS
+          |
+          |${factory.blocksTable}
+          |
+          |
+          |INGREDIENTS
+          |
+          |${factory.ingredientsTree}
+          |""".stripMargin
+  }
 }

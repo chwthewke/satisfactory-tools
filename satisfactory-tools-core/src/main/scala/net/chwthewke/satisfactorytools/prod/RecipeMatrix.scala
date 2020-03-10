@@ -90,9 +90,15 @@ final case class RecipeMatrix(
       goal     <- mkGoal
       solution <- solve( goal )
       _        <- checkSolution( solution )
-    } yield Factory(
-      columnLabels.zip( solution ).map { case ( recipe, count ) => FactoryBlock( Countable( recipe, count ) ) }
-    )
+    } yield {
+
+      val factoryBlocks =
+        columnLabels.zip( solution ).map {
+          case ( recipe, count ) => FactoryBlock( Countable( recipe, count ) )
+        }
+
+      Factory( bill, factoryBlocks )
+    }
   }
 
   def solve( v: DenseVector[Double] ): Either[String, Vector[Double]] =
