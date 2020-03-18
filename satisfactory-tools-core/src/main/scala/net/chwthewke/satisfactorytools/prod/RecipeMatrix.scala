@@ -6,10 +6,12 @@ import breeze.linalg.{Vector => _, _}
 import cats.data.NonEmptyVector
 import cats.Show
 import cats.instances.double._
+import cats.instances.either._
 import cats.instances.int._
 import cats.instances.map._
 import cats.instances.string._
 import cats.instances.vector._
+import cats.syntax.applicativeError._
 import cats.syntax.either._
 import cats.syntax.foldable._
 import cats.syntax.show._
@@ -37,9 +39,19 @@ final case class RecipeMatrix(
       .map( uris => show"Unproduceable items:${uris.map( _.className.show ).intercalate( "," )}" )
       .toLeft( () )
 
+  def nonUniquePlan: String =
+    show"""Too many recipes (${columnLabels.size})
+          |
+          |${columnLabels.map( _.displayName ).intercalate( "\n" )}
+          |
+          |to produce ${rowLabels.size} items
+          |
+          |${rowLabels.map( _.displayName ).intercalate( "\n" )}
+          |""".stripMargin
+
   val invertible: Either[String, Unit] =
     (matrix.rows == matrix.cols)
-      .either( show"Non-square matrix (${matrix.cols} recipes, ${matrix.rows} items)", () )
+      .either( nonUniquePlan, () )
       .flatMap( _ => (math.abs( det( matrix ) ) > 1e-12).either( "Non-invertible matrix", () ) )
 
   def report: String = {
@@ -79,6 +91,7 @@ final case class RecipeMatrix(
         )
         .leftMap( inv => s"Error: recipes had negative counts: ${inv.intercalate( ", " )}" )
         .toEither
+        .handleError( println )
     }
 
     for {
