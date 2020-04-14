@@ -1,6 +1,7 @@
 package net.chwthewke.satisfactorytools
 package model
 
+import cats.Order
 import cats.Show
 import cats.instances.double._
 import cats.instances.string._
@@ -34,4 +35,6 @@ object Item {
                                                                |Form: ${item.form}
                                                                |Energy: ${item.energyValue} MJ
                                                                |""".stripMargin )
+
+  implicit val itemOrder: Order[Item] = Order.by( _.displayName )
 }

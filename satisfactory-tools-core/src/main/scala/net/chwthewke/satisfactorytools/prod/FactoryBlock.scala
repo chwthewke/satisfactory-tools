@@ -1,7 +1,20 @@
 package net.chwthewke.satisfactorytools
 package prod
 
+import cats.Order
+import cats.Order.catsKernelOrderingForOrder
+import cats.instances.double._
+import cats.instances.list._
+import cats.instances.sortedMap._
+import cats.instances.sortedSet._
+import cats.instances.string._
+import cats.instances.tuple._
+import cats.syntax.foldable._
+import enumeratum.Enum
+import enumeratum.EnumEntry
 import mouse.boolean._
+import scala.collection.immutable.SortedMap
+import scala.collection.immutable.SortedSet
 //
 import model.Countable
 import model.Form
@@ -37,9 +50,33 @@ final case class FactoryBlock( block: Countable[Recipe[Machine, Item], Double] )
       power
     )
 
-  def ingredients: Map[Item, Vector[( String, Double )]] =
-    block.item.ingredientsPerMinute
-      .map( ci => ( ci.item, Vector( ( block.item.displayName, simpleItemAmount( ci ) ) ) ) )
-      .to( Map )
+  def inputsOutputs: SortedMap[Item, SortedSet[( FactoryBlock.Direction, String, Double )]] = {
+    def line(
+        direction: FactoryBlock.Direction,
+        lineItem: Countable[Item, Double]
+    ): SortedSet[( FactoryBlock.Direction, String, Double )] =
+      SortedSet( ( direction, block.item.displayName, simpleItemAmount( lineItem ) ) )
 
+    val ingredients =
+      block.item.ingredientsPerMinute
+        .foldMap( ci => SortedMap( ( ci.item, line( FactoryBlock.Direction.In, ci ) ) ) )
+    val products =
+      block.item.productsPerMinute
+        .foldMap( ci => SortedMap( ( ci.item, line( FactoryBlock.Direction.Out, ci ) ) ) )
+
+    ingredients ++ products
+  }
+
+}
+
+object FactoryBlock {
+  sealed abstract class Direction( val arrow: String ) extends EnumEntry
+  object Direction extends Enum[Direction] {
+    object Out extends Direction( "->" )
+    object In  extends Direction( "<-" )
+
+    override val values: IndexedSeq[Direction] = findValues
+
+    implicit val directionOrder: Order[Direction] = Order.by( _.arrow )
+  }
 }
