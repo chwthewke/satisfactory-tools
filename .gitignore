@@ -10,3 +10,5 @@ target/
 .scalafmt.conf
 
 *.csv
+
+satisfactory-production-calculator/src/main/resources/application.conf
