@@ -142,7 +142,7 @@ object ProtoModel {
         decodeMap( Item.itemDecoder( ItemType.Resource ) )( _.className ).map( ProtoModel.items )
       case NativeClass.`manufacturerDescClass` =>
         decodeMap( Decoder[Manufacturer] )( _.className ).map( ProtoModel.manufacturers )
-      case NativeClass.`resourceExtractorClass` =>
+      case NativeClass.`resourceExtractorClass` | NativeClass.`waterPumpClass` =>
         decodeMap( Decoder[Extractor] )( _.className ).map( ProtoModel.extractors )
       case NativeClass.`recipeClass` =>
         Decoder[Vector[Recipe[ClassName, ClassName]]].map( ProtoModel.recipes )

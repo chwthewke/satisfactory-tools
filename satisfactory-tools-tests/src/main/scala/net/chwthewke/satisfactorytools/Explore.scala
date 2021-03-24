@@ -144,6 +144,15 @@ object Explore extends IOApp {
       )
   }
 
+  def report( recipeMatrix: RecipeMatrix ): String = {
+    def okOr[A]( err: Either[String, A] ): String = err.fold( identity[String], _ => "OK" )
+
+    show"""Unproduceable items: ${okOr( recipeMatrix.unreachableItems )}
+          |
+          |Indeterminate matrix: ${okOr( recipeMatrix.invertible )}
+          |""".stripMargin
+  }
+
   def showRecipeMatrix( data: ProtoModel, config: ProductionConfig ): String =
     showModelWith(
       data,
@@ -151,7 +160,7 @@ object Explore extends IOApp {
         val recipeMatrix = RecipeMatrix.init( config, model )
         show"""$recipeMatrix
               |
-              |${recipeMatrix.report}
+              |${report( recipeMatrix )}
               |""".stripMargin
       }
     )

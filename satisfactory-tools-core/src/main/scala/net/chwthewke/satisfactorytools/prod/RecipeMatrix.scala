@@ -8,6 +8,7 @@ import cats.Show
 import cats.syntax.applicativeError._
 import cats.syntax.either._
 import cats.syntax.foldable._
+import cats.syntax.functor._
 import cats.syntax.show._
 import com.flowtick.graphs.algorithm._
 import java.util.logging.LogManager
@@ -31,7 +32,17 @@ final case class RecipeMatrix(
         rowLabels
           .filter( wanted => columnLabels.forall( recipe => recipe.product.toList.forall( _.item != wanted ) ) )
       )
-      .map( uris => show"Unproduceable items:${uris.map( _.className.show ).intercalate( "," )}" )
+      .fproduct(
+        items => columnLabels.filter( recipe => recipe.ingredients.exists( ingr => items.contains_( ingr.item ) ) )
+      )
+      .map {
+        case ( items, recipes ) =>
+          show"""Unproduceable items:
+                |  ${items.map( _.displayName.show ).intercalate( "\n  " )}
+                |Recipes requiring unproduceable items:
+                |  ${recipes.map( _.displayName.show ).intercalate( "\n  " )}
+                |""".stripMargin
+      }
       .toLeft( () )
 
   def nonUniquePlan: String =
@@ -48,15 +59,6 @@ final case class RecipeMatrix(
     (matrix.rows == matrix.cols)
       .either( nonUniquePlan, () )
       .flatMap( _ => (math.abs( det( matrix ) ) > 1e-12).either( "Non-invertible matrix", () ) )
-
-  def report: String = {
-    def okOr[A]( err: Either[String, A] ): String = err.fold( identity[String], _ => "OK" )
-
-    show"""Unproduceable items: ${okOr( unreachableItems )}
-          |
-          |Indeterminate matrix: ${okOr( invertible )}
-          |""".stripMargin
-  }
 
   def computeFactory( bill: Bill ): Either[String, Factory] = {
 
