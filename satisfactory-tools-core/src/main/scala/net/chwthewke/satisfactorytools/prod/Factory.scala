@@ -5,12 +5,6 @@ import alleycats.std.iterable._
 import cats.Order.catsKernelOrderingForOrder
 import cats.Show
 import cats.data.ZipVector
-import cats.instances.double._
-import cats.instances.sortedMap._
-import cats.instances.sortedSet._
-import cats.instances.string._
-import cats.instances.tuple._
-import cats.instances.vector._
 import cats.syntax.apply._
 import cats.syntax.foldable._
 import cats.syntax.semigroup._

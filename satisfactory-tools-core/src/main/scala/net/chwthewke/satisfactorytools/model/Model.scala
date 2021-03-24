@@ -3,8 +3,6 @@ package model
 
 import alleycats.std.iterable._
 import cats.Show
-import cats.instances.string._
-import cats.instances.vector._
 import cats.syntax.foldable._
 import cats.syntax.show._
 

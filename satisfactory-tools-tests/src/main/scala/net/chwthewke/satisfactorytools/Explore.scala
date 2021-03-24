@@ -14,6 +14,7 @@ import cats.effect.IO
 import cats.effect.IOApp
 import cats.implicits._
 import com.flowtick.graphs.Graph
+import com.flowtick.graphs.Node
 import com.flowtick.graphs.algorithm._
 import io.circe.Decoder
 import mouse.option._
@@ -87,7 +88,7 @@ object Explore extends IOApp {
       .map( _.show )
       .intercalate( "\n" )
 
-  def makeGraph( proto: ProtoModel ): ValidatedNel[String, Graph[Unit, RecipeGraph.N, Unit]] =
+  def makeGraph( proto: ProtoModel ): ValidatedNel[String, Graph[Unit, RecipeGraph.N]] =
     proto.toModel.map( m => RecipeGraph.of( m.recipes ).graph )
 
   def showModelWith[A: Show]( data: ProtoModel, f: Model => A ): String =
@@ -96,7 +97,7 @@ object Explore extends IOApp {
       f andThen (_.show)
     )
 
-  def showGraphWith[A: Show]( proto: ProtoModel, f: Graph[Unit, RecipeGraph.N, Unit] => A ): String =
+  def showGraphWith[A: Show]( proto: ProtoModel, f: Graph[Unit, RecipeGraph.N] => A ): String =
     makeGraph( proto ).fold(
       errs => ("Errors transforming graph:" :: errs).intercalate( "\n  " ),
       graph => f( graph ).show
@@ -114,15 +115,18 @@ object Explore extends IOApp {
       proto,
       graph =>
         graph.topologicalSort
+          .map( _.value )
           .collect { case RecipeGraph.RecipeNode( recipe ) => recipe }
           .map( r => show"${cn( r.className )} # ${r.displayName}" )
           .intercalate( "\n" )
     )
   }
 
-  def showNodes( graph: Graph[Unit, RecipeGraph.N, Unit], nodes: Iterable[RecipeGraph.N] ): String =
+  def showNodes( graph: Graph[Unit, RecipeGraph.N], nodes: Iterable[Node[RecipeGraph.N]] ): String =
     nodes
-      .map( n => show"$n -> ${graph.successors( n ).to( Iterable ).map( _.show ).intercalate( ", " )}" )
+      .map(
+        n => show"${n.value} -> ${graph.successors( n.id ).to( Iterable ).map( _.value.show ).intercalate( ", " )}"
+      )
       .intercalate( "\n" )
 
   def showItems( proto: ProtoModel ): String = {
@@ -158,8 +162,9 @@ object Explore extends IOApp {
       model => {
         val recipeGraph = RecipeGraph.of( model.recipes )
         val depths      = computeDepths( recipeGraph )
-        val sortedNodes = recipeGraph.graph.nodes.toVector.sortBy( depths.getOrElse( _, Int.MaxValue ) )
+        val sortedNodes = recipeGraph.graph.nodes.toVector.sortBy( n => depths.getOrElse( n.value, Int.MaxValue ) )
         sortedNodes
+          .map( _.value )
           .collect {
             case n @ RecipeGraph.ItemNode( item ) =>
               show"${item.displayName.padTo( 36, ' ' )} ${depths( n )}"
@@ -177,6 +182,8 @@ object Explore extends IOApp {
     import prod.RecipeGraph.N
     import prod.RecipeGraph.ItemNode
     import prod.RecipeGraph.RecipeNode
+
+    implicit def show[A: Show]: Show[Node[A]] = Show.show( node => node.value.show )
 
     val depths: Map[N, Int] = {
       def seenAnd( seen: Set[RecipeNode], x: N ): Set[RecipeNode] =
@@ -204,43 +211,43 @@ object Explore extends IOApp {
 
       def computeFromSuccessors(
           seen: Set[RecipeNode],
-          succs: NonEmptyVector[N],
+          succs: NonEmptyVector[Node[N]],
           op: ( Int, Int ) => Int
       ): State[Map[N, Int], Int] =
         succs
           .traverse(
             x =>
               StateT.liftF[Eval, Map[N, Int], Unit]( Eval.always( println( show"$x REC" ) ) ) *> compute(
-                seenAnd( seen, x ),
+                seenAnd( seen, x.value ),
                 x
               )
           )
           .map( _.reduceLeft( op ) + 1 )
 
-      def compute( seen: Set[RecipeNode], node: N ): State[Map[N, Int], Int] =
+      def compute( seen: Set[RecipeNode], node: Node[N] ): State[Map[N, Int], Int] =
         StateT.liftF[Eval, Map[N, Int], Unit]( Eval.always( println( show"$node ASK" ) ) ) *>
           State
             .get[Map[N, Int]]
             .flatMap(
               m =>
-                m.get( node )
+                m.get( node.value )
                   .map(
                     x => StateT.liftF[Eval, Map[N, Int], Int]( Eval.always( println( show"$node MEMO $x" ) ).as( x ) )
                   )
                   .orElse(
                     NonEmptyVector
-                      .fromVector( graph.successors( node ).filterNot( wasSeen( seen ) ).toVector )
-                      .map( computeFromSuccessors( seen, _, succMerge( node ) ) )
+                      .fromVector( graph.successors( node.id ).filterNot( n => wasSeen( seen )( n.value ) ).toVector )
+                      .map( computeFromSuccessors( seen, _, succMerge( node.value ) ) )
                   )
-                  .getOrElse( State.pure[Map[N, Int], Int]( zero( node ) ) )
+                  .getOrElse( State.pure[Map[N, Int], Int]( zero( node.value ) ) )
                   .flatTap(
                     d =>
                       StateT.liftF[Eval, Map[N, Int], Unit]( Eval.always( println( show"$node PUT $d" ) ) ) *>
-                        State.modify( _ + (node -> d) )
+                        State.modify( _ + (node.value -> d) )
                   )
             )
 
-      graph.nodes.traverse_( x => compute( seenAnd( Set.empty, x ), x ) ).runS( Map.empty ).value
+      graph.nodes.traverse_( x => compute( seenAnd( Set.empty, x.value ), x ) ).runS( Map.empty ).value
     }
 
     depths

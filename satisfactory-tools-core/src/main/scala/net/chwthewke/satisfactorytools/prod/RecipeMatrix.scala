@@ -5,12 +5,6 @@ import alleycats.std.iterable._
 import breeze.linalg.{Vector => _, _}
 import cats.data.NonEmptyVector
 import cats.Show
-import cats.instances.double._
-import cats.instances.either._
-import cats.instances.int._
-import cats.instances.map._
-import cats.instances.string._
-import cats.instances.vector._
 import cats.syntax.applicativeError._
 import cats.syntax.either._
 import cats.syntax.foldable._
@@ -157,25 +151,25 @@ object RecipeMatrix {
 
     val ( producedItems, usedRecipes ): ( Vector[Item], Vector[Recipe[Machine, Item]] ) = {
       val reachable =
-        new DepthFirstSearch[Unit, RecipeGraph.N, Unit](
-          wantedItems.map( ci => RecipeGraph.ItemNode( ci.item ) ),
+        new DepthFirstSearch[Unit, RecipeGraph.N](
+          wantedItems.map( ci => RecipeGraph.itemNode( ci.item ).show ),
           recipeGraph.graph
         ).run.toVector
 
       reachable.foldLeft( ( Vector.empty[Item], Vector.empty[Recipe[Machine, Item]] ) ) {
         case ( ( itAcc, recAcc ), node ) =>
-          node match {
+          node.value match {
             case RecipeGraph.ItemNode( item )     => ( itAcc :+ item, recAcc )
             case RecipeGraph.RecipeNode( recipe ) => ( itAcc, recAcc :+ recipe )
           }
       }
     }
 
-    val recipeOrder = orderedNodes.collect {
+    val recipeOrder = orderedNodes.map( _.value ).collect {
       case RecipeGraph.RecipeNode( recipe ) => recipe
     }
 
-    val itemOrder = orderedNodes.collect {
+    val itemOrder = orderedNodes.map( _.value ).collect {
       case RecipeGraph.ItemNode( item ) => item
     }
 

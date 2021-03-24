@@ -7,9 +7,6 @@ import cats.Show
 import cats.data.NonEmptyList
 import cats.data.Validated
 import cats.data.ValidatedNel
-import cats.instances.option._
-import cats.instances.string._
-import cats.instances.vector._
 import cats.syntax.apply._
 import cats.syntax.foldable._
 import cats.syntax.functorFilter._

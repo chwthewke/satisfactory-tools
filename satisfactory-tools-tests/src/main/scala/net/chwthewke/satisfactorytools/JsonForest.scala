@@ -2,8 +2,6 @@ package net.chwthewke.satisfactorytools
 
 import cats.Monoid
 import cats.Show
-import cats.instances.string._
-import cats.instances.vector._
 import cats.syntax.foldable._
 import cats.syntax.show._
 import io.circe.Decoder

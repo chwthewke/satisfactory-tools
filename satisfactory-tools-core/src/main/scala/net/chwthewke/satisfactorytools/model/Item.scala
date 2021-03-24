@@ -3,8 +3,6 @@ package model
 
 import cats.Order
 import cats.Show
-import cats.instances.double._
-import cats.instances.string._
 import cats.syntax.show._
 import io.circe.Decoder
 

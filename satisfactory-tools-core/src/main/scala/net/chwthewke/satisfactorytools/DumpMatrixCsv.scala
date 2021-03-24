@@ -1,8 +1,6 @@
 package net.chwthewke.satisfactorytools
 
 import cats.effect.IO
-import cats.instances.string._
-import cats.instances.vector._
 import cats.syntax.foldable._
 //
 import model.Model

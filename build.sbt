@@ -4,7 +4,7 @@ import sbt.Keys._
 // format: off
 organization      in ThisBuild := "net.chwthewke"
 scalaOrganization in ThisBuild := "org.scala-lang"
-scalaVersion      in ThisBuild := "2.13.1"
+scalaVersion      in ThisBuild := "2.13.5"
 // TODO when I can make sense of lm-coursier
 conflictManager   in ThisBuild                         := ConflictManager.strict
 conflictManager   in updateSbtClassifiers in ThisBuild := ConflictManager.default
@@ -12,7 +12,7 @@ conflictManager   in updateSbtClassifiers in ThisBuild := ConflictManager.defaul
 
 enablePlugins( FormatPlugin, DependenciesPlugin )
 
-val compilerPlugins = libraryDependencies ++= silencer ++ kindProjector ++ splain ++ betterMonadicFor
+val compilerPlugins = libraryDependencies ++= kindProjector ++ splain ++ betterMonadicFor
 
 val `satisfactory-tools-core` = project
   .settings( compilerPlugins )

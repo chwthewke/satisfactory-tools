@@ -1,9 +1,6 @@
 package net.chwthewke.satisfactorytools
 package prod
 
-import cats.instances.option._
-import cats.instances.string._
-import cats.instances.vector._
 import cats.syntax.either._
 import cats.syntax.option._
 import cats.syntax.show._

@@ -3,6 +3,7 @@ package prod
 
 import pureconfig.ConfigReader
 import pureconfig.generic.semiauto
+import scala.annotation.nowarn
 //
 import model.ClassName
 import model.Countable
@@ -16,7 +17,7 @@ object ProductionConfig {
     implicit val itemsReader: ConfigReader[Vector[Countable[ClassName, Double]]] =
       ConfigReader[Map[String, Double]]
         .map( _.map { case ( k, v ) => Countable( ClassName( k ), v ) }.toVector )
-    semiauto.deriveReader[ProductionConfig]
+    semiauto.deriveReader[ProductionConfig]: @nowarn( "cat=lint-byname-implicit" )
   }
 
 }

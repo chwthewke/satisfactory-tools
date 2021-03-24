@@ -3,10 +3,6 @@ package model
 
 import cats.Show
 import cats.data.NonEmptyList
-import cats.instances.int._
-import cats.instances.finiteDuration._
-import cats.instances.list._
-import cats.instances.string._
 import cats.syntax.foldable._
 import cats.syntax.functor._
 import cats.syntax.show._

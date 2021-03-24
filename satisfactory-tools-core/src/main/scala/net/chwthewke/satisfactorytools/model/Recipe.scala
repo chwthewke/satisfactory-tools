@@ -7,10 +7,6 @@ import cats.Foldable
 import cats.Show
 import cats.Traverse
 import cats.data.NonEmptyList
-import cats.instances.int._
-import cats.instances.list._
-import cats.instances.string._
-import cats.instances.finiteDuration._
 import cats.syntax.apply._
 import cats.syntax.foldable._
 import cats.syntax.functor._

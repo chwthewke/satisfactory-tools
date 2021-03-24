@@ -9,13 +9,16 @@ import model.Item
 import model.Machine
 import model.Recipe
 
-case class RecipeGraph( graph: Graph[Unit, RecipeGraph.N, Unit] )
+case class RecipeGraph( graph: Graph[Unit, RecipeGraph.N] )
 
 object RecipeGraph {
   sealed trait N extends Product with Serializable
 
   final case class ItemNode( item: Item )                      extends N
   final case class RecipeNode( recipe: Recipe[Machine, Item] ) extends N
+
+  def itemNode( item: Item ): N                      = ItemNode( item )
+  def recipeNode( recipe: Recipe[Machine, Item] ): N = RecipeNode( recipe )
 
   object N {
     implicit val showN: Show[N] = Show.show {
@@ -24,9 +27,6 @@ object RecipeGraph {
     }
   }
 
-  def itemNode( item: Item ): N                      = ItemNode( item )
-  def recipeNode( recipe: Recipe[Machine, Item] ): N = RecipeNode( recipe )
-
   def of( recipes: Vector[Recipe[Machine, Item]] ): RecipeGraph =
     RecipeGraph(
       Graph.fromEdges(
@@ -34,8 +34,8 @@ object RecipeGraph {
           .sortBy( r => ( r.product.head.item.className.name, r.className.name ) )
           .flatMap(
             rec =>
-              rec.ingredients.map( ci => n( recipeNode( rec ) ) --> n( itemNode( ci.item ) ) ) ++
-                rec.product.toList.map( ci => n( itemNode( ci.item ) ) --> n( recipeNode( rec ) ) )
+              rec.ingredients.map( ci => recipeNode( rec ) --> itemNode( ci.item ) ) ++
+                rec.product.toList.map( ci => itemNode( ci.item ) --> recipeNode( rec ) )
           )
       )
     )

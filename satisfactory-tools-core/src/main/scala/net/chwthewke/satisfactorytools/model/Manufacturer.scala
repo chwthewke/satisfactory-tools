@@ -2,7 +2,6 @@ package net.chwthewke.satisfactorytools
 package model
 
 import cats.Show
-import cats.instances.string._
 import cats.syntax.show._
 import io.circe.Decoder
 

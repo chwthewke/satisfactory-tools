@@ -3,12 +3,6 @@ package prod
 
 import cats.Order
 import cats.Order.catsKernelOrderingForOrder
-import cats.instances.double._
-import cats.instances.list._
-import cats.instances.sortedMap._
-import cats.instances.sortedSet._
-import cats.instances.string._
-import cats.instances.tuple._
 import cats.syntax.foldable._
 import enumeratum.Enum
 import enumeratum.EnumEntry
