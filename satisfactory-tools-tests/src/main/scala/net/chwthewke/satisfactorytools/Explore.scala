@@ -33,9 +33,10 @@ object Explore extends IOApp {
 //
       .map( _._1 )
 //      .map( showItems )
-//      .map( showSortedRecipeNodes )
+//      .map( showManufacturers )
+      .map( showSortedRecipeNodes )
 //      .map( showModelWith( _, _.show ) )
-      .map( showItemSortedByDepths )
+//      .map( showItemSortedByDepths )
 //
 //      .map( (showRecipeMatrix _).tupled )
       .flatMap( m => IO( println( m ) ) )
@@ -58,6 +59,16 @@ object Explore extends IOApp {
         else
           None
     )
+
+  def showManufacturers( model: ProtoModel ): String =
+    model.manufacturers.values
+      .map {
+        case Manufacturer( className, displayName, powerConsumption ) =>
+          show"""$displayName # $className
+                |Power Consumption: $powerConsumption MW
+                |""".stripMargin
+      }
+      .intercalate( "\n" )
 
   def showExtractors( model: ProtoModel ): String =
     model.extractors.values
