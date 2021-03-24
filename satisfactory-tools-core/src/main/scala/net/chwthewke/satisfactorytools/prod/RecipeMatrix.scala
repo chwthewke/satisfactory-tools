@@ -16,6 +16,7 @@ import cats.syntax.either._
 import cats.syntax.foldable._
 import cats.syntax.show._
 import com.flowtick.graphs.algorithm._
+import java.util.logging.LogManager
 import mouse.boolean._
 import mouse.option._
 //
@@ -196,4 +197,6 @@ object RecipeMatrix {
     )
   }
 
+  // Haxx disable logging from netlib
+  LogManager.getLogManager.reset()
 }

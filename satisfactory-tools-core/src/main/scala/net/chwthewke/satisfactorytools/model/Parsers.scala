@@ -36,8 +36,9 @@ object Parsers {
         stringOf1( bpNoSep )
     ).map( ClassName( _ ) )
 
-  val buildablesList: Parser[NonEmptyList[ClassName]] =
-    char( '(' ) ~> buildableClass.sepBy1( char( ',' ) ) <~ char( ')' )
+  val buildablesList: Parser[List[ClassName]] =
+    (char( '(' ) ~> buildableClass.sepBy1( char( ',' ) ) <~ char( ')' )).map( _.toList ) |
+      ok( Nil )
 
   val countable: Parser[Countable[ClassName, Int]] =
     ((string( "(ItemClass=" ) ~> bpGeneratedClass <~ string( ",Amount=" )) ~ int <~ char( ')' ))

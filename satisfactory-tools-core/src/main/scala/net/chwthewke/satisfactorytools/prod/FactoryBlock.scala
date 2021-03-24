@@ -25,10 +25,10 @@ import model.Recipe
 final case class FactoryBlock( block: Countable[Recipe[Machine, Item], Double] ) {
 
   val machineCount: Int = block.amount.ceil.toInt
-  val clockSpeed: Int   = (block.amount / machineCount * 100).ceil.toInt
+  val clockSpeed10: Int = (block.amount / machineCount * 1000).ceil.toInt
 
   val machine: Machine = block.item.producers.head
-  val power: Double    = machineCount * machine.powerConsumption * math.pow( clockSpeed / 100d, 1.6d )
+  val power: Double    = machineCount * machine.powerConsumption * math.pow( clockSpeed10 / 1000d, 1.6d )
 
   def simpleItemAmount( ci: Countable[Item, Double] ): Double = {
     val factor = (ci.item.form == Form.Liquid).fold( 0.001, 1 )
@@ -46,7 +46,7 @@ final case class FactoryBlock( block: Countable[Recipe[Machine, Item], Double] )
       itemAmountPerUnit,
       machine.displayName,
       machineCount,
-      clockSpeed,
+      clockSpeed10,
       power
     )
 

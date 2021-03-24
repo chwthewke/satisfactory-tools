@@ -16,7 +16,7 @@ object FactoryTable {
       amountPerUnit: Double,
       machineName: String,
       machineCount: Int,
-      clockSpeed: Int,
+      clockSpeed10: Int,
       power: Double
   ): Vector[String] =
     Vector(
@@ -30,7 +30,7 @@ object FactoryTable {
       " ",
       machineName,
       sep,
-      f"$amountPerUnit%3.3f / unit @ $clockSpeed%-3d%%",
+      f"$amountPerUnit%3.3f / unit @ ${clockSpeed10 / 10}%3d.${clockSpeed10 % 10}%%",
       sep,
       f"$power%4.2f",
       f" MW"

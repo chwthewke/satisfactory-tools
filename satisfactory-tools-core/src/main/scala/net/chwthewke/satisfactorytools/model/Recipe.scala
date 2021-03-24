@@ -14,6 +14,7 @@ import cats.instances.finiteDuration._
 import cats.syntax.apply._
 import cats.syntax.foldable._
 import cats.syntax.functor._
+import cats.syntax.option._
 import cats.syntax.show._
 import cats.syntax.traverse._
 import io.circe.Decoder
@@ -83,7 +84,7 @@ object Recipe {
       countableList.decoder.map( _.toList ),
       countableList.decoder,
       Decoders.doubleStringDecoder.map( _.seconds ),
-      buildablesList.decoder.map( _.toList )
+      Decoder.decodeOption( buildablesList.decoder ).map( _.orEmpty )
     )
   }
 

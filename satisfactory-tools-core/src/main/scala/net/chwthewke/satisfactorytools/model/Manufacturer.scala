@@ -32,7 +32,9 @@ object Manufacturer {
     "Build_AssemblerMk1_C",
     "Build_OilRefinery_C",
     "Build_FoundryMk1_C",
-    "Build_ManufacturerMk1_C"
+    "Build_ManufacturerMk1_C",
+    "Build_Packager_C",
+    "Build_Blender_C"
   ).map( ClassName( _ ) )
 
   implicit val manufacturerShow: Show[Manufacturer] = Show { manufacturer =>

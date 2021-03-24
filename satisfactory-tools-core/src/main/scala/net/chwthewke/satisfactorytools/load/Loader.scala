@@ -32,7 +32,7 @@ trait Loader[F[_]] {
     file
       .readAll( path, blocker, 32768 )
 
-  private def process[A: Decoder: Monoid]( bytes: Stream[F, Byte] ) =
+  private def process[A: Decoder: Monoid]( bytes: Stream[F, Byte] ): F[A] =
     bytes
       .through( byteArrayParser[F] )
       .through( decoder[F, A] )

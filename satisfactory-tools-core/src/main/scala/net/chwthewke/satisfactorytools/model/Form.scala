@@ -12,6 +12,7 @@ sealed abstract class Form( override val entryName: String ) extends EnumEntry
 object Form extends Enum[Form] {
   final case object Solid   extends Form( "RF_SOLID" )
   final case object Liquid  extends Form( "RF_LIQUID" )
+  final case object Gas     extends Form( "RF_GAS" )
   final case object Invalid extends Form( "RF_INVALID" )
 
   override val values: IndexedSeq[Form] = findValues

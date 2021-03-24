@@ -137,6 +137,8 @@ object ProtoModel {
     nativeClass match {
       case NativeClass.`partDescClass` | NativeClass.`consumableDescClass` | NativeClass.`nuclearFuelDescClass` =>
         decodeMap( Item.itemDecoder( ItemType.Part ) )( _.className ).map( ProtoModel.items )
+      case NativeClass.`equipmentDescClass` =>
+        decodeMap( Item.itemDecoder( ItemType.Equipment ) )( _.className ).map( ProtoModel.items )
       case NativeClass.`biomassDescClass` =>
         decodeMap( Item.itemDecoder( ItemType.Biomass ) )( _.className ).map( ProtoModel.items )
       case NativeClass.`resourceDescClass` =>

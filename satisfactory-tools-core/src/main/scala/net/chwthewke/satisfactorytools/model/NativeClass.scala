@@ -15,6 +15,7 @@ object NativeClass {
 
   val biomassDescClass: NativeClass       = NativeClass( "Class'/Script/FactoryGame.FGItemDescriptorBiomass'" )
   val consumableDescClass: NativeClass    = NativeClass( "Class'/Script/FactoryGame.FGConsumableDescriptor'" )
+  val equipmentDescClass: NativeClass     = NativeClass( "Class'/Script/FactoryGame.FGEquipmentDescriptor'" )
   val nuclearFuelDescClass: NativeClass   = NativeClass( "Class'/Script/FactoryGame.FGItemDescriptorNuclearFuel'" )
   val partDescClass: NativeClass          = NativeClass( "Class'/Script/FactoryGame.FGItemDescriptor'" )
   val recipeClass: NativeClass            = NativeClass( "Class'/Script/FactoryGame.FGRecipe'" )
