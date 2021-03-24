@@ -3,13 +3,13 @@
 **Good**
 
 * Requires only the game-provided `Docs.json`
-* Works with U3
-* Should hopefully resist future updates fairly well
+* Works with U4
+* Should hopefully resist future updates fairly well. U3 to U4 still took work though so ¯\\_(ツ)_/¯
 
 **Bad**
 
 * No provision for unused by-products yet
-* No GUI, edit `application.conf` and pray
+* No GUI, copy `satisfactory-tools-core/src/main/resources/reference.conf` to `satisfactory-production-calculator/src/main/resources/application.conf`, edit and pray
   * Need to have the right set of recipes to produce desired items without by-products, and no more
 
 **Ugly**
