@@ -54,6 +54,17 @@ final case class Factory( bill: Bill, blocks: Vector[FactoryBlock] ) {
 
   }
 
+  def extractedResources: String =
+    blocks
+      .collect {
+        case FactoryBlock( Countable( recipe, amount ) ) if recipe.isExtraction =>
+          val product = recipe.productsPerMinute.head
+          ( product.item.displayName, product.simpleAmount * amount )
+      }
+      .sortBy { case ( p, x ) => ( -x, p ) }
+      .map { case ( p, x ) => f"${p.padTo( 24, ' ' )} $x%.3f" }
+      .intercalate( "\n" )
+
   def ingredientTree( item: Item, destinations: SortedSet[( FactoryBlock.Direction, String, Double )] ): String = {
     def destinationLine( direction: FactoryBlock.Direction, dest: String, amount: Double ): String = {
       val amountText = f"$amount%4.3f".reverse.padTo( 8, ' ' ).reverse
@@ -93,6 +104,10 @@ object Factory {
           |
           |${factory.blocksTable}
           |
+          |
+          |RAW RESOURCES
+          |
+          |${factory.extractedResources}
           |
           |INGREDIENTS
           |
