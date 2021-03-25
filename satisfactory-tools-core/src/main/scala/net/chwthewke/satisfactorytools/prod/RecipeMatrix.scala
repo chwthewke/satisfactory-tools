@@ -46,7 +46,7 @@ final case class RecipeMatrix(
       .toLeft( () )
 
   def nonUniquePlan: String =
-    show"""Too many recipes (${columnLabels.size})
+    show"""Too ${if (columnLabels.size > rowLabels.size) "many" else "few"} recipes (${columnLabels.size})
           |
           |${columnLabels.map( _.displayName ).intercalate( "\n" )}
           |
@@ -142,10 +142,10 @@ object RecipeMatrix {
     val activeRecipes: Vector[Recipe[Machine, Item]] =
       productionConfig.recipes
         .flatMap( cn => model.recipes.find( _.className == cn ) )
-    val wantedItems: Vector[Countable[Item, Double]] =
+    val wantedItems: Vector[Item] =
       productionConfig.items
         .filter( _.amount != 0d )
-        .flatMap { case Countable( cn, amount ) => model.items.get( cn ).map( Countable( _, amount ) ) }
+        .flatMap( ci => model.items.get( ci.item ) )
 
     val recipeGraph: RecipeGraph = RecipeGraph.of( activeRecipes )
 
@@ -154,7 +154,7 @@ object RecipeMatrix {
     val ( producedItems, usedRecipes ): ( Vector[Item], Vector[Recipe[Machine, Item]] ) = {
       val reachable =
         new DepthFirstSearch[Unit, RecipeGraph.N](
-          wantedItems.map( ci => RecipeGraph.itemNode( ci.item ).show ),
+          wantedItems.map( item => RecipeGraph.itemNode( item ).show ),
           recipeGraph.graph
         ).run.toVector
 

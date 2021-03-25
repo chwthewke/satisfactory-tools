@@ -7,12 +7,14 @@ import cats.syntax.show._
 case class Machine(
     className: ClassName,
     displayName: String,
+    machineType: MachineType,
     powerConsumption: Double
 )
 
 object Machine {
+
   implicit val machineShow: Show[Machine] = Show.show {
-    case Machine( className, displayName, powerConsumption ) =>
+    case Machine( className, displayName, _, powerConsumption ) =>
       show"""$displayName # $className
             |Power: ${f"$powerConsumption%.0f MW"}""".stripMargin
   }
@@ -21,6 +23,7 @@ object Machine {
     Machine(
       extractor.className,
       extractor.displayName,
+      MachineType.Extractor,
       extractor.powerConsumption
     )
 
@@ -28,6 +31,7 @@ object Machine {
     Machine(
       manufacturer.className,
       manufacturer.displayName,
+      MachineType.Manufacturer,
       manufacturer.powerConsumption
     )
 

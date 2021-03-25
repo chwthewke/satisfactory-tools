@@ -71,10 +71,10 @@ final case class Factory( bill: Bill, blocks: Vector[FactoryBlock] ) {
 
     val billDestinations: SortedMap[Item, SortedSet[( FactoryBlock.Direction, String, Double )]] =
       bill.items.foldMap {
-        case Countable( item, amount ) =>
+        case billItem @ Countable( item, _ ) =>
           SortedMap(
             item -> SortedSet[( FactoryBlock.Direction, String, Double )](
-              ( FactoryBlock.Direction.In, "STORAGE", amount )
+              ( FactoryBlock.Direction.In, "STORAGE", billItem.simpleAmount )
             )
           )
       }

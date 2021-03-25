@@ -28,6 +28,9 @@ final case class Recipe[M, N](
   def ingredientsPerMinute: List[Countable[N, Double]]      = ingredients.map( perMinute )
   def productsPerMinute: NonEmptyList[Countable[N, Double]] = product.map( perMinute )
 
+  def isExtraction( implicit ev: M =:= Machine ): Boolean =
+    producers.forall( p => ev( p ).machineType == MachineType.Extractor )
+
   private def perMinute( ct: Countable[N, Int] ): Countable[N, Double] =
     Countable( ct.item, ct.amount.toDouble * 60000 / duration.toMillis )
 

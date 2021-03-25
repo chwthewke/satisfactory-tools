@@ -25,7 +25,7 @@ object Bill {
             .option(
               model.items
                 .get( itemClass )
-                .map( Countable( _, amount ) )
+                .map( Countable.fromSimpleAmount( _, amount ) )
                 .toValidNel( itemClass.show )
             )
             .sequence

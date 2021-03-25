@@ -12,7 +12,9 @@ final case class Item(
     displayName: String,
     form: Form /* maybe not */,
     energyValue: Double
-)
+) {
+  def fuelValue: Double = energyValue * form.simpleAmountFactor
+}
 
 object Item {
   def itemDecoder( itemType: ItemType ): Decoder[Item] =
