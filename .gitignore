@@ -12,3 +12,4 @@ target/
 *.csv
 
 satisfactory-production-calculator/src/main/resources/application.conf
+satisfactory-tools-tests/src/main/resources/application.conf
