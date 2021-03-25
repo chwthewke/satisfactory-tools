@@ -1,6 +1,8 @@
 package net.chwthewke.satisfactorytools
 
 import alleycats.std.iterable._
+import atto._
+import Atto._
 import cats.Eval
 import cats.Monoid
 import cats.Show
@@ -31,13 +33,18 @@ object Explore extends IOApp {
     Blocker[IO]
       .use( blocker => ( loadData[ProtoModel]( blocker ), loadConfig( blocker ) ).tupled )
 //
-      .map( _._1 )
+//      .map( _._1 )
 //      .map( showItems )
+//      .map( showFuelValues )
+//      .map( splitItemClassNames )
+//      .map( showExtractors )
 //      .map( showManufacturers )
-      .map( showSortedRecipeNodes )
+//      .map( showSortedRecipeNodes )
+//      .map( showRecipeIngredientsAndProducts )
 //      .map( showModelWith( _, _.show ) )
 //      .map( showItemSortedByDepths )
 //
+      .map( (showExtractedResources _).tupled )
 //      .map( (showRecipeMatrix _).tupled )
       .flatMap( m => IO( println( m ) ) )
       .as( ExitCode.Success )
@@ -91,6 +98,48 @@ object Explore extends IOApp {
       }
       .intercalate( "\n" )
 
+  def showExtractedResources( data: ProtoModel, config: ProductionConfig ): String =
+    showModelWith(
+      data,
+      model =>
+        Calculator.computeFactory( model, config ).map { factory =>
+          factory.blocks
+            .collect {
+              case FactoryBlock( Countable( recipe, amount ) ) if recipe.isExtraction =>
+                val product = recipe.productsPerMinute.head
+                ( product.item.displayName, product.simpleAmount * amount )
+            }
+            .sortBy { case ( p, x ) => ( -x, p ) }
+            .map { case ( p, x ) => f"${p.padTo( 24, ' ' )} $x%.3f" }
+            .intercalate( "\n" )
+        }
+    )
+
+  def splitItemClassNames( model: ProtoModel ): String = {
+    val parseClassName: Parser[String] = {
+
+      string( "Desc_" ) ~> satisfy( _ != '_' ).many1.map( _.mkString_( "" ) ) <~ string( "_C" )
+    }
+
+    val ( invalid, parsed ) = model.items.keys.toVector.partitionEither(
+      cn => parseClassName.parseOnly( cn.name ).either.leftMap( _ => cn.name )
+    )
+
+    show"""${parsed.size} items parsed OK
+          |
+          |${invalid.size} failures
+          |
+          |${invalid.mkString( "\n" )}
+          |""".stripMargin
+
+  }
+
+  def showFuelValues( model: ProtoModel ): String =
+    model.items.values
+      .filter( _.fuelValue > 0d )
+      .map( it => show"${it.displayName} ${it.fuelValue} MJ" )
+      .intercalate( "\n" )
+
   def showResourceRecipes( model: ProtoModel ): String =
     model.recipes
       .filter(
@@ -131,6 +180,14 @@ object Explore extends IOApp {
           .map( r => show"${cn( r.className )} # ${r.displayName}" )
           .intercalate( "\n" )
     )
+  }
+
+  def showRecipeIngredientsAndProducts( proto: ProtoModel ): String = {
+
+    show"""Recipes:
+          |${proto.recipes.map( _.show ).intercalate( "\n" )}
+          |""".stripMargin
+
   }
 
   def showNodes( graph: Graph[Unit, RecipeGraph.N], nodes: Iterable[Node[RecipeGraph.N]] ): String =
