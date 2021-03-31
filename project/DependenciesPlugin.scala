@@ -58,7 +58,8 @@ object DependenciesPlugin extends AutoPlugin {
 
     val atto: Deps = Seq( "org.tpolecat" %% "atto-core" % "0.9.2" )
 
-    val graphs: Deps = "com.flowtick" %% Seq( "graphs-core", "graphs-cats" ) % "0.5.0"
+    val asciiGraphs: Deps = Seq( "org.scalameta" %% "ascii-graphs" % "0.1.2" )
+    val graphs: Deps      = "com.flowtick" %% Seq( "graphs-core", "graphs-cats" ) % "0.5.0"
 
     val spire: Deps    = Seq( "org.typelevel" %% "spire"         % "0.17.0-M1" )
     val algebird: Deps = Seq( "com.twitter"   %% "algebird-core" % "0.13.6" )
@@ -149,6 +150,7 @@ object DependenciesPlugin extends AutoPlugin {
       circeOptics ++
       enumeratum ++
       enumeratumCirce ++
+      asciiGraphs ++
       graphs ++
       algebra ++
       spire ++

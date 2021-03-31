@@ -29,6 +29,7 @@ val `satisfactory-tools-core` = project
         circeFs2 ++
         enumeratum ++
         enumeratumCirce ++
+        asciiGraphs ++
         graphs ++
         breeze ++
         pureconfig
