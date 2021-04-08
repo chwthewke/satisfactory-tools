@@ -6,7 +6,14 @@ import cats.Show
 import cats.syntax.foldable._
 import cats.syntax.show._
 
-case class Model( recipes: Vector[Recipe[Machine, Item]], items: Map[ClassName, Item], extractedItems: Vector[Item] )
+case class Model(
+    extractionRecipes: Vector[Recipe[Machine, Item]],
+    manufacturingRecipes: Vector[Recipe[Machine, Item]],
+    items: Map[ClassName, Item],
+    extractedItems: Vector[Item]
+) {
+  def allRecipes: Vector[Recipe[Machine, Item]] = extractionRecipes ++ manufacturingRecipes
+}
 
 object Model {
   implicit val modelShow: Show[Model] = Show.show { model =>
@@ -14,7 +21,7 @@ object Model {
     implicit val showMachine: Show[Machine] = Show.show( _.displayName )
 
     show"""Recipes
-          |${model.recipes.map( _.show ).intercalate( "\n" )}
+          |${model.allRecipes.map( _.show ).intercalate( "\n" )}
           |
           |Items
           |${model.items.values.map( _.show ).intercalate( "\n" )}

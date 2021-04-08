@@ -65,7 +65,7 @@ final case class ProtoModel(
           )
       }
 
-    ( selfExtraction, regular, extractedItems ).mapN( ( se, rg, ei ) => Model( se ++ rg, items, ei ) )
+    ( selfExtraction, regular, extractedItems ).mapN( ( se, rg, ei ) => Model( se, rg, items, ei ) )
   }
 
   def isSelfExtraction[M, N]( recipe: Recipe[M, N] ): Boolean =

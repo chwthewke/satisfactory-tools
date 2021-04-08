@@ -141,7 +141,7 @@ object RecipeMatrix {
 
     val activeRecipes: Vector[Recipe[Machine, Item]] =
       productionConfig.recipes
-        .flatMap( cn => model.recipes.find( _.className == cn ) )
+        .flatMap( cn => model.allRecipes.find( _.className == cn ) )
     val wantedItems: Vector[Item] =
       productionConfig.items
         .filter( _.amount != 0d )

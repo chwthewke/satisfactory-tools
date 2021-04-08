@@ -42,7 +42,7 @@ object PrintConfigStub extends Program[Unit] {
        |}
        |
        |recipes = [
-       |${recipeLines( model.recipes )}
+       |${recipeLines( model.allRecipes )}
        |]
        |""".stripMargin
 

@@ -149,7 +149,7 @@ object Explore extends IOApp {
       .intercalate( "\n" )
 
   def makeGraph( proto: ProtoModel ): ValidatedNel[String, Graph[Unit, RecipeGraph.N]] =
-    proto.toModel.map( m => RecipeGraph.of( m.recipes ).graph )
+    proto.toModel.map( m => RecipeGraph.of( m.allRecipes ).graph )
 
   def showModelWith[A: Show]( data: ProtoModel, f: Model => A ): String =
     data.toModel.fold(
@@ -202,7 +202,7 @@ object Explore extends IOApp {
     proto.toModel
       .fold(
         errs => ("Errors transforming graph:" :: errs).intercalate( "\n  " ),
-        _.recipes
+        _.allRecipes
           .flatMap( _.product.toList.toVector )
           .map( _.item )
           .distinct
@@ -237,7 +237,7 @@ object Explore extends IOApp {
     showModelWith(
       data,
       model => {
-        val recipeGraph = RecipeGraph.of( model.recipes )
+        val recipeGraph = RecipeGraph.of( model.allRecipes )
         val depths      = computeDepths( recipeGraph )
         val sortedNodes = recipeGraph.graph.nodes.toVector.sortBy( n => depths.getOrElse( n.value, Int.MaxValue ) )
         sortedNodes
