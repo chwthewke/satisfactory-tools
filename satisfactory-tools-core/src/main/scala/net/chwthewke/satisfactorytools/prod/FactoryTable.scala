@@ -30,7 +30,7 @@ object FactoryTable {
       " ",
       machineName,
       sep,
-      f"$amountPerUnit%3.3f / unit @ ${clockSpeed10 / 10}%3d.${clockSpeed10 % 10}%%",
+      f"$amountPerUnit%3.3f / unit @ ${clockSpeed10 / 10000}%3d.${clockSpeed10 % 10000}%04d %%",
       sep,
       f"$power%4.2f",
       f" MW"
