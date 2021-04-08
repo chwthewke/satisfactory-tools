@@ -33,7 +33,7 @@ object Explore extends IOApp {
     Blocker[IO]
       .use( blocker => ( loadData[ProtoModel]( blocker ), loadConfig( blocker ) ).tupled )
 //
-//      .map( _._1 )
+      .map( _._1 )
 //      .map( showItems )
 //      .map( showFuelValues )
 //      .map( splitItemClassNames )
@@ -44,7 +44,8 @@ object Explore extends IOApp {
 //      .map( showModelWith( _, _.show ) )
 //      .map( showItemSortedByDepths )
 //
-      .map( (showExtractedResources _).tupled )
+//      .map( (showExtractedResources _).tupled )
+      .map( showExtractedItems )
 //      .map( (showRecipeMatrix _).tupled )
       .flatMap( m => IO( println( m ) ) )
       .as( ExitCode.Success )
@@ -113,6 +114,14 @@ object Explore extends IOApp {
             .map { case ( p, x ) => f"${p.padTo( 24, ' ' )} $x%.3f" }
             .intercalate( "\n" )
         }
+    )
+
+  def showExtractedItems( data: ProtoModel ): String =
+    showModelWith(
+      data,
+      model =>
+        "Extracted items:\n" +
+          model.extractedItems.map( _.show ).intercalate( "\n" )
     )
 
   def splitItemClassNames( model: ProtoModel ): String = {
