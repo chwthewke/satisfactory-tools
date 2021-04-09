@@ -22,10 +22,10 @@ final case class FactoryBlock( block: Countable[Recipe[Machine, Item], Double] )
   val machine: Machine = block.item.producers.head
   val power: Double    = machineCount * machine.powerConsumption * math.pow( clockSpeedMillionth / 1e6d, 1.6d )
 
-  def simpleItemAmount( ci: Countable[Item, Double] ): Double = ci.simpleAmount * block.amount
+  def computeItemAmount( ci: Countable[Item, Double] ): Double = ci.amount * block.amount
 
   val firstItem: Countable[Item, Double] = block.item.productsPerMinute.head
-  val itemAmount: Double                 = simpleItemAmount( firstItem )
+  val itemAmount: Double                 = computeItemAmount( firstItem )
   val itemAmountPerUnit: Double          = itemAmount / machineCount
 
   def tableColumns: Vector[String] =
@@ -44,7 +44,7 @@ final case class FactoryBlock( block: Countable[Recipe[Machine, Item], Double] )
         direction: FactoryBlock.Direction,
         lineItem: Countable[Item, Double]
     ): SortedSet[( FactoryBlock.Direction, String, Double )] =
-      SortedSet( ( direction, block.item.displayName, simpleItemAmount( lineItem ) ) )
+      SortedSet( ( direction, block.item.displayName, computeItemAmount( lineItem ) ) )
 
     val ingredients =
       block.item.ingredientsPerMinute

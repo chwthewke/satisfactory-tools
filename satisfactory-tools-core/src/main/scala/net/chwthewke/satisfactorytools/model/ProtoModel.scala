@@ -28,8 +28,16 @@ final case class ProtoModel(
   def toModel: ValidatedNel[String, Model] = {
     val ( selfExtr, reg ) = recipes.partition( isSelfExtraction )
 
-    def validateItem( cn: ClassName ): ValidatedNel[String, Item] =
-      items.get( cn ).toValidNel( show"Unknown item class $cn" )
+    def validateItem( ccn: Countable[ClassName, Double] ): ValidatedNel[String, Countable[Item, Double]] =
+      items
+        .get( ccn.item )
+        .toValidNel( show"Unknown item class ${ccn.item}" )
+        .map( it => Countable( it, ccn.amount / it.form.simpleAmountFactor ) )
+
+    def validateRecipeItems[A]( recipe: Recipe[A, ClassName] ): ValidatedNel[String, Recipe[A, Item]] =
+      recipe
+        .traverseIngredientsAndProducts( validateItem )
+        .leftMap( errs => NonEmptyList.of( show"In ${recipe.displayName}\n  ${errs.intercalate( "\n  " )}" ) )
 
     val selfExtraction: ValidatedNel[String, Vector[Recipe[Machine, Item]]] =
       extractors.values
@@ -37,7 +45,7 @@ final case class ProtoModel(
           extractorRecipesFor( _, selfExtr.flatMap( recipe => items.get( recipe.product.head.item ) ) )
         )
         .toVector
-        .traverse( _.traverse( validateItem ) )
+        .traverse( validateRecipeItems )
 
     val extractedItems: Validated[NonEmptyList[String], Vector[Item]] =
       selfExtraction.map( _.map( _.product.head.item ).distinct )
@@ -58,7 +66,7 @@ final case class ProtoModel(
                         .orElse( manufacturers.get( cn ).map( Machine.manufacturer ) )
                         .toValidNel( show"Unknown machine class $cn" )
                   ),
-                recipe.traverse( validateItem )
+                validateRecipeItems( recipe )
               ).mapN(
                 ( ps, rec ) => rec.copy( producers = ps.toList )
               )
@@ -97,7 +105,7 @@ final case class ProtoModel(
       ClassName( show"${item.className}_${extractor.className}" ),
       show"Extract ${item.displayName} with ${extractor.displayName}",
       Nil,
-      NonEmptyList.of( Countable( item.className, extractor.itemsPerCycle ) ),
+      NonEmptyList.of( Countable( item.className, extractor.itemsPerCycle.toDouble ) ),
       extractor.cycleTime,
       Machine.extractor( extractor ) :: Nil
     )

@@ -2,14 +2,10 @@ package net.chwthewke.satisfactorytools
 package model
 
 import cats.Applicative
-import cats.Eval
-import cats.Foldable
 import cats.Show
-import cats.Traverse
 import cats.data.NonEmptyList
 import cats.syntax.apply._
 import cats.syntax.foldable._
-import cats.syntax.functor._
 import cats.syntax.option._
 import cats.syntax.show._
 import cats.syntax.traverse._
@@ -20,8 +16,8 @@ import scala.concurrent.duration._
 final case class Recipe[M, N](
     className: ClassName,
     displayName: String,
-    ingredients: List[Countable[N, Int]],
-    product: NonEmptyList[Countable[N, Int]],
+    ingredients: List[Countable[N, Double]],
+    product: NonEmptyList[Countable[N, Double]],
     duration: FiniteDuration,
     producers: List[M]
 ) {
@@ -31,32 +27,17 @@ final case class Recipe[M, N](
   def isExtraction( implicit ev: M =:= Machine ): Boolean =
     producers.forall( p => ev( p ).machineType == MachineType.Extractor )
 
-  private def perMinute( ct: Countable[N, Int] ): Countable[N, Double] =
-    Countable( ct.item, ct.amount.toDouble * 60000 / duration.toMillis )
+  private def perMinute( ct: Countable[N, Double] ): Countable[N, Double] =
+    Countable( ct.item, ct.amount * 60000 / duration.toMillis )
 
+  def traverseIngredientsAndProducts[F[_]: Applicative, P](
+      f: Countable[N, Double] => F[Countable[P, Double]]
+  ): F[Recipe[M, P]] =
+    ( ingredients.traverse( f ), product.traverse( f ) )
+      .mapN( ( ing, prd ) => copy[M, P]( ingredients = ing, product = prd ) )
 }
 
 object Recipe {
-
-  implicit def recipeTraverse[M]: Traverse[Recipe[M, *]] = new Traverse[Recipe[M, *]] {
-    private def itemList[A]( fa: Recipe[M, A] ): List[A] =
-      fa.ingredients.map( _.item ) ++ fa.product.toList.map( _.item )
-
-    override def traverse[G[_], A, B](
-        fa: Recipe[M, A]
-    )( f: A => G[B] )( implicit A: Applicative[G] ): G[Recipe[M, B]] =
-      (
-        fa.ingredients.traverse( i => f( i.item ).map( Countable( _, i.amount ) ) ),
-        fa.product.traverse( i => f( i.item ).map( Countable( _, i.amount ) ) )
-      ).mapN( ( in, out ) => Recipe( fa.className, fa.displayName, in, out, fa.duration, fa.producers ) )
-
-    override def foldLeft[A, B]( fa: Recipe[M, A], b: B )( f: ( B, A ) => B ): B =
-      Foldable[List].foldLeft( itemList( fa ), b )( f )
-
-    override def foldRight[A, B]( fa: Recipe[M, A], lb: Eval[B] )( f: ( A, Eval[B] ) => Eval[B] ): Eval[B] =
-      Foldable[List].foldRight( itemList( fa ), lb )( f )
-
-  }
 
   implicit val recipeDecoder: Decoder[Recipe[ClassName, ClassName]] = {
     import Parsers._
@@ -72,8 +53,8 @@ object Recipe {
       (
           cn: ClassName,
           dn: String,
-          in: List[Countable[ClassName, Int]],
-          out: NonEmptyList[Countable[ClassName, Int]],
+          in: List[Countable[ClassName, Double]],
+          out: NonEmptyList[Countable[ClassName, Double]],
           dur: FiniteDuration,
           mch: List[ClassName]
       ) => Recipe( cn, dn, in, out, dur, mch )

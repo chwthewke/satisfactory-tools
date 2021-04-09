@@ -6,6 +6,7 @@ import Atto._
 import cats.Eval
 import cats.Monoid
 import cats.Show
+import cats.data.NonEmptyList
 import cats.data.NonEmptyVector
 import cats.data.State
 import cats.data.StateT
@@ -19,6 +20,7 @@ import com.flowtick.graphs.Graph
 import com.flowtick.graphs.Node
 import com.flowtick.graphs.algorithm._
 import io.circe.Decoder
+import mouse.any._
 import mouse.option._
 import pureconfig.ConfigSource
 import pureconfig.module.catseffect.syntax._
@@ -41,11 +43,13 @@ object Explore extends IOApp {
 //      .map( showManufacturers )
 //      .map( showSortedRecipeNodes )
 //      .map( showRecipeIngredientsAndProducts )
+      .map( showModelWith( _, showRecipesWithFluidAmounts ) )
 //      .map( showModelWith( _, _.show ) )
 //      .map( showItemSortedByDepths )
 //
 //      .map( (showExtractedResources _).tupled )
-      .map( showExtractedItems )
+//      .map( showExtractedItems )
+//      .map( showSelfExtractionRecipes )
 //      .map( (showRecipeMatrix _).tupled )
       .flatMap( m => IO( println( m ) ) )
       .as( ExitCode.Success )
@@ -108,7 +112,7 @@ object Explore extends IOApp {
             .collect {
               case FactoryBlock( Countable( recipe, amount ) ) if recipe.isExtraction =>
                 val product = recipe.productsPerMinute.head
-                ( product.item.displayName, product.simpleAmount * amount )
+                ( product.item.displayName, product.amount * amount )
             }
             .sortBy { case ( p, x ) => ( -x, p ) }
             .map { case ( p, x ) => f"${p.padTo( 24, ' ' )} $x%.3f" }
@@ -123,6 +127,10 @@ object Explore extends IOApp {
         "Extracted items:\n" +
           model.extractedItems.map( _.show ).intercalate( "\n" )
     )
+
+  def showSelfExtractionRecipes( data: ProtoModel ): String =
+    "Self-extraction recipes:\n\n" +
+      data.recipes.filter( data.isSelfExtraction ).map( _.show ).intercalate( "\n\n" )
 
   def splitItemClassNames( model: ProtoModel ): String = {
     val parseClassName: Parser[String] = {
@@ -156,6 +164,21 @@ object Explore extends IOApp {
       )
       .map( _.show )
       .intercalate( "\n" )
+
+  def showRecipesWithFluidAmounts( model: Model ): String =
+    (model.manufacturingRecipes ++ model.extractionRecipes).foldMap { r =>
+      val fluidLines =
+        r.product
+          .tupleRight( ">" )
+          .concat( r.ingredients.tupleRight( "<" ) )
+          .filter( _._1.item.form |> Set( Form.Gas, Form.Liquid ) )
+          .map { case ( Countable( item, amount ), pfx ) => f"$pfx $amount%-6.1f ${item.displayName}" }
+
+      NonEmptyList.fromList( fluidLines ).map( lns => show"""${r.displayName}
+                                                            |  ${lns.intercalate( "\n  " )}
+                                                            |
+                                                            |""".stripMargin )
+    }.orEmpty
 
   def makeGraph( proto: ProtoModel ): ValidatedNel[String, Graph[Unit, RecipeGraph.N]] =
     proto.toModel.map( m => RecipeGraph.of( m.allRecipes ).graph )

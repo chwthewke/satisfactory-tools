@@ -59,7 +59,7 @@ final case class Factory( bill: Bill, blocks: Vector[FactoryBlock] ) {
       .collect {
         case FactoryBlock( Countable( recipe, amount ) ) if recipe.isExtraction =>
           val product = recipe.productsPerMinute.head
-          ( product.item.displayName, product.simpleAmount * amount )
+          ( product.item.displayName, product.amount * amount )
       }
       .sortBy { case ( p, x ) => ( -x, p ) }
       .map { case ( p, x ) => f"${p.padTo( 24, ' ' )} $x%.3f" }
@@ -85,7 +85,7 @@ final case class Factory( bill: Bill, blocks: Vector[FactoryBlock] ) {
         case billItem @ Countable( item, _ ) =>
           SortedMap(
             item -> SortedSet[( FactoryBlock.Direction, String, Double )](
-              ( FactoryBlock.Direction.In, "STORAGE", billItem.simpleAmount )
+              ( FactoryBlock.Direction.In, "STORAGE", billItem.amount )
             )
           )
       }
