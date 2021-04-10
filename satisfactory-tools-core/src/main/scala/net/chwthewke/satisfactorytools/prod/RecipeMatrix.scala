@@ -2,7 +2,6 @@ package net.chwthewke.satisfactorytools
 package prod
 
 import alleycats.std.iterable._
-import breeze.linalg.{Vector => _, _}
 import cats.Show
 import cats.data.NonEmptyVector
 import cats.syntax.either._
@@ -10,8 +9,8 @@ import cats.syntax.foldable._
 import cats.syntax.functor._
 import cats.syntax.show._
 import com.flowtick.graphs.algorithm._
-import java.util.logging.LogManager
 import mouse.boolean._
+import org.ojalgo.matrix.Primitive64Matrix
 
 import model.Countable
 import model.Item
@@ -21,7 +20,7 @@ import model.Recipe
 final case class RecipeMatrix(
     rowLabels: Vector[Item],
     columnLabels: Vector[Recipe[Machine, Item]],
-    matrix: DenseMatrix[Double]
+    matrix: Primitive64Matrix
 ) {
   val unreachableItems: Either[String, Unit] =
     NonEmptyVector
@@ -52,14 +51,15 @@ final case class RecipeMatrix(
           |${rowLabels.map( _.displayName ).intercalate( "\n" )}
           |""".stripMargin
 
-  val invertible: Either[String, Unit] =
-    (matrix.rows == matrix.cols)
+  val invertible: Either[String, Unit] = {
+    matrix.isSquare
       .either( nonUniquePlan, () )
-      .flatMap( _ => (math.abs( det( matrix ) ) > 1e-12).either( "Non-invertible matrix", () ) )
+      .flatMap( _ => (math.abs( matrix.getDeterminant.get ) > 1e-12).either( "Non-invertible matrix", () ) )
+  }
 
   def computeFactory( bill: Bill ): Either[String, Solution] = {
 
-    def mkGoal: Either[String, DenseVector[Double]] =
+    def mkGoal: Either[String, Vector[Double]] =
       bill.items
         .foldMapA {
           case Countable( item, amount ) =>
@@ -68,7 +68,7 @@ final case class RecipeMatrix(
               .either( item, Map( ix -> amount ) )
               .toValidatedNel
         }
-        .map( byIndex => DenseVector.tabulate( matrix.rows )( ix => byIndex.getOrElse( ix, 0d ) ) )
+        .map( byIndex => rowLabels.indices.map( ix => byIndex.getOrElse( ix, 0d ) ).toVector )
         .toEither
         .leftMap( items => show"Requested items cannot be produced: ${items.map( _.displayName ).intercalate( ", " )}" )
 
@@ -105,11 +105,14 @@ final case class RecipeMatrix(
     }
   }
 
-  def solve( v: DenseVector[Double] ): Either[String, Vector[Double]] =
+  def solve( v: Vector[Double] ): Either[String, Vector[Double]] = {
+    val rhs = Primitive64Matrix.FACTORY.columns( v.toArray )
+
     Either
-      .catchNonFatal( matrix \ v )
+      .catchNonFatal( matrix.solve( rhs ) )
       .leftMap( err => s"Solving for required items failed: ${err.getMessage}" )
-      .map( _.toScalaVector() )
+      .map( x => rowLabels.indices.map( i => x.get( i.toLong, 0 ).toDouble ).toVector )
+  }
 }
 
 object RecipeMatrix extends Solver {
@@ -122,12 +125,15 @@ object RecipeMatrix extends Solver {
   ): Either[String, Solution] =
     init( bill, recipes ).computeFactory( bill )
 
-  private def showMatrixRow( matrix: Matrix[Double], rowIx: Int ): String =
-    (0 until matrix.cols).map( colIx => f"${matrix( rowIx, colIx )}%.4f" ).to( Iterable ).intercalate( "," )
+  private def showMatrixRow( matrix: Primitive64Matrix, rowIx: Long ): String =
+    (0L until matrix.countColumns)
+      .map( colIx => f"${matrix.get( rowIx, colIx )}%.4f" )
+      .to( Iterable )
+      .intercalate( "," )
 
-  private def showMatrixRows( matrix: Matrix[Double], rowLabels: Vector[Item] ): String =
+  private def showMatrixRows( matrix: Primitive64Matrix, rowLabels: Vector[Item] ): String =
     rowLabels
-      .zip( 0 until matrix.rows )
+      .zip( 0L until matrix.countRows )
       .map {
         case ( lab, rowIx ) =>
           show"${lab.displayName}:${showMatrixRow( matrix, rowIx )}"
@@ -178,15 +184,13 @@ object RecipeMatrix extends Solver {
     val recipes = usedRecipes.sortBy( r => -recipeOrder.indexOf( r ) )
     val items   = producedItems.sortBy( i => -itemOrder.indexOf( i ) )
 
-    RecipeMatrix(
-      items,
-      recipes,
-      DenseMatrix.tabulate( items.size, recipes.size )(
-        ( i, j ) => recipes( j ).reducedItemsPerMinute.getOrElse( items( i ), 0d )
-      )
+    val matrix = Primitive64Matrix.FACTORY.columns(
+      recipes.map(
+        recipe => items.map( item => recipe.reducedItemsPerMinute.getOrElse( item, 0d ) ).toArray
+      ): _*
     )
+
+    RecipeMatrix( items, recipes, matrix )
   }
 
-  // Haxx disable logging from netlib
-  LogManager.getLogManager.reset()
 }

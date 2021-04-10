@@ -31,7 +31,7 @@ val `satisfactory-tools-core` = project
         enumeratumCirce ++
         asciiGraphs ++
         graphs ++
-        breeze ++
+        ojAlgo ++
         pureconfig
   )
   .settings( mainClass := Some( "net.chwthewke.satisfactory.BatchMain" ) )
@@ -45,7 +45,7 @@ val `satisfactory-production-calculator` = project
 
 val `satisfactory-tools-tests` = project
   .settings( compilerPlugins )
-  .settings( libraryDependencies ++= (scalatest ++ scalacheck).map( _ % "test" ) )
+  .settings( libraryDependencies ++= breeze ++ (scalatest ++ scalacheck).map( _ % "test" ) )
   .settings(
     initialCommands := Seq(
       "import cats._",

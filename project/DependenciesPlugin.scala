@@ -72,6 +72,8 @@ object DependenciesPlugin extends AutoPlugin {
         "com.github.fommil.netlib" % "core"          % "1.1.2"
       )
 
+    val ojAlgo: Deps = Seq( "org.ojalgo" % "ojalgo" % "48.4.1" )
+
     val enumeratum: Deps =
       Seq( "com.beachape" %% "enumeratum" % "1.6.1", "com.beachape" %% "enumeratum-cats" % "1.6.1" )
     val enumeratumCirce: Deps = Seq( "com.beachape" %% "enumeratum-circe" % "1.6.1" )
@@ -157,6 +159,7 @@ object DependenciesPlugin extends AutoPlugin {
       algebird ++
       breeze ++
       breezeDependencyOverrides ++
+      ojAlgo ++
       shapeless ++
       java8compat ++
       jawnParser ++

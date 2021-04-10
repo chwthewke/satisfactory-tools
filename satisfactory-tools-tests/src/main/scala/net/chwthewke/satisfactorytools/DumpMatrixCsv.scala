@@ -17,8 +17,8 @@ object DumpMatrixCsv extends Program[ProductionConfig] {
         matrix.rowLabels.zipWithIndex.map {
           case ( it, ix ) =>
             (
-              it.displayName +: (0 until matrix.matrix.cols)
-                .map( matrix.matrix( ix, _ ) )
+              it.displayName +: (0L until matrix.matrix.countColumns)
+                .map( matrix.matrix.get( ix.toLong, _ ) )
                 .map( v => f"$v%4.3f" )
                 .toVector
             ).intercalate( "," )
