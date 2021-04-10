@@ -7,24 +7,43 @@ import cats.syntax.foldable._
 import cats.syntax.show._
 
 case class Model(
-    extractionRecipes: Vector[Recipe[Machine, Item]],
     manufacturingRecipes: Vector[Recipe[Machine, Item]],
     items: Map[ClassName, Item],
-    extractedItems: Vector[Item]
-) {
-  def allRecipes: Vector[Recipe[Machine, Item]] = extractionRecipes ++ manufacturingRecipes
-}
+    extractedItems: Vector[Item],
+    extractionRecipes: Vector[( Item, Recipe[Machine, Item] )], // TODO can we make these Recipe[Extractor, Item]? useful?
+    resourceNodes: Map[Extractor, Map[Item, ResourceDistrib]]
+)
 
 object Model {
+  private def showResourceNodesFor( extractor: Extractor, nodes: Map[Item, ResourceDistrib] ) =
+    show"""  ${extractor.displayName}
+          |    ${nodes
+            .map { case ( it, dist ) => show"${it.displayName} $dist" }
+            .to( Iterable )
+            .intercalate( "\n    " )}
+          |
+          |""".stripMargin
+
   implicit val modelShow: Show[Model] = Show.show { model =>
     implicit val showItem: Show[Item]       = Show.show( _.displayName )
     implicit val showMachine: Show[Machine] = Show.show( _.displayName )
 
-    show"""Recipes
-          |${model.allRecipes.map( _.show ).intercalate( "\n" )}
+    show"""Manufacturing Recipes
+          |${model.manufacturingRecipes.map( _.show ).intercalate( "\n" )}
           |
           |Items
           |${model.items.values.map( _.show ).intercalate( "\n" )}
+          |
+          |Extracted Items ${model.extractedItems.map( _.displayName ).intercalate( ", " )}
+          |
+          |Extraction Recipes
+          |${model.extractionRecipes.map( _._2 ).map( _.show ).intercalate( "\n" )}
+          |
+          |Resource nodes
+          |${model.resourceNodes
+            .map { case ( ex, byItem ) => showResourceNodesFor( ex, byItem ) }
+            .to( Iterable )
+            .intercalate( "\n" )}
           |""".stripMargin
   }
 

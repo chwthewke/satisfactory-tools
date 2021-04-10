@@ -14,8 +14,8 @@ import io.circe.JsonObject
 import io.circe.fs2.byteArrayParser
 import scala.collection.immutable.SortedMap
 import scala.collection.immutable.SortedSet
-//
-import load.Loader
+
+import data.Loader
 import model.NativeClass
 
 object ExploreJson extends IOApp {

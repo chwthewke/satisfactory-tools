@@ -19,7 +19,18 @@ final case class Extractor(
     powerConsumption: Double,
     cycleTime: FiniteDuration,
     itemsPerCycle: Int
-)
+) {
+  def extractionRecipe( item: Item ): Recipe[Machine, Item] =
+    Recipe(
+      ClassName( show"${item.className}_${className}" ),
+      show"Extract ${item.displayName} with ${displayName}",
+      Nil,
+      NonEmptyList.of( Countable( item, itemsPerCycle.toDouble ) ),
+      cycleTime,
+      Machine.extractor( this ) :: Nil
+    )
+}
+
 object Extractor {
 
   implicit val extractorDecoder: Decoder[Extractor] = {
@@ -58,7 +69,8 @@ object Extractor {
     )
   }
 
-  val extractorClass: ClassName = ClassName( "Build_Converter_C" )
+  val converterClass: ClassName         = ClassName( "Build_Converter_C" )
+  val frackingExtractorClass: ClassName = ClassName( "Build_FrackingExtractor_C" )
 
   implicit val extractorShow: Show[Extractor] = Show { extractor =>
     show"""${extractor.displayName} # ${extractor.className}

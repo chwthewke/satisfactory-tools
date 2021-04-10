@@ -13,25 +13,28 @@ import org.scalameta.ascii.graph.Graph
 import org.scalameta.ascii.layout._
 import pureconfig.ConfigSource
 import pureconfig.module.catseffect.syntax._
-//
-import load.Loader
+
+import data.GameData
+import data.Loader
+import data.ProductionConfig
 import model.Model
-import model.ProtoModel
-import prod.ProductionConfig
-import prod.RecipeMatrix
+import net.chwthewke.satisfactorytools.data.MapConfig
 
 object ExploreRecipeGraph extends IOApp {
 
   override def run( args: List[String] ): IO[ExitCode] =
     for {
-      ( data, config ) <- Blocker[IO]
-                           .use( blocker => ( loadData[ProtoModel]( blocker ), loadConfig( blocker ) ).tupled )
-      model <- data.toModel.toEither.leftMap( m => new RuntimeException( m.intercalate( ", " ) ) ).liftTo[IO]
+      ( data, config, map ) <- Blocker[IO]
+                                .use(
+                                  blocker =>
+                                    ( loadData[GameData]( blocker ), loadConfig( blocker ), loadMapConfig( blocker ) ).tupled
+                                )
+      model <- data.toModel( map ).toEither.leftMap( m => new RuntimeException( m.intercalate( ", " ) ) ).liftTo[IO]
       _     <- IO.delay( println( asciiGraph( config, model ) ) )
     } yield ExitCode.Success
 
   def asciiGraph( config: ProductionConfig, model: Model ): String = {
-    val mat = RecipeMatrix.init( config, model )
+    val mat = MkRecipeMatrix( config, model )
 
     val activeRecipes = mat.columnLabels
 
@@ -56,5 +59,8 @@ object ExploreRecipeGraph extends IOApp {
 
   def loadConfig( blocker: Blocker ): IO[ProductionConfig] =
     ConfigSource.default.loadF[IO, ProductionConfig]( blocker )
+
+  def loadMapConfig( blocker: Blocker ): IO[MapConfig] =
+    ConfigSource.resources( "map.conf" ).loadF[IO, MapConfig]( blocker )
 
 }

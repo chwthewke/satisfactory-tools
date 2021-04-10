@@ -17,17 +17,23 @@ import cats.syntax.semigroup._
 import cats.syntax.show._
 import cats.syntax.traverse._
 import mouse.option._
-//
+
+import data.ProductionConfig
 import model.ClassName
 import model.Countable
 import model.Item
 import model.Machine
 import model.Model
+import model.Options
 import model.Recipe
+import net.chwthewke.satisfactorytools.prod.RecipeSelection
+import net.chwthewke.satisfactorytools.prod.ResourceCaps
+import net.chwthewke.satisfactorytools.prod.ResourceWeights
 import prod.Bill
-import prod.ProductionConfig
 
 object ExploreLinProg extends Program[ProductionConfig] {
+
+  val options = Options.full
 
   class LPS( val lp: LinearProgram ) {
 
@@ -209,7 +215,7 @@ object ExploreLinProg extends Program[ProductionConfig] {
       blocks: Vector[Countable[Recipe[Machine, Item], Double]],
       extr: Vector[Countable[Item, Double]],
       cost: Double
-  ) =
+  ): String =
     show"""Blocks:
           |${blocks
             .map( b => f"${b.amount}%4.4f ${b.item.displayName}" )
@@ -225,15 +231,13 @@ object ExploreLinProg extends Program[ProductionConfig] {
     val configWithTestBill = config.copy( items = Vector( Countable( ClassName( "Desc_IronPlate_C" ), 60.0 ) ) )
 
     val bill = Bill
-      .init( configWithTestBill, model )
+      .init( model, configWithTestBill )
       .leftMap( e => new IllegalArgumentException( e ) )
       .liftTo[IO]
 
-    val resourceWeights = config.resourceWeights.toVector
-      .traverse { case ( cn, w ) => model.items.get( cn ).toValidNel( show"Unknown item class $cn" ).tupleRight( w ) }
-      .toEither
-      .leftMap( e => new IllegalArgumentException( e.mkString_( ", " ) ) )
-      .liftTo[IO]
+    val recipeSelection = RecipeSelection.init( model, config, options )
+    val resourceWeights =
+      recipeSelection.map( sel => ResourceWeights.init( ResourceCaps.init( model, options, sel.extractionRecipes ) ) )
 
     val lps = new LPS( new LinearProgram )
 
@@ -252,9 +256,9 @@ object ExploreLinProg extends Program[ProductionConfig] {
       )
 
     for {
-      rw                     <- resourceWeights
       b                      <- bill
-      ( v, p )               <- IO.delay( lps.toLinearProblem( b, rw.toMap, model ).run( lps.VarDict.empty ).value )
+      w                      <- resourceWeights.leftMap( new IllegalArgumentException( _ ) ).liftTo[IO]
+      ( v, p )               <- IO.delay( lps.toLinearProblem( b, w.weights, model ).run( lps.VarDict.empty ).value )
       _                      <- IO.delay( println( p ) )
       ( blocks, extr, cost ) <- lps.solveLinearProblem( p, model ).runA( v ).value.liftTo[IO]
       _                      <- IO( println( showResult( blocks, extr, cost ) ) )

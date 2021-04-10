@@ -15,7 +15,7 @@ import scala.collection.immutable.SortedSet
 import model.Countable
 import model.Item
 
-final case class Factory( bill: Bill, blocks: Vector[FactoryBlock] ) {
+final case class Factory( bill: Bill, blocks: Vector[FactoryBlock], extraInputs: Vector[Countable[Item, Double]] ) {
 
   import FactoryTable.alignment
   import FactoryTable.headers

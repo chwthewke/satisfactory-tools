@@ -3,9 +3,8 @@ package prod
 
 import alleycats.std.iterable._
 import breeze.linalg.{Vector => _, _}
-import cats.data.NonEmptyVector
 import cats.Show
-import cats.syntax.applicativeError._
+import cats.data.NonEmptyVector
 import cats.syntax.either._
 import cats.syntax.foldable._
 import cats.syntax.functor._
@@ -13,18 +12,16 @@ import cats.syntax.show._
 import com.flowtick.graphs.algorithm._
 import java.util.logging.LogManager
 import mouse.boolean._
-import mouse.option._
-//
+
 import model.Countable
 import model.Item
 import model.Machine
-import model.Model
 import model.Recipe
 
 final case class RecipeMatrix(
     rowLabels: Vector[Item],
     columnLabels: Vector[Recipe[Machine, Item]],
-    matrix: DenseMatrix[Double] // TODO rational?
+    matrix: DenseMatrix[Double]
 ) {
   val unreachableItems: Either[String, Unit] =
     NonEmptyVector
@@ -60,7 +57,7 @@ final case class RecipeMatrix(
       .either( nonUniquePlan, () )
       .flatMap( _ => (math.abs( det( matrix ) ) > 1e-12).either( "Non-invertible matrix", () ) )
 
-  def computeFactory( bill: Bill ): Either[String, Factory] = {
+  def computeFactory( bill: Bill ): Either[String, Solution] = {
 
     def mkGoal: Either[String, DenseVector[Double]] =
       bill.items
@@ -75,7 +72,7 @@ final case class RecipeMatrix(
         .toEither
         .leftMap( items => show"Requested items cannot be produced: ${items.map( _.displayName ).intercalate( ", " )}" )
 
-    def checkSolution( counts: Vector[Double] ): Either[String, Unit] = {
+    def checkSolution( counts: Vector[Double] ): Either[String, Unit] =
       counts.zipWithIndex
         .traverse_(
           ci =>
@@ -88,8 +85,6 @@ final case class RecipeMatrix(
         )
         .leftMap( inv => s"Error: recipes had negative counts: ${inv.intercalate( ", " )}" )
         .toEither
-        .handleError( println )
-    }
 
     for {
       // TODO move health checks into construction?
@@ -103,10 +98,10 @@ final case class RecipeMatrix(
 
       val factoryBlocks =
         columnLabels.zip( solution ).map {
-          case ( recipe, count ) => FactoryBlock( Countable( recipe, count ) )
+          case ( recipe, count ) => Countable( recipe, count )
         }
 
-      Factory( bill, factoryBlocks )
+      Solution( factoryBlocks, Vector.empty )
     }
   }
 
@@ -117,7 +112,15 @@ final case class RecipeMatrix(
       .map( _.toScalaVector() )
 }
 
-object RecipeMatrix {
+object RecipeMatrix extends Solver {
+
+  override def solve(
+      bill: Bill,
+      recipes: RecipeSelection,
+      resourceWeights: ResourceWeights,
+      resourceCaps: ResourceCaps
+  ): Either[String, Solution] =
+    init( bill, recipes ).computeFactory( bill )
 
   private def showMatrixRow( matrix: Matrix[Double], rowIx: Int ): String =
     (0 until matrix.cols).map( colIx => f"${matrix( rowIx, colIx )}%.4f" ).to( Iterable ).intercalate( "," )
@@ -137,16 +140,13 @@ object RecipeMatrix {
                             |${showMatrixRows( mat.matrix, mat.rowLabels )}
                             |""".stripMargin )
 
-  def init( productionConfig: ProductionConfig, model: Model ): RecipeMatrix = {
+  def init( bill: Bill, recipeSelection: RecipeSelection ): RecipeMatrix =
+    init(
+      recipeSelection.allowedRecipes ++ recipeSelection.extractionRecipes.values.toVector,
+      bill.items.map( _.item )
+    )
 
-    val activeRecipes: Vector[Recipe[Machine, Item]] =
-      productionConfig.recipes
-        .flatMap( cn => model.allRecipes.find( _.className == cn ) )
-    val wantedItems: Vector[Item] =
-      productionConfig.items
-        .filter( _.amount != 0d )
-        .flatMap( ci => model.items.get( ci.item ) )
-
+  def init( activeRecipes: Vector[Recipe[Machine, Item]], wantedItems: Vector[Item] ): RecipeMatrix = {
     val recipeGraph: RecipeGraph = RecipeGraph.of( activeRecipes )
 
     val orderedNodes = recipeGraph.graph.topologicalSort
@@ -182,13 +182,7 @@ object RecipeMatrix {
       items,
       recipes,
       DenseMatrix.tabulate( items.size, recipes.size )(
-        ( i, j ) =>
-          recipes( j ).ingredientsPerMinute
-            .find( _.item == items( i ) )
-            .cata( -_.amount, 0d ) +
-            recipes( j ).productsPerMinute
-              .find( _.item == items( i ) )
-              .cata( _.amount, 0d )
+        ( i, j ) => recipes( j ).reducedItemsPerMinute.getOrElse( items( i ), 0d )
       )
     )
   }

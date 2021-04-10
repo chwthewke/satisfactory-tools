@@ -2,16 +2,15 @@ package net.chwthewke.satisfactorytools
 
 import cats.effect.IO
 import cats.syntax.foldable._
-//
+
+import data.ProductionConfig
 import model.Model
-import prod.ProductionConfig
-import prod.RecipeMatrix
 
 object DumpMatrixCsv extends Program[ProductionConfig] {
 
   override def runProgram( model: Model, config: ProductionConfig ): IO[Unit] = {
 
-    val matrix = RecipeMatrix.init( config, model )
+    val matrix = MkRecipeMatrix( config, model )
 
     val output = (
       ("" +: matrix.columnLabels.map( _.displayName )).intercalate( "," ) +:

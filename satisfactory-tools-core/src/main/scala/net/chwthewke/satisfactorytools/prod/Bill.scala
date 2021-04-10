@@ -2,22 +2,26 @@ package net.chwthewke.satisfactorytools
 package prod
 
 import cats.syntax.either._
+import cats.syntax.foldable._
 import cats.syntax.option._
 import cats.syntax.show._
-import cats.syntax.foldable._
 import cats.syntax.traverse._
 import cats.syntax.traverseFilter._
 import mouse.boolean._
-//
-import net.chwthewke.satisfactorytools.model.Countable
-import net.chwthewke.satisfactorytools.model.Item
-import net.chwthewke.satisfactorytools.model.Model
 
-final case class Bill( items: Vector[Countable[Item, Double]] )
+import data.ProductionConfig
+import model.Countable
+import model.Item
+import model.Model
+
+final case class Bill( items: Vector[Countable[Item, Double]] ) {
+  def amountOf( item: Item ): Double =
+    items.find( _.item == item ).map( _.amount ).orEmpty
+}
 
 object Bill {
 
-  def init( config: ProductionConfig, model: Model ): Either[String, Bill] =
+  def init( model: Model, config: ProductionConfig ): Either[String, Bill] =
     config.items
       .traverseFilter {
         case Countable( itemClass, amount ) =>

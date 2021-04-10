@@ -7,6 +7,7 @@ import cats.data.NonEmptyList
 import cats.syntax.apply._
 import cats.syntax.foldable._
 import cats.syntax.option._
+import cats.syntax.semigroup._
 import cats.syntax.show._
 import cats.syntax.traverse._
 import io.circe.Decoder
@@ -23,6 +24,10 @@ final case class Recipe[M, N](
 ) {
   def ingredientsPerMinute: List[Countable[N, Double]]      = ingredients.map( perMinute )
   def productsPerMinute: NonEmptyList[Countable[N, Double]] = product.map( perMinute )
+
+  def reducedItemsPerMinute: Map[N, Double] =
+    productsPerMinute.foldMap { case Countable( it, am )      => Map( it -> am ) } |+|
+      ingredientsPerMinute.foldMap { case Countable( it, am ) => Map( it -> -am ) }
 
   def isExtraction( implicit ev: M =:= Machine ): Boolean =
     producers.forall( p => ev( p ).machineType == MachineType.Extractor )

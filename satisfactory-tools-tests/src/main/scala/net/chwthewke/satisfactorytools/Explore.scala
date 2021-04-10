@@ -1,8 +1,8 @@
 package net.chwthewke.satisfactorytools
 
 import alleycats.std.iterable._
+import atto.Atto._
 import atto._
-import Atto._
 import cats.Eval
 import cats.Monoid
 import cats.Show
@@ -24,8 +24,11 @@ import mouse.any._
 import mouse.option._
 import pureconfig.ConfigSource
 import pureconfig.module.catseffect.syntax._
-//
-import load.Loader
+
+import data.GameData
+import data.Loader
+import data.MapConfig
+import data.ProductionConfig
 import model._
 import prod._
 
@@ -33,9 +36,9 @@ object Explore extends IOApp {
 
   override def run( args: List[String] ): IO[ExitCode] =
     Blocker[IO]
-      .use( blocker => ( loadData[ProtoModel]( blocker ), loadConfig( blocker ) ).tupled )
+      .use( blocker => ( loadData[GameData]( blocker ), loadMapConfig( blocker ), loadConfig( blocker ) ).tupled )
 //
-      .map( _._1 )
+//      .map( _._1 )
 //      .map( showItems )
 //      .map( showFuelValues )
 //      .map( splitItemClassNames )
@@ -43,8 +46,8 @@ object Explore extends IOApp {
 //      .map( showManufacturers )
 //      .map( showSortedRecipeNodes )
 //      .map( showRecipeIngredientsAndProducts )
-      .map( showModelWith( _, showRecipesWithFluidAmounts ) )
-//      .map( showModelWith( _, _.show ) )
+//      .map( showModelWith( _, showRecipesWithFluidAmounts ) )
+      .map( m => showModelWith( m._1, m._2, _.show ) )
 //      .map( showItemSortedByDepths )
 //
 //      .map( (showExtractedResources _).tupled )
@@ -60,19 +63,22 @@ object Explore extends IOApp {
   def loadConfig( blocker: Blocker ): IO[ProductionConfig] =
     ConfigSource.default.loadF[IO, ProductionConfig]( blocker )
 
-  def filterRecipes( model: ProtoModel ): Vector[Recipe[ClassName, ClassName]] =
+  def loadMapConfig( blocker: Blocker ): IO[MapConfig] =
+    ConfigSource.resources( "map.conf" ).loadF[IO, MapConfig]( blocker )
+
+  def filterRecipes( model: GameData ): Vector[Recipe[ClassName, ClassName]] =
     model.recipes.mapFilter(
       recipe =>
         if (recipe.producers.exists( Manufacturer.builders ) && !recipe.displayName.toLowerCase
               .startsWith( "alternate" ))
           Some( recipe )
-        else if (recipe.producers.contains( Extractor.extractorClass ))
+        else if (recipe.producers.contains( Extractor.converterClass ))
           Some( recipe.copy( ingredients = Nil ) )
         else
           None
     )
 
-  def showManufacturers( model: ProtoModel ): String =
+  def showManufacturers( model: GameData ): String =
     model.manufacturers.values
       .map {
         case Manufacturer( className, displayName, powerConsumption ) =>
@@ -82,8 +88,9 @@ object Explore extends IOApp {
       }
       .intercalate( "\n" )
 
-  def showExtractors( model: ProtoModel ): String =
+  def showExtractors( model: GameData ): String =
     model.extractors.values
+      .map( _._2 )
       .map {
         case Extractor(
             className,
@@ -103,11 +110,12 @@ object Explore extends IOApp {
       }
       .intercalate( "\n" )
 
-  def showExtractedResources( data: ProtoModel, config: ProductionConfig ): String =
+  def showExtractedResources( data: GameData, mapConfig: MapConfig, config: ProductionConfig ): String =
     showModelWith(
       data,
+      mapConfig,
       model =>
-        Calculator.computeFactory( model, config ).map { factory =>
+        Calculator.computeFactory( model, config, Options.default, RecipeMatrix ).map { factory =>
           factory.blocks
             .collect {
               case FactoryBlock( Countable( recipe, amount ) ) if recipe.isExtraction =>
@@ -120,19 +128,20 @@ object Explore extends IOApp {
         }
     )
 
-  def showExtractedItems( data: ProtoModel ): String =
+  def showExtractedItems( data: GameData, mapConfig: MapConfig ): String =
     showModelWith(
       data,
+      mapConfig,
       model =>
         "Extracted items:\n" +
           model.extractedItems.map( _.show ).intercalate( "\n" )
     )
 
-  def showSelfExtractionRecipes( data: ProtoModel ): String =
+  def showSelfExtractionRecipes( data: GameData ): String =
     "Self-extraction recipes:\n\n" +
       data.recipes.filter( data.isSelfExtraction ).map( _.show ).intercalate( "\n\n" )
 
-  def splitItemClassNames( model: ProtoModel ): String = {
+  def splitItemClassNames( model: GameData ): String = {
     val parseClassName: Parser[String] = {
 
       string( "Desc_" ) ~> satisfy( _ != '_' ).many1.map( _.mkString_( "" ) ) <~ string( "_C" )
@@ -151,13 +160,13 @@ object Explore extends IOApp {
 
   }
 
-  def showFuelValues( model: ProtoModel ): String =
+  def showFuelValues( model: GameData ): String =
     model.items.values
       .filter( _.fuelValue > 0d )
       .map( it => show"${it.displayName} ${it.fuelValue} MJ" )
       .intercalate( "\n" )
 
-  def showResourceRecipes( model: ProtoModel ): String =
+  def showResourceRecipes( model: GameData ): String =
     model.recipes
       .filter(
         _.product.toList.flatMap( p => model.items.get( p.item ) ).forall( _.itemType == ItemType.Resource )
@@ -166,7 +175,7 @@ object Explore extends IOApp {
       .intercalate( "\n" )
 
   def showRecipesWithFluidAmounts( model: Model ): String =
-    (model.manufacturingRecipes ++ model.extractionRecipes).foldMap { r =>
+    (model.manufacturingRecipes ++ model.extractionRecipes.map( _._2 )).foldMap { r =>
       val fluidLines =
         r.product
           .tupleRight( ">" )
@@ -180,31 +189,37 @@ object Explore extends IOApp {
                                                             |""".stripMargin )
     }.orEmpty
 
-  def makeGraph( proto: ProtoModel ): ValidatedNel[String, Graph[Unit, RecipeGraph.N]] =
-    proto.toModel.map( m => RecipeGraph.of( m.allRecipes ).graph )
+  def allRecipes( model: Model ): Vector[Recipe[Machine, Item]] =
+    model.extractionRecipes.map( _._2 ) ++ model.manufacturingRecipes
 
-  def showModelWith[A: Show]( data: ProtoModel, f: Model => A ): String =
-    data.toModel.fold(
-      errs => ("Errors transforming graph:" :: errs).intercalate( "\n  " ),
-      f andThen (_.show)
-    )
+  def makeGraph( proto: GameData, mapConfig: MapConfig ): ValidatedNel[String, Graph[Unit, RecipeGraph.N]] =
+    proto.toModel( mapConfig ).map( m => RecipeGraph.of( allRecipes( m ) ).graph )
 
-  def showGraphWith[A: Show]( proto: ProtoModel, f: Graph[Unit, RecipeGraph.N] => A ): String =
-    makeGraph( proto ).fold(
+  def showModelWith[A: Show]( data: GameData, mapConfig: MapConfig, f: Model => A ): String =
+    data
+      .toModel( mapConfig )
+      .fold(
+        errs => ("Errors transforming graph:" :: errs).intercalate( "\n  " ),
+        f andThen (_.show)
+      )
+
+  def showGraphWith[A: Show]( proto: GameData, mapConfig: MapConfig, f: Graph[Unit, RecipeGraph.N] => A ): String =
+    makeGraph( proto, mapConfig ).fold(
       errs => ("Errors transforming graph:" :: errs).intercalate( "\n  " ),
       graph => f( graph ).show
     )
 
-  def showGraph( proto: ProtoModel ): String =
-    showGraphWith( proto, graph => showNodes( graph, graph.nodes ) )
+  def showGraph( proto: GameData, mapConfig: MapConfig ): String =
+    showGraphWith( proto, mapConfig, graph => showNodes( graph, graph.nodes ) )
 
-  def showSortedGraph( proto: ProtoModel ): String =
-    showGraphWith( proto, graph => showNodes( graph, new TopologicalSort( graph ).sort ) )
+  def showSortedGraph( proto: GameData, mapConfig: MapConfig ): String =
+    showGraphWith( proto, mapConfig, graph => showNodes( graph, new TopologicalSort( graph ).sort ) )
 
-  def showSortedRecipeNodes( proto: ProtoModel ): String = {
+  def showSortedRecipeNodes( proto: GameData, mapConfig: MapConfig ): String = {
     def cn( className: ClassName ): String = ("\"" + className.show + "\"").padTo( 64, ' ' )
     showGraphWith(
       proto,
+      mapConfig,
       graph =>
         graph.topologicalSort
           .map( _.value )
@@ -214,7 +229,7 @@ object Explore extends IOApp {
     )
   }
 
-  def showRecipeIngredientsAndProducts( proto: ProtoModel ): String = {
+  def showRecipeIngredientsAndProducts( proto: GameData ): String = {
 
     show"""Recipes:
           |${proto.recipes.map( _.show ).intercalate( "\n" )}
@@ -229,18 +244,20 @@ object Explore extends IOApp {
       )
       .intercalate( "\n" )
 
-  def showItems( proto: ProtoModel ): String = {
+  def showItems( proto: GameData, mapConfig: MapConfig ): String = {
     def cn( className: ClassName ): String = ("\"" + className.show + "\":").padTo( 43, ' ' ) + "0.0                  "
-    proto.toModel
+    proto
+      .toModel( mapConfig )
       .fold(
         errs => ("Errors transforming graph:" :: errs).intercalate( "\n  " ),
-        _.allRecipes
-          .flatMap( _.product.toList.toVector )
-          .map( _.item )
-          .distinct
-          .map( item => show"${cn( item.className )} # ${item.displayName}" )
-          .sorted
-          .intercalate( "\n" )
+        m =>
+          allRecipes( m )
+            .flatMap( _.product.toList.toVector )
+            .map( _.item )
+            .distinct
+            .map( item => show"${cn( item.className )} # ${item.displayName}" )
+            .sorted
+            .intercalate( "\n" )
       )
   }
 
@@ -253,11 +270,12 @@ object Explore extends IOApp {
           |""".stripMargin
   }
 
-  def showRecipeMatrix( data: ProtoModel, config: ProductionConfig ): String =
+  def showRecipeMatrix( data: GameData, mapConfig: MapConfig, config: ProductionConfig ): String =
     showModelWith(
       data,
+      mapConfig,
       model => {
-        val recipeMatrix = RecipeMatrix.init( config, model )
+        val recipeMatrix = MkRecipeMatrix( config, model )
         show"""$recipeMatrix
               |
               |${report( recipeMatrix )}
@@ -265,11 +283,12 @@ object Explore extends IOApp {
       }
     )
 
-  def showItemSortedByDepths( data: ProtoModel ): String =
+  def showItemSortedByDepths( data: GameData, mapConfig: MapConfig ): String =
     showModelWith(
       data,
+      mapConfig,
       model => {
-        val recipeGraph = RecipeGraph.of( model.allRecipes )
+        val recipeGraph = RecipeGraph.of( allRecipes( model ) )
         val depths      = computeDepths( recipeGraph )
         val sortedNodes = recipeGraph.graph.nodes.toVector.sortBy( n => depths.getOrElse( n.value, Int.MaxValue ) )
         sortedNodes
@@ -282,14 +301,14 @@ object Explore extends IOApp {
       }
     )
 
-  def index( model: ProtoModel, recipes: Vector[Recipe[ClassName, ClassName]] ): Vector[ClassName] =
+  def index( model: GameData, recipes: Vector[Recipe[ClassName, ClassName]] ): Vector[ClassName] =
     recipes.flatMap( r => r.ingredients ++ r.product.toList ).map( _.item ).filter( model.items.keySet )
 
   def computeDepths( recipeGraph: RecipeGraph ): Map[RecipeGraph.N, Int] = {
     import recipeGraph.graph
 
-    import prod.RecipeGraph.N
     import prod.RecipeGraph.ItemNode
+    import prod.RecipeGraph.N
     import prod.RecipeGraph.RecipeNode
 
     implicit def show[A: Show]: Show[Node[A]] = Show.show( node => node.value.show )
