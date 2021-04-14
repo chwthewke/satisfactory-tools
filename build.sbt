@@ -22,11 +22,8 @@ val `satisfactory-tools-core` = project
         alleycatsCore ++
         mouse ++
         kittens ++
-        catsEffect ++
         atto ++
-        fs2 ++
         circe ++
-        circeFs2 ++
         enumeratum ++
         enumeratumCirce ++
         asciiGraphs ++
@@ -34,13 +31,30 @@ val `satisfactory-tools-core` = project
         ojAlgo ++
         pureconfig
   )
-  .settings( mainClass := Some( "net.chwthewke.satisfactory.BatchMain" ) )
   .enablePlugins( SbtBuildInfo, ScalacPlugin )
+
+val `satisfactory-tools-app` = project
+  .settings( compilerPlugins )
+  .settings(
+    libraryDependencies ++=
+      catsEffect ++
+        pureconfigCatsEffect ++
+        fs2 ++
+        circeFs2 ++
+        decline
+  )
+  .dependsOn( `satisfactory-tools-core` )
+  .enablePlugins( ScalacPlugin )
+
+val `satisfactory-tools-dev` = project
+  .settings( compilerPlugins )
+  .dependsOn( `satisfactory-tools-app` )
+  .enablePlugins( ScalacPlugin )
 
 val `satisfactory-production-calculator` = project
   .settings( compilerPlugins )
   .settings( mainClass := Some( "net.chwthewke.satisfactory.ProdCalculator" ) )
-  .dependsOn( `satisfactory-tools-core` )
+  .dependsOn( `satisfactory-tools-app` )
   .enablePlugins( ScalacPlugin )
 
 val `satisfactory-tools-tests` = project
@@ -56,7 +70,7 @@ val `satisfactory-tools-tests` = project
       "import net.chwthewke.satisfactorytools._"
     ).mkString( "\n" )
   )
-  .dependsOn( `satisfactory-tools-core` )
+  .dependsOn( `satisfactory-tools-app` )
   .enablePlugins( ScalacPlugin )
 
 val `satisfactory-tools-all` = project

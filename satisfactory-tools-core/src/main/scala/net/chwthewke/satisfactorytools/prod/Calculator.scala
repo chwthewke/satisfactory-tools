@@ -1,7 +1,6 @@
 package net.chwthewke.satisfactorytools
 package prod
 
-import cats.effect.Sync
 import cats.syntax.foldable._
 import cats.syntax.show._
 import mouse.option._
@@ -15,10 +14,8 @@ import model.Options
 import model.Recipe
 
 object Calculator {
-  def apply[F[_]]( model: Model, config: ProductionConfig, options: Options, solver: Solver )(
-      implicit F: Sync[F]
-  ): F[Unit] =
-    F.delay( println( computeFactory( model, config, options, solver ).map( _.show ).merge ) )
+  def apply[F[_]]( model: Model, config: ProductionConfig, options: Options, solver: Solver ): String =
+    computeFactory( model, config, options, solver ).map( _.show ).merge
 
   def computeFactory(
       model: Model,

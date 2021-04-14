@@ -10,5 +10,5 @@ import prod.RecipeMatrix
 
 object OldProdCalculator extends Program[ProductionConfig] {
   override def runProgram( model: Model, config: ProductionConfig ): IO[Unit] =
-    Calculator[IO]( model, config, Options.default, RecipeMatrix )
+    IO.delay( println( Calculator[IO]( model, config, Options.default, RecipeMatrix ) ) )
 }

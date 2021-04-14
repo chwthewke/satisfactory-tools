@@ -9,8 +9,7 @@ import prod.Calculator
 import prod.ConstraintSolver
 
 object ProdCalculator extends Program[ProductionConfig] {
-  override def runProgram( model: Model, config: ProductionConfig ): IO[Unit] = {
+  override def runProgram( model: Model, config: ProductionConfig ): IO[Unit] =
+    IO.delay( println( Calculator[IO]( model, config, Options.default, ConstraintSolver ) ) )
 
-    Calculator[IO]( model, config, Options.default, ConstraintSolver )
-  }
 }
