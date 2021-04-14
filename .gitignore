@@ -1,6 +1,7 @@
 bin/
 target/
 .bloop/
+.bsp/
 .cache*
 .idea
 .idea_modules
