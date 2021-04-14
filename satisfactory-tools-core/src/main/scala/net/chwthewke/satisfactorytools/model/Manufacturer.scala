@@ -25,17 +25,6 @@ object Manufacturer {
       Decoders.doubleStringDecoder
     )
 
-  val builders: Set[ClassName] = Set(
-    "Build_ConstructorMk1_C",
-    "Build_SmelterMk1_C",
-    "Build_AssemblerMk1_C",
-    "Build_OilRefinery_C",
-    "Build_FoundryMk1_C",
-    "Build_ManufacturerMk1_C",
-    "Build_Packager_C",
-    "Build_Blender_C"
-  ).map( ClassName( _ ) )
-
   implicit val manufacturerShow: Show[Manufacturer] = Show { manufacturer =>
     show"""${manufacturer.displayName} # ${manufacturer.className}
           |Power: ${f"${manufacturer.powerConsumption}%.0f"} MW

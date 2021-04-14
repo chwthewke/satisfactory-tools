@@ -38,16 +38,16 @@ object Explore extends IOApp {
     Blocker[IO]
       .use( blocker => ( loadData[GameData]( blocker ), loadMapConfig( blocker ), loadConfig( blocker ) ).tupled )
 //
-//      .map( _._1 )
+      .map( _._1 )
 //      .map( showItems )
 //      .map( showFuelValues )
 //      .map( splitItemClassNames )
 //      .map( showExtractors )
-//      .map( showManufacturers )
+      .map( showManufacturers )
 //      .map( showSortedRecipeNodes )
 //      .map( showRecipeIngredientsAndProducts )
 //      .map( showModelWith( _, showRecipesWithFluidAmounts ) )
-      .map( m => showModelWith( m._1, m._2, _.show ) )
+//      .map( m => showModelWith( m._1, m._2, _.show ) )
 //      .map( showItemSortedByDepths )
 //
 //      .map( (showExtractedResources _).tupled )
@@ -69,7 +69,7 @@ object Explore extends IOApp {
   def filterRecipes( model: GameData ): Vector[Recipe[ClassName, ClassName]] =
     model.recipes.mapFilter(
       recipe =>
-        if (recipe.producers.exists( Manufacturer.builders ) && !recipe.displayName.toLowerCase
+        if (recipe.producers.exists( model.manufacturers.keySet ) && !recipe.displayName.toLowerCase
               .startsWith( "alternate" ))
           Some( recipe )
         else if (recipe.producers.contains( Extractor.converterClass ))

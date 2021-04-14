@@ -44,7 +44,7 @@ final case class GameData(
     val manufacturing: ValidatedNel[String, Vector[Recipe[Machine, Item]]] =
       rawManufacturing.traverseFilter { recipe =>
         NonEmptyList
-          .fromList( recipe.producers.filter( Manufacturer.builders ) )
+          .fromList( recipe.producers.filter( manufacturers.keySet ) )
           .traverse(
             producers =>
               (
