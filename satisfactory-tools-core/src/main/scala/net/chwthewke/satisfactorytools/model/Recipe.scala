@@ -35,6 +35,8 @@ final case class Recipe[M, N](
   private def perMinute( ct: Countable[N, Double] ): Countable[N, Double] =
     Countable( ct.item, ct.amount * 60000 / duration.toMillis )
 
+  def isAlternate: Boolean = displayName.toLowerCase.startsWith( "alternate" )
+
   def traverseIngredientsAndProducts[F[_]: Applicative, P](
       f: Countable[N, Double] => F[Countable[P, Double]]
   ): F[Recipe[M, P]] =

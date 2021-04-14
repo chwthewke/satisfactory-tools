@@ -2,8 +2,9 @@ package net.chwthewke.satisfactorytools
 
 import cats.effect.IO
 import cats.syntax.foldable._
-//
+
 import model.Item
+import model.MachineType
 import model.Model
 import model.Recipe
 
@@ -20,7 +21,7 @@ object PrintConfigStub extends Program[Unit] {
     val w = recipes.map( _.className.name.length ).max
 
     recipes
-      .sortBy( r => ( r.product.head.item.displayName, r.className.name ) )
+      .sortBy( r => ( r.product.head.item.displayName, r.isAlternate, r.displayName ) )
       .map( recipeLine( _, w ) )
       .intercalate( "\n" )
   }
@@ -35,19 +36,25 @@ object PrintConfigStub extends Program[Unit] {
     items.sortBy( _.displayName ).map( itemLine( _, w, defaultValue ) ).intercalate( "\n" )
   }
 
-  def configStub( model: Model ): String =
+  def configStub( model: Model ): String = {
+    val eligibleRecipes =
+      model.manufacturingRecipes
+        .filter( _.producers.exists( machine => machine.machineType == MachineType.Manufacturer ) )
+
+    val eligibleItems =
+      model.items.values
+        .filter( item => eligibleRecipes.exists( recipe => recipe.product.exists( _.item == item ) ) )
+        .toVector
+
     s"""
        |items = {
-       |${itemLines( model.items.values.toVector, "0.0" )}
+       |${itemLines( eligibleItems, "0.0" )}
        |}
        |
        |recipes = [
-       |${recipeLines( model.manufacturingRecipes )}
+       |${recipeLines( eligibleRecipes )}
        |]
-       |
-       |resource-weights = {
-       |${itemLines( model.extractedItems, "1.0" )}
-       |}
        |""".stripMargin
+  }
 
 }
