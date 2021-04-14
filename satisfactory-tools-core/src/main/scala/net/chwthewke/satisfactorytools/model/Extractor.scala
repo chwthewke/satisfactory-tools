@@ -22,10 +22,10 @@ final case class Extractor(
 ) {
   def extractionRecipe( item: Item ): Recipe[Machine, Item] =
     Recipe(
-      ClassName( show"${item.className}_${className}" ),
-      show"Extract ${item.displayName} with ${displayName}",
+      ClassName( show"${item.className}_$className" ),
+      show"Extract ${item.displayName} with $displayName",
       Nil,
-      NonEmptyList.of( Countable( item, itemsPerCycle.toDouble ) ),
+      NonEmptyList.of( Countable( item, itemsPerCycle.toDouble / item.form.simpleAmountFactor ) ),
       cycleTime,
       Machine.extractor( this ) :: Nil
     )
