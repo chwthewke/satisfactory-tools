@@ -6,9 +6,11 @@ import data.ProductionConfig
 import model.Model
 import model.Options
 import prod.Calculator
-import prod.RecipeMatrix
+import prod.ConstraintSolver
 
 object ProdCalculator extends Program[ProductionConfig] {
-  override def runProgram( model: Model, config: ProductionConfig ): IO[Unit] =
-    Calculator[IO]( model, config, Options.default, RecipeMatrix )
+  override def runProgram( model: Model, config: ProductionConfig ): IO[Unit] = {
+
+    Calculator[IO]( model, config, Options.default, ConstraintSolver )
+  }
 }
