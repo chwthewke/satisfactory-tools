@@ -8,7 +8,7 @@ import model.MachineType
 import model.Model
 import model.Recipe
 
-object PrintConfigStub extends Program[Unit] {
+object PrintConfigStub extends Program[Unit]( "print-config-stub", "app conf stub generator" ) {
   override def runProgram( model: Model, config: Unit ): IO[Unit] =
     IO.delay( println( configStub( model ) ) )
 

@@ -31,7 +31,8 @@ import net.chwthewke.satisfactorytools.prod.ResourceCaps
 import net.chwthewke.satisfactorytools.prod.ResourceWeights
 import prod.Bill
 
-object ExploreLinProg extends Program[ProductionConfig] {
+object ExploreLinProg
+    extends Program[ProductionConfig]( "test-linear-programming", "Sample linear programming solver with breeze" ) {
 
   val options = Options.full
 

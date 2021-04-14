@@ -6,7 +6,7 @@ import cats.syntax.foldable._
 import data.ProductionConfig
 import model.Model
 
-object DumpMatrixCsv extends Program[ProductionConfig] {
+object DumpMatrixCsv extends Program[ProductionConfig]( "dump-matrix-csv", "Dump recipe matrix as csv" ) {
 
   override def runProgram( model: Model, config: ProductionConfig ): IO[Unit] = {
 

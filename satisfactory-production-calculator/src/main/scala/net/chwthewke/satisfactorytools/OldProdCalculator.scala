@@ -8,7 +8,8 @@ import model.Options
 import prod.Calculator
 import prod.RecipeMatrix
 
-object OldProdCalculator extends Program[ProductionConfig] {
+object OldProdCalculator
+    extends Program[ProductionConfig]( "prod-calculator-old", "Production Calculator (Matrix edition)" ) {
   override def runProgram( model: Model, config: ProductionConfig ): IO[Unit] =
     IO.delay( println( Calculator[IO]( model, config, Options.default, RecipeMatrix ) ) )
 }
