@@ -1,6 +1,8 @@
 package net.chwthewke.satisfactorytools
 package prod
 
+import cats.Id
+import cats.syntax.flatMap._
 import cats.syntax.foldable._
 import cats.syntax.show._
 import mouse.option._
@@ -60,7 +62,27 @@ object Calculator {
               )
         )
 
-    Factory( bill, (solution.recipes ++ inputRecipes).map( FactoryBlock( _ ) ), extraInputs )
+    val sortedBlocks: Vector[FactoryBlock] =
+      ( Vector.empty[Countable[Recipe[Machine, Item], Double]], ( inputRecipes, solution.recipes ) )
+        .tailRecM[Id, Vector[FactoryBlock]] {
+          case ( acc, ( available, rest ) ) =>
+            if (available.isEmpty)
+              Right( (acc ++ rest).map( FactoryBlock( _ ) ) )
+            else {
+              val next = acc ++ available
+              Left(
+                (
+                  next,
+                  rest.partition(
+                    recipe =>
+                      recipe.item.ingredients.forall( it => next.exists( _.item.product.exists( _.item == it.item ) ) )
+                  )
+                )
+              )
+            }
+        }
+
+    Factory( bill, sortedBlocks, extraInputs )
   }
 
 }
