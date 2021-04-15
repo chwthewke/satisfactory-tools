@@ -11,11 +11,11 @@ case class Model(
     items: Map[ClassName, Item],
     extractedItems: Vector[Item],
     extractionRecipes: Vector[( Item, Recipe[Machine, Item] )], // TODO can we make these Recipe[Extractor, Item]? useful?
-    resourceNodes: Map[Extractor, Map[Item, ResourceDistrib]]
+    resourceNodes: Map[Machine, Map[Item, ResourceDistrib]]
 )
 
 object Model {
-  private def showResourceNodesFor( extractor: Extractor, nodes: Map[Item, ResourceDistrib] ) =
+  private def showResourceNodesFor( extractor: Machine, nodes: Map[Item, ResourceDistrib] ) =
     show"""  ${extractor.displayName}
           |    ${nodes
             .map { case ( it, dist ) => show"${it.displayName} $dist" }

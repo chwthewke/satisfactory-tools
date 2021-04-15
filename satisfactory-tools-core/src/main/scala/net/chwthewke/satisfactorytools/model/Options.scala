@@ -6,22 +6,30 @@ import enumeratum.EnumEntry
 
 case class Options(
     belt: Options.Belt,
+    pipe: Options.Pipe,
     miner: Options.Miner,
     clockSpeed: Options.ClockSpeed,
-    fracking: Set[Options.LiquidResource]
+    extractors: Set[Options.Extractors],
+    preferFracking: Set[Options.Extractors]
 ) {
-  def allowsExtractionRecipe( recipe: Recipe[Machine, Item] ): Boolean =
-    miner.allows( recipe ) &&
-      Options.LiquidResource.values
-        .find( _.matches( recipe ) )
-        .forall(
-          liq => fracking( liq ) == recipe.producers.exists( _.className == Extractor.frackingExtractorClass )
-        )
+
+  // None: not allowed, Int: priority for resource
+  def scoreExtractionRecipe( recipe: Recipe[Machine, Item] ): Option[Int] =
+    Option.when( extractors.exists( _.allow( recipe.producedIn, miner ) ) ) {
+      if (Options.Extractors.WellExtractor.allow( recipe.producedIn, miner ))
+        0
+      else if (preferFracking.exists( _.allow( recipe.producedIn, miner ) ))
+        1
+      else
+        -1
+    }
 }
 
 object Options {
-  val full: Options    = Options( Belt.BeltMk5, Miner.MinerMk3, ClockSpeed.ClockSpeed250, Set.empty )
-  val default: Options = Options( Belt.BeltMk4, Miner.MinerMk2, ClockSpeed.ClockSpeed100, Set.empty )
+  val full: Options =
+    Options( Belt.BeltMk5, Pipe.PipeMk2, Miner.MinerMk3, ClockSpeed.ClockSpeed250, Extractors.values.toSet, Set.empty )
+  val default: Options =
+    Options( Belt.BeltMk4, Pipe.PipeMk2, Miner.MinerMk2, ClockSpeed.ClockSpeed100, Extractors.values.toSet, Set.empty )
 
   sealed abstract class Belt( val itemsPerMinute: Int ) extends EnumEntry
 
@@ -35,6 +43,15 @@ object Options {
     override val values: Vector[Belt] = findValues.toVector
   }
 
+  sealed abstract class Pipe( val cubicMetersPerMinute: Int ) extends EnumEntry
+
+  object Pipe extends Enum[Pipe] {
+    final case object PipeMk1 extends Pipe( 300 )
+    final case object PipeMk2 extends Pipe( 600 )
+
+    override val values: Vector[Pipe] = findValues.toVector
+  }
+
   sealed abstract class Miner( val extractorClass: ClassName ) extends EnumEntry {
     private def allowsClass( className: ClassName ): Boolean =
       className == extractorClass || Miner.values.forall( _.extractorClass != className )
@@ -43,7 +60,7 @@ object Options {
       allowsClass( extractor.className )
 
     def allows( recipe: Recipe[Machine, Item] ): Boolean =
-      recipe.producers.forall( m => allowsClass( m.className ) )
+      allowsClass( recipe.producedIn.className )
   }
 
   object Miner extends Enum[Miner] {
@@ -63,23 +80,23 @@ object Options {
     override val values: Vector[ClockSpeed] = findValues.toVector
   }
 
-  sealed abstract class LiquidResource( val className: ClassName ) extends EnumEntry {
-    def matches( recipe: Recipe[Machine, Item] ): Boolean =
-      recipe.product.forall( _.item.className == className )
-
-    def allows( recipe: Recipe[Machine, Item] ): Boolean =
-      recipe.product.forall(
-        p =>
-          LiquidResource.values.forall( _.className != p.item.className ) ||
-            p.item.className == className
-      )
-
+  sealed abstract class Extractors extends EnumEntry {
+    def allow( machine: Machine, miner: Miner ): Boolean
   }
 
-  object LiquidResource extends Enum[LiquidResource] {
-    final case object Water    extends LiquidResource( ClassName( "Desc_Water_C" ) )
-    final case object CrudeOil extends LiquidResource( ClassName( "Desc_LiquidOil_C" ) )
+  sealed abstract class SingleExtractor( className: ClassName ) extends Extractors {
+    override def allow( machine: Machine, miner: Miner ): Boolean = machine.className == className
+  }
 
-    override val values: Vector[LiquidResource] = findValues.toVector
+  object Extractors extends Enum[Extractors] {
+    final case object WellExtractor  extends SingleExtractor( Extractor.frackingExtractorClass )
+    final case object WaterExtractor extends SingleExtractor( Extractor.waterExtractorClass )
+    final case object OilExtractor   extends SingleExtractor( Extractor.oilExtractorClass )
+    final case object Miners extends Extractors {
+      override def allow( machine: Machine, miner: Miner ): Boolean =
+        machine.className == miner.extractorClass
+    }
+
+    override val values: Vector[Extractors] = findValues.toVector
   }
 }

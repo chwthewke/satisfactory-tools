@@ -20,12 +20,7 @@ object ConstraintSolver extends Solver {
   private def varName( recipe: Recipe[Machine, Item] ): String = show"R__${recipe.className}"
   private def exprName( item: Item ): String                   = show"X__${item.className}"
 
-  override def solve(
-      bill: Bill,
-      recipes: RecipeSelection,
-      resourceWeights: ResourceWeights,
-      resourceCaps: ResourceCaps
-  ): Either[String, Solution] = {
+  override def solve( bill: Bill, recipes: RecipeSelection ): Either[String, Solution] = {
 
     val actualRecipes = recipes.allowedRecipes
 
@@ -35,8 +30,8 @@ object ConstraintSolver extends Solver {
       actualRecipes.fproduct( recipe => model.addVariable( varName( recipe ) ).lower( 0d ) ).toMap
 
     def inputVar( item: Item ): Variable = {
-      val setUpper  = (v: Variable) => resourceCaps.caps.get( item ).fold( v )( v.upper )
-      val setWeight = (v: Variable) => resourceWeights.weights.get( item ).fold( v )( v.weight )
+      val setUpper  = (v: Variable) => recipes.resourceCaps.get( item ).fold( v )( v.upper )
+      val setWeight = (v: Variable) => recipes.resourceWeights.get( item ).fold( v )( v.weight )
 
       model.addVariable( varName( item ) ).lower( 0d ) |> setUpper |> setWeight
     }

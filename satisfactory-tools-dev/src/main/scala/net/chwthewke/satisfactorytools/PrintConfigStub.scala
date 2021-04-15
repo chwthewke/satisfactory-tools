@@ -38,8 +38,7 @@ object PrintConfigStub extends Program[Unit]( "print-config-stub", "app conf stu
 
   def configStub( model: Model ): String = {
     val eligibleRecipes =
-      model.manufacturingRecipes
-        .filter( _.producers.exists( machine => machine.machineType == MachineType.Manufacturer ) )
+      model.manufacturingRecipes.filter( _.producedIn.machineType == MachineType.Manufacturer )
 
     val eligibleItems =
       model.items.values

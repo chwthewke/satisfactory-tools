@@ -26,15 +26,13 @@ import model.Machine
 import model.Model
 import model.Options
 import model.Recipe
-import net.chwthewke.satisfactorytools.prod.RecipeSelection
-import net.chwthewke.satisfactorytools.prod.ResourceCaps
-import net.chwthewke.satisfactorytools.prod.ResourceWeights
 import prod.Bill
+import prod.RecipeSelection
 
 object ExploreLinProg
     extends Program[ProductionConfig]( "test-linear-programming", "Sample linear programming solver with breeze" ) {
 
-  val options = Options.full
+  val options: Options = Options.full
 
   class LPS( val lp: LinearProgram ) {
 
@@ -58,6 +56,7 @@ object ExploreLinProg
     def getVars: State[VarDict, VarDict]                               = State.get
     def getIndices: State[VarDict, Vector[LPVariable]]                 = State.inspect( _.indices )
     def getVar( key: LPVariable ): State[VarDict, Option[lp.Variable]] = State.inspect( _.get( key ) )
+    //noinspection ConvertibleToMethodValue
     def getOrCreateVar( key: LPVariable ): State[VarDict, lp.Variable] =
       getVar( key ).flatMap(
         _.cata(
@@ -237,8 +236,7 @@ object ExploreLinProg
       .liftTo[IO]
 
     val recipeSelection = RecipeSelection.init( model, config, options )
-    val resourceWeights =
-      recipeSelection.map( sel => ResourceWeights.init( ResourceCaps.init( model, options, sel.extractionRecipes ) ) )
+    val resourceWeights = recipeSelection.map( _.resourceWeights )
 
     val lps = new LPS( new LinearProgram )
 
@@ -259,7 +257,7 @@ object ExploreLinProg
     for {
       b                      <- bill
       w                      <- resourceWeights.leftMap( new IllegalArgumentException( _ ) ).liftTo[IO]
-      ( v, p )               <- IO.delay( lps.toLinearProblem( b, w.weights, model ).run( lps.VarDict.empty ).value )
+      ( v, p )               <- IO.delay( lps.toLinearProblem( b, w, model ).run( lps.VarDict.empty ).value )
       _                      <- IO.delay( println( p ) )
       ( blocks, extr, cost ) <- lps.solveLinearProblem( p, model ).runA( v ).value.liftTo[IO]
       _                      <- IO( println( showResult( blocks, extr, cost ) ) )

@@ -27,7 +27,7 @@ final case class Extractor(
       Nil,
       NonEmptyList.of( Countable( item, itemsPerCycle.toDouble / item.form.simpleAmountFactor ) ),
       cycleTime,
-      Machine.extractor( this ) :: Nil
+      Machine.extractor( this )
     )
 }
 
@@ -69,7 +69,10 @@ object Extractor {
     )
   }
 
-  val converterClass: ClassName         = ClassName( "Build_Converter_C" )
+  val converterClass: ClassName = ClassName( "Build_Converter_C" )
+
+  val waterExtractorClass: ClassName    = ClassName( "Build_WaterPump_C" )
+  val oilExtractorClass: ClassName      = ClassName( "Build_OilPump_C" )
   val frackingExtractorClass: ClassName = ClassName( "Build_FrackingExtractor_C" )
 
   implicit val extractorShow: Show[Extractor] = Show { extractor =>

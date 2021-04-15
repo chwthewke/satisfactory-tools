@@ -25,56 +25,34 @@ import model.Manufacturer
 import model.Model
 import model.NativeClass
 import model.Recipe
+import model.ResourceDistrib
 
 final case class GameData(
     items: Map[ClassName, Item],
     extractors: Map[ClassName, ( NativeClass, Extractor )],
     manufacturers: Map[ClassName, Manufacturer],
-    recipes: Vector[Recipe[ClassName, ClassName]]
+    recipes: Vector[Recipe[List[ClassName], ClassName]]
 ) {
 
   def toModel( map: MapConfig ): ValidatedNel[String, Model] = {
     val ( rawSelfExtraction, rawManufacturing ) = recipes.partition( isSelfExtraction )
 
-    val extractionRecipes =
+    val extractionRecipes: ValidatedNel[String, Vector[( Item, Recipe[Machine, Item] )]] =
       rawSelfExtraction
         .traverse( validateRecipeItems )
         .map( getExtractionRecipes )
 
     val manufacturing: ValidatedNel[String, Vector[Recipe[Machine, Item]]] =
-      rawManufacturing.traverseFilter { recipe =>
-        NonEmptyList
-          .fromList( recipe.producers.filter( manufacturers.keySet ) )
-          .traverse(
-            producers =>
-              (
-                producers.traverse( validateManufacturer ),
-                validateRecipeItems( recipe )
-              ).mapN(
-                ( ps, rec ) => rec.copy( producers = ps.toList )
-              )
-          )
-      }
+      rawManufacturing.traverseFilter( validateManufacturingRecipe )
 
-    val resourceNodes =
+    val resourceNodes: ValidatedNel[String, Map[Machine, Map[Item, ResourceDistrib]]] =
       extractors.toVector
         .flatTraverse {
-          case ( _, ( nc, ex ) ) =>
-            map.resourceNodes
-              .get( nc )
-              .foldMap(
-                byItem =>
-                  byItem.toVector.traverseFilter {
-                    case ( itemClass, dist ) =>
-                      items
-                        .get( itemClass )
-                        .toValidNel( show"Unknown item in map data: $itemClass" )
-                        .map( item => Option.when( canExtract( ex, item ) )( ( ex, ( item, dist ) ) ) )
-                  }
-              )
+          case ( _, ( extractorNativeClass, extractor ) ) =>
+            validateResourceNodes( map, extractorNativeClass, extractor )
         }
         .map(
-          flat => flat.groupMap( _._1 )( _._2 ).map { case ( ex, dists ) => ( ex, dists.toMap ) }
+          flat => flat.groupMap( _._1 )( _._2 ).map { case ( ex, dists ) => ( Machine.extractor( ex ), dists.toMap ) }
         )
 
     ( extractionRecipes, manufacturing, resourceNodes )
@@ -98,11 +76,45 @@ final case class GameData(
       .map( Machine.manufacturer )
       .toValidNel( show"Unknown machine class $className" )
 
+  def validateManufacturingRecipe(
+      recipe: Recipe[List[ClassName], ClassName]
+  ): ValidatedNel[String, Option[Recipe[Machine, Item]]] =
+    NonEmptyList
+      .fromList( recipe.producedIn.filter( manufacturers.keySet ) )
+      .traverse(
+        ms =>
+          (
+            Option
+              .when( ms.size == 1 )( ms.head )
+              .toValidNel( show"Recipe ${recipe.displayName} is produced in multiple manufacturers" )
+              .andThen( validateManufacturer ),
+            validateRecipeItems( recipe )
+          ).mapN( ( producer, itemRecipe ) => itemRecipe.copy( producedIn = producer ) )
+      )
+
+  def validateResourceNodes(
+      map: MapConfig,
+      extractorNativeClass: NativeClass,
+      extractor: Extractor
+  ): ValidatedNel[String, Vector[( Extractor, ( Item, ResourceDistrib ) )]] =
+    map.resourceNodes
+      .get( extractorNativeClass )
+      .foldMap(
+        byItem =>
+          byItem.toVector.traverseFilter {
+            case ( itemClass, dist ) =>
+              items
+                .get( itemClass )
+                .toValidNel( show"Unknown item in map data: $itemClass" )
+                .map( item => Option.when( canExtract( extractor, item ) )( ( extractor, ( item, dist ) ) ) )
+          }
+      )
+
   def isSelfExtraction[M, N]( recipe: Recipe[M, N] ): Boolean =
     recipe.ingredients == List( recipe.product.head )
 
   def getExtractionRecipes(
-      selfExtraction: Vector[Recipe[ClassName, Item]]
+      selfExtraction: Vector[Recipe[List[ClassName], Item]]
   ): Vector[( Item, Recipe[Machine, Item] )] = {
     val ( converterExtractors, otherExtractors ) =
       extractors.values.toVector.partition( _._1 == NativeClass.resourceExtractorClass )
@@ -115,7 +127,7 @@ final case class GameData(
 
   def getConverterRecipes(
       converterExtractors: Vector[Extractor],
-      selfExtraction: Vector[Recipe[ClassName, Item]]
+      selfExtraction: Vector[Recipe[List[ClassName], Item]]
   ): Vector[( Item, Extractor )] =
     for {
       selfExtractionRecipe <- selfExtraction
@@ -155,7 +167,7 @@ object GameData {
     GameData( Map.empty, extractors, Map.empty, Vector.empty )
   def manufacturers( manufacturers: Map[ClassName, Manufacturer] ): GameData =
     GameData( Map.empty, Map.empty, manufacturers, Vector.empty )
-  def recipes( recipes: Vector[Recipe[ClassName, ClassName]] ): GameData =
+  def recipes( recipes: Vector[Recipe[List[ClassName], ClassName]] ): GameData =
     GameData( Map.empty, Map.empty, Map.empty, recipes )
 
   implicit val modelMonoid: Monoid[GameData] = new Monoid[GameData] {
@@ -189,7 +201,7 @@ object GameData {
         decodeMap( Decoder[Extractor] )( _.className )
           .map( exs => GameData.extractors( exs.map { case ( c, ex ) => ( c, ( nativeClass, ex ) ) } ) )
       case NativeClass.`recipeClass` =>
-        Decoder[Vector[Recipe[ClassName, ClassName]]].map( GameData.recipes )
+        Decoder[Vector[Recipe[List[ClassName], ClassName]]].map( GameData.recipes )
       case _ => Decoder.const( GameData.empty )
     }
 

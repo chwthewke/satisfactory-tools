@@ -38,16 +38,18 @@ object Explore extends IOApp {
     Blocker[IO]
       .use( blocker => ( loadData[GameData]( blocker ), loadMapConfig( blocker ), loadConfig( blocker ) ).tupled )
 //
-      .map( _._1 )
+//      .map( _._1 )
 //      .map( showItems )
 //      .map( showFuelValues )
 //      .map( splitItemClassNames )
 //      .map( showExtractors )
-      .map( showManufacturers )
-//      .map( showSortedRecipeNodes )
+//      .map( showManufacturers )
 //      .map( showRecipeIngredientsAndProducts )
+//
+      .map( dmc => ( dmc._1, dmc._2 ) )
+//      .map( (showSortedRecipeNodes _).tupled )
 //      .map( showModelWith( _, showRecipesWithFluidAmounts ) )
-//      .map( m => showModelWith( m._1, m._2, _.show ) )
+      .map { case ( d, m ) => showModelWith( d, m, _.show ) }
 //      .map( showItemSortedByDepths )
 //
 //      .map( (showExtractedResources _).tupled )
@@ -66,13 +68,13 @@ object Explore extends IOApp {
   def loadMapConfig( blocker: Blocker ): IO[MapConfig] =
     ConfigSource.resources( "map.conf" ).loadF[IO, MapConfig]( blocker )
 
-  def filterRecipes( model: GameData ): Vector[Recipe[ClassName, ClassName]] =
+  def filterRecipes( model: GameData ): Vector[Recipe[List[ClassName], ClassName]] =
     model.recipes.mapFilter(
       recipe =>
-        if (recipe.producers.exists( model.manufacturers.keySet ) && !recipe.displayName.toLowerCase
+        if (recipe.producedIn.exists( model.manufacturers.keySet ) && !recipe.displayName.toLowerCase
               .startsWith( "alternate" ))
           Some( recipe )
-        else if (recipe.producers.contains( Extractor.converterClass ))
+        else if (recipe.producedIn.contains( Extractor.converterClass ))
           Some( recipe.copy( ingredients = Nil ) )
         else
           None
@@ -118,7 +120,7 @@ object Explore extends IOApp {
         Calculator.computeFactory( model, config, Options.default, RecipeMatrix ).map { factory =>
           factory.blocks
             .collect {
-              case FactoryBlock( Countable( recipe, amount ) ) if recipe.isExtraction =>
+              case FactoryBlock( Countable( recipe, amount ), _ ) if recipe.isExtraction =>
                 val product = recipe.productsPerMinute.head
                 ( product.item.displayName, product.amount * amount )
             }

@@ -117,12 +117,7 @@ final case class RecipeMatrix(
 
 object RecipeMatrix extends Solver {
 
-  override def solve(
-      bill: Bill,
-      recipes: RecipeSelection,
-      resourceWeights: ResourceWeights,
-      resourceCaps: ResourceCaps
-  ): Either[String, Solution] =
+  override def solve( bill: Bill, recipes: RecipeSelection ): Either[String, Solution] =
     init( bill, recipes ).computeFactory( bill )
 
   private def showMatrixRow( matrix: Primitive64Matrix, rowIx: Long ): String =
@@ -148,7 +143,8 @@ object RecipeMatrix extends Solver {
 
   def init( bill: Bill, recipeSelection: RecipeSelection ): RecipeMatrix =
     init(
-      recipeSelection.allowedRecipes ++ recipeSelection.extractionRecipes.values.toVector,
+      recipeSelection.allowedRecipes ++
+        recipeSelection.extractionRecipes.values.toVector.flatMap( _.headOption.map( _._2 ) ),
       bill.items.map( _.item )
     )
 

@@ -56,11 +56,13 @@ final case class Factory( bill: Bill, blocks: Vector[FactoryBlock], extraInputs:
 
   def extractedResources: String =
     blocks
-      .collect {
-        case FactoryBlock( Countable( recipe, amount ) ) if recipe.isExtraction =>
+      .filter( _.recipe.item.isExtraction )
+      .foldMap {
+        case FactoryBlock( Countable( recipe, amount ), _ ) =>
           val product = recipe.productsPerMinute.head
-          ( product.item.displayName, product.amount * amount )
+          Map( ( product.item.displayName, product.amount * amount ) )
       }
+      .toVector
       .sortBy { case ( p, x ) => ( -x, p ) }
       .map { case ( p, x ) => f"${p.padTo( 24, ' ' )} $x%.3f" }
       .intercalate( "\n" )

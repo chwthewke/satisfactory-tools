@@ -20,7 +20,7 @@ final case class Recipe[M, N](
     ingredients: List[Countable[N, Double]],
     product: NonEmptyList[Countable[N, Double]],
     duration: FiniteDuration,
-    producers: List[M]
+    producedIn: M
 ) {
   def ingredientsPerMinute: List[Countable[N, Double]]      = ingredients.map( perMinute )
   def productsPerMinute: NonEmptyList[Countable[N, Double]] = product.map( perMinute )
@@ -30,7 +30,7 @@ final case class Recipe[M, N](
       ingredientsPerMinute.foldMap { case Countable( it, am ) => Map( it -> -am ) }
 
   def isExtraction( implicit ev: M =:= Machine ): Boolean =
-    producers.forall( p => ev( p ).machineType == MachineType.Extractor )
+    producedIn.machineType == MachineType.Extractor
 
   private def perMinute( ct: Countable[N, Double] ): Countable[N, Double] =
     Countable( ct.item, ct.amount * 60000 / duration.toMillis )
@@ -46,7 +46,7 @@ final case class Recipe[M, N](
 
 object Recipe {
 
-  implicit val recipeDecoder: Decoder[Recipe[ClassName, ClassName]] = {
+  implicit val recipeDecoder: Decoder[Recipe[List[ClassName], ClassName]] = {
     import Parsers._
 
     Decoder.forProduct6(
@@ -85,7 +85,7 @@ object Recipe {
               |    ${products.map( _.show ).intercalate( "\n    " )}
               |  Duration $duration
               |  Producers:
-              |    ${producers.map( _.show ).intercalate( "\n    " )}
+              |    $producers
               |""".stripMargin
     }
 

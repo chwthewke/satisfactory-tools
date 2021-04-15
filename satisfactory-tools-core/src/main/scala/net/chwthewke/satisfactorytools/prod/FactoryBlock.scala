@@ -8,29 +8,29 @@ import enumeratum.Enum
 import enumeratum.EnumEntry
 import scala.collection.immutable.SortedMap
 import scala.collection.immutable.SortedSet
-//
+
 import model.Countable
 import model.Item
 import model.Machine
 import model.Recipe
 
-final case class FactoryBlock( block: Countable[Recipe[Machine, Item], Double] ) {
+final case class FactoryBlock( recipe: Countable[Recipe[Machine, Item], Double], baseClock: Double ) {
 
-  val machineCount: Int        = block.amount.ceil.toInt
-  val clockSpeedMillionth: Int = (block.amount / machineCount * 1000000).ceil.toInt
+  val machineCount: Int        = recipe.amount.ceil.toInt
+  val clockSpeedMillionth: Int = (recipe.amount / machineCount * 10000 * baseClock).ceil.toInt
 
-  val machine: Machine = block.item.producers.head
+  val machine: Machine = recipe.item.producedIn
   val power: Double    = machineCount * machine.powerConsumption * math.pow( clockSpeedMillionth / 1e6d, 1.6d )
 
-  def computeItemAmount( ci: Countable[Item, Double] ): Double = ci.amount * block.amount
+  def computeItemAmount( ci: Countable[Item, Double] ): Double = ci.amount * recipe.amount
 
-  val firstItem: Countable[Item, Double] = block.item.productsPerMinute.head
+  val firstItem: Countable[Item, Double] = recipe.item.productsPerMinute.head
   val itemAmount: Double                 = computeItemAmount( firstItem )
   val itemAmountPerUnit: Double          = itemAmount / machineCount
 
   def tableColumns: Vector[String] =
     FactoryTable.columnsForBlock(
-      block.item.displayName,
+      recipe.item.displayName,
       itemAmount,
       itemAmountPerUnit,
       machine.displayName,
@@ -44,13 +44,13 @@ final case class FactoryBlock( block: Countable[Recipe[Machine, Item], Double] )
         direction: FactoryBlock.Direction,
         lineItem: Countable[Item, Double]
     ): SortedSet[( FactoryBlock.Direction, String, Double )] =
-      SortedSet( ( direction, block.item.displayName, computeItemAmount( lineItem ) ) )
+      SortedSet( ( direction, recipe.item.displayName, computeItemAmount( lineItem ) ) )
 
     val ingredients =
-      block.item.ingredientsPerMinute
+      recipe.item.ingredientsPerMinute
         .foldMap( ci => SortedMap( ( ci.item, line( FactoryBlock.Direction.In, ci ) ) ) )
     val products =
-      block.item.productsPerMinute
+      recipe.item.productsPerMinute
         .foldMap( ci => SortedMap( ( ci.item, line( FactoryBlock.Direction.Out, ci ) ) ) )
 
     ingredients ++ products
