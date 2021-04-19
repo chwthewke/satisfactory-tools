@@ -10,30 +10,36 @@ final case class Item(
     itemType: ItemType,
     className: ClassName,
     displayName: String,
-    form: Form /* maybe not */,
-    energyValue: Double
+    form: Form,
+    energyValue: Double,
+    sinkPoints: Int
 ) {
   def fuelValue: Double = energyValue * form.simpleAmountFactor
+
+  override def toString: String = Item.showItem.show( this )
 }
 
 object Item {
   def itemDecoder( itemType: ItemType ): Decoder[Item] =
-    Decoder.forProduct4(
+    Decoder.forProduct5(
       "ClassName",
       "mDisplayName",
       "mForm",
-      "mEnergyValue"
-    )( ( cn: ClassName, dn: String, fm: Form, ev: Double ) => Item( itemType, cn, dn, fm, ev ) )(
+      "mEnergyValue",
+      "mResourceSinkPoints"
+    )( ( cn: ClassName, dn: String, fm: Form, ev: Double, pts: Int ) => Item( itemType, cn, dn, fm, ev, pts ) )(
       Decoder[ClassName],
       Decoder[String],
       Decoder[Form],
-      Decoders.doubleStringDecoder
+      Decoders.doubleStringDecoder,
+      Decoders.intStringDecoder
     )
 
   implicit val showItem: Show[Item] = Show.show( item => show"""${item.displayName} # ${item.className}
                                                                |Type: ${item.itemType}
                                                                |Form: ${item.form}
                                                                |Energy: ${item.energyValue} MJ
+                                                               |Sink: ${item.sinkPoints} points
                                                                |""".stripMargin )
 
   implicit val itemOrder: Order[Item] = Order.by( _.displayName )

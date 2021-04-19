@@ -32,7 +32,7 @@ object Model {
           |${model.manufacturingRecipes.map( _.show ).intercalate( "\n" )}
           |
           |Items
-          |${model.items.values.map( _.show ).intercalate( "\n" )}
+          |${model.items.values.map( _.toString ).intercalate( "\n" )}
           |
           |Extracted Items ${model.extractedItems.map( _.displayName ).intercalate( ", " )}
           |
