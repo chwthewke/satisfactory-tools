@@ -12,6 +12,8 @@ conflictManager   in updateSbtClassifiers in ThisBuild := ConflictManager.defaul
 
 enablePlugins( FormatPlugin, DependenciesPlugin )
 
+SettingKey[Seq[String]]( "ide-base-packages" ) in ThisBuild := Seq( "net.chwthewke.satisfactorytools" )
+
 val compilerPlugins = libraryDependencies ++= kindProjector ++ splain ++ betterMonadicFor
 
 val `satisfactory-tools-core` = project
