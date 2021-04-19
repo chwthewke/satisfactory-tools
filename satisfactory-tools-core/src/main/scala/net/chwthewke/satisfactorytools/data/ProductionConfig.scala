@@ -10,8 +10,11 @@ import model.Countable
 
 final case class ProductionConfig(
     items: Vector[Countable[ClassName, Double]],
-    recipes: Vector[ClassName]
-)
+    recipes: Vector[ClassName],
+    forbidden: Vector[ClassName]
+) {
+  def allowedRecipes: Vector[ClassName] = recipes.filterNot( forbidden.toSet )
+}
 
 object ProductionConfig {
 

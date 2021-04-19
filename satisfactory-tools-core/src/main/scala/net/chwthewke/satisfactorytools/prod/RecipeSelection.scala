@@ -119,7 +119,7 @@ object RecipeSelection {
     }
 
   def init( model: Model, config: ProductionConfig, options: Options ): Either[String, RecipeSelection] =
-    config.recipes
+    config.allowedRecipes
       .traverse( cn => model.manufacturingRecipes.find( _.className == cn ).toValidNel( cn.show ) )
       .leftMap( missing => show"Unknown recipe(s) in config: ${missing.mkString_( ", " )}" )
       .toEither
