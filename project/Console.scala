@@ -15,7 +15,7 @@ object Console {
 
     def settings = Seq(
       initialCommands := compileS,
-      initialCommands in Test := testS
+      Test / initialCommands := testS
     )
   }
 

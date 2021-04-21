@@ -27,34 +27,44 @@ object DependenciesPlugin extends AutoPlugin {
       "com.github.ghik" % "silencer-lib" % silencerVersion % Provided cross CrossVersion.full
     )
 
-    val catsVersion         = "2.4.2"
+    val catsVersion         = "2.5.0"
     val cats: Deps          = "org.typelevel" %% Seq( "cats-core", "cats-kernel" ) % catsVersion
     val catsFree: Deps      = Seq( "org.typelevel" %% "cats-free" % catsVersion )
-    val catsMtl: Deps       = Seq( "org.typelevel" %% "cats-mtl-core" % "0.7.0" )
+    val catsMtl: Deps       = Seq( "org.typelevel" %% "cats-mtl-core" % "0.7.1" )
     val mouse: Deps         = Seq( "org.typelevel" %% "mouse" % "1.0.0" )
     val kittens: Deps       = Seq( "org.typelevel" %% "kittens" % "2.2.1" )
     val alleycatsCore: Deps = Seq( "org.typelevel" %% "alleycats-core" % catsVersion )
 
-    val catsEffect: Deps = Seq( "org.typelevel" %% "cats-effect" % "2.4.0" )
+    val catsEffect: Deps = Seq( "org.typelevel" %% "cats-effect" % "2.5.0" )
 
-    val fs2: Deps = "co.fs2" %% Seq( "fs2-core", "fs2-io" ) % "2.5.3"
+    val fs2: Deps = "co.fs2" %% Seq( "fs2-core", "fs2-io" ) % "2.5.4"
 
-    val http4sVersion           = "0.21.0"
+    val http4sVersion           = "0.21.22"
     val http4s: Deps            = Seq( "org.http4s" %% "http4s-dsl" % http4sVersion )
     val http4sBlazeServer: Deps = Seq( "org.http4s" %% "http4s-blaze-server" % http4sVersion )
     val http4sBlazeClient: Deps = Seq( "org.http4s" %% "http4s-blaze-client" % http4sVersion )
 
-    val monocleVersion       = "2.0.1"
+    val scalatags: Deps = Seq(
+      "com.lihaoyi" %% "scalatags"        % "0.9.4",
+      "org.http4s"  %% "http4s-scalatags" % http4sVersion
+    )
+
+    val monocleVersion       = "2.0.4"
     val monocle: Deps        = "com.github.julien-truffaut" %% Seq( "monocle-core", "monocle-macro" ) % monocleVersion
     val monocleState: Deps   = Seq( "com.github.julien-truffaut" %% "monocle-state" % monocleVersion )
     val monocleGeneric: Deps = Seq( "com.github.julien-truffaut" %% "monocle-generic" % monocleVersion )
 
     val circeVersion      = "0.13.0"
     val circe: Deps       = "io.circe" %% Seq( "circe-core", "circe-generic", "circe-parser" ) % circeVersion
-    val circeOptics: Deps = Seq( "io.circe" %% "circe-optics" % "0.12.0" )
+    val circeOptics: Deps = Seq( "io.circe" %% "circe-optics" % "0.13.0" )
     val circeFs2: Deps    = Seq( "io.circe" %% "circe-fs2" % "0.13.0" )
     val circeJawn: Deps   = Seq( "io.circe" %% "circe-jawn" % circeVersion )
     val jawnParser: Deps  = Seq( "org.typelevel" %% "jawn-parser" % "1.0.0" )
+
+    val scodec: Deps = Seq(
+      "org.scodec" %% "scodec-bits" % "1.1.24",
+      "org.scodec" %% "scodec-core" % "1.11.7"
+    )
 
     val atto: Deps = Seq( "org.tpolecat" %% "atto-core" % "0.9.2" )
 
@@ -83,7 +93,12 @@ object DependenciesPlugin extends AutoPlugin {
     val java8compat: Deps = Seq( "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0" )
     val scalaXml: Deps    = Seq( "org.scala-lang.modules" %% "scala-xml"          % "1.2.0" )
 
-    val logging: Deps = Seq( "org.slf4j" % "slf4j-api" % "1.7.28", "ch.qos.logback" % "logback-classic" % "1.2.3" )
+    val logging: Deps =
+      Seq(
+        "org.slf4j"      % "slf4j-api"       % "1.7.30",
+        "ch.qos.logback" % "logback-classic" % "1.2.3",
+        "org.typelevel"  %% "log4cats-slf4j" % "1.2.2"
+      )
 
     val pureconfigVersion = "0.14.1"
     val pureconfig: Deps = "com.github.pureconfig" %% Seq(
@@ -150,8 +165,8 @@ object DependenciesPlugin extends AutoPlugin {
       circeFs2 ++
       circeJawn ++
       circeOptics ++
-      enumeratum ++
-      enumeratumCirce ++
+      scodec ++
+      atto ++
       asciiGraphs ++
       graphs ++
       algebra ++
@@ -160,6 +175,8 @@ object DependenciesPlugin extends AutoPlugin {
       breeze ++
       breezeDependencyOverrides ++
       ojAlgo ++
+      enumeratum ++
+      enumeratumCirce ++
       shapeless ++
       java8compat ++
       jawnParser ++
@@ -186,7 +203,7 @@ object DependenciesPlugin extends AutoPlugin {
       autoDiffScalatest
 
   override def buildSettings: Seq[Def.Setting[_]] =
-    dependencyOverrides in ThisBuild ++= Seq(
+    ThisBuild / dependencyOverrides ++= Seq(
       "org.scala-lang" % "scala-library"  % scalaVersion.value,
       "org.scala-lang" % "scala-compiler" % scalaVersion.value,
       "org.scala-lang" % "scala-reflect"  % scalaVersion.value

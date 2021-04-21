@@ -2,17 +2,18 @@ import sbt._
 import sbt.Keys._
 
 // format: off
-organization      in ThisBuild := "net.chwthewke"
-scalaOrganization in ThisBuild := "org.scala-lang"
-scalaVersion      in ThisBuild := "2.13.5"
+
+ThisBuild / organization       := "net.chwthewke"
+ThisBuild / scalaOrganization  := "org.scala-lang"
+ThisBuild / scalaVersion       := "2.13.5"
 // TODO when I can make sense of lm-coursier
-conflictManager   in ThisBuild                         := ConflictManager.strict
-conflictManager   in updateSbtClassifiers in ThisBuild := ConflictManager.default
+ThisBuild / conflictManager                         := ConflictManager.strict
+ThisBuild / updateSbtClassifiers / conflictManager  := ConflictManager.default
 // format: on
 
 enablePlugins( FormatPlugin, DependenciesPlugin )
 
-SettingKey[Seq[String]]( "ide-base-packages" ) in ThisBuild := Seq( "net.chwthewke.satisfactorytools" )
+ThisBuild / SettingKey[Seq[String]]( "ide-base-packages" ) := Seq( "net.chwthewke.satisfactorytools" )
 
 val compilerPlugins = libraryDependencies ++= kindProjector ++ splain ++ betterMonadicFor
 
