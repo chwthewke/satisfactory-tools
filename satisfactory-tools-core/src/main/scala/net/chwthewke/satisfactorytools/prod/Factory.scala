@@ -11,7 +11,8 @@ import cats.syntax.semigroup._
 import cats.syntax.show._
 import scala.collection.immutable.SortedMap
 import scala.collection.immutable.SortedSet
-//
+
+import model.Bill
 import model.Countable
 import model.Item
 

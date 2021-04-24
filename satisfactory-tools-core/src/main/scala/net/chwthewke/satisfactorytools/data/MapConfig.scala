@@ -2,16 +2,18 @@ package net.chwthewke.satisfactorytools
 package data
 
 import cats.syntax.apply._
+import cats.syntax.functor._
+import cats.syntax.traverse._
 import pureconfig.ConfigReader
 import pureconfig.error.CannotConvert
 import pureconfig.generic.semiauto
 import scala.annotation.nowarn
 
 import model.ClassName
-import model.NativeClass
+import model.ExtractorType
 import model.ResourceDistrib
 
-case class MapConfig( resourceNodes: Map[NativeClass, Map[ClassName, ResourceDistrib]] )
+case class MapConfig( resourceNodes: Map[ExtractorType, Map[ClassName, ResourceDistrib]] )
 
 object MapConfig {
   private implicit val resourceDistribReader: ConfigReader[ResourceDistrib] =
@@ -24,6 +26,21 @@ object MapConfig {
               CannotConvert( counts.mkString( "[", ", ", "]" ), "ResourceDistrib", "the array must have 3 elements" )
             )
       )
+
+  private implicit def extractorTypeMapReader[A](
+      implicit reader: ConfigReader[Map[String, A]]
+  ): ConfigReader[Map[ExtractorType, A]] =
+    reader.emap(
+      _.toVector
+        .traverse {
+          case ( k, v ) =>
+            ExtractorType
+              .withNameOption( k )
+              .toRight( CannotConvert( k, "ExtractorType", "Unknown key" ) )
+              .tupleRight( v )
+        }
+        .map( _.toMap )
+    )
 
   implicit val mapConfigReader: ConfigReader[MapConfig] =
     semiauto.deriveReader[MapConfig]: @nowarn( "cat=lint-byname-implicit" )

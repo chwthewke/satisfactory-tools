@@ -10,19 +10,10 @@ case class Model(
     manufacturingRecipes: Vector[Recipe[Machine, Item]],
     items: Map[ClassName, Item],
     extractedItems: Vector[Item],
-    extractionRecipes: Vector[( Item, Recipe[Machine, Item] )], // TODO can we make these Recipe[Extractor, Item]? useful?
-    resourceNodes: Map[Machine, Map[Item, ResourceDistrib]]
+    extractionRecipes: Vector[( Item, Recipe[Machine, Item] )] // TODO can we make these Recipe[Extractor, Item]? useful?
 )
 
 object Model {
-  private def showResourceNodesFor( extractor: Machine, nodes: Map[Item, ResourceDistrib] ) =
-    show"""  ${extractor.displayName}
-          |    ${nodes
-            .map { case ( it, dist ) => show"${it.displayName} $dist" }
-            .to( Iterable )
-            .intercalate( "\n    " )}
-          |
-          |""".stripMargin
 
   implicit val modelShow: Show[Model] = Show.show { model =>
     implicit val showItem: Show[Item]       = Show.show( _.displayName )
@@ -38,12 +29,6 @@ object Model {
           |
           |Extraction Recipes
           |${model.extractionRecipes.map( _._2 ).map( _.show ).intercalate( "\n" )}
-          |
-          |Resource nodes
-          |${model.resourceNodes
-            .map { case ( ex, byItem ) => showResourceNodesFor( ex, byItem ) }
-            .to( Iterable )
-            .intercalate( "\n" )}
           |""".stripMargin
   }
 

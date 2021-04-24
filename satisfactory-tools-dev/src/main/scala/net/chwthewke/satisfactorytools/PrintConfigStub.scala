@@ -1,16 +1,23 @@
 package net.chwthewke.satisfactorytools
 
+import cats.effect.ExitCode
 import cats.effect.IO
+import cats.effect.IOApp
 import cats.syntax.foldable._
 
+import data.Loader
 import model.Item
 import model.MachineType
 import model.Model
 import model.Recipe
 
-object PrintConfigStub extends Program[Unit]( "print-config-stub", "app conf stub generator" ) {
-  override def runProgram( model: Model, config: Unit ): IO[Unit] =
-    IO.delay( println( configStub( model ) ) )
+object PrintConfigStub extends IOApp {
+
+  override def run( args: List[String] ): IO[ExitCode] =
+    Loader.io
+      .use( _.loadModel )
+      .flatMap( model => IO.delay( println( configStub( model ) ) ) )
+      .as( ExitCode.Success )
 
   def recipeLine( recipe: Recipe[_, Item], w: Int ): String = {
     val recipeKey = "\"" + recipe.className.name + "\""

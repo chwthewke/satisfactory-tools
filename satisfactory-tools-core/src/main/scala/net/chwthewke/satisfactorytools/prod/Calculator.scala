@@ -9,30 +9,35 @@ import cats.syntax.show._
 import cats.syntax.traverse._
 import mouse.option._
 
-import data.ProductionConfig
+import model.Bill
 import model.Countable
 import model.ExtractionRecipe
 import model.Item
 import model.Model
-import model.Options
+import model.SolverInputs
 
 object Calculator {
   val Tolerance: Double = 1e-6
 
-  def apply[F[_]]( model: Model, config: ProductionConfig, options: Options, solver: Solver ): String =
-    computeFactory( model, config, options, solver ).map( _.show ).merge
+  def apply[F[_]]( model: Model, inputs: SolverInputs, solver: Solver ): String =
+    computeFactory( model, inputs, solver ).map( _.show ).merge
 
   def computeFactory(
       model: Model,
-      config: ProductionConfig,
-      options: Options,
+      inputs: SolverInputs,
       solver: Solver
-  ): Either[String, Factory] =
-    for {
-      bill      <- Bill.init( model, config )
-      selection <- RecipeSelection.init( model, config, options )
-      solution  <- solver.solve( bill, selection )
-    } yield renderFactory( model, bill, selection, solution, options )
+  ): Either[String, Factory] = {
+    val selection = RecipeSelection( model, inputs.recipeList, inputs.options, inputs.mapOptions )
+
+    solver
+      .solve(
+        inputs.bill,
+        RecipeSelection( model, inputs.recipeList, inputs.options, inputs.mapOptions )
+      )
+      .map(
+        renderFactory( inputs.bill, selection, _ )
+      )
+  }
 
   def renderExtractionRecipes(
       input: Countable[Item, Double],
@@ -67,11 +72,9 @@ object Calculator {
       }
 
   def renderFactory(
-      model: Model,
       bill: Bill,
       recipeSelection: RecipeSelection,
-      solution: Solution,
-      options: Options
+      solution: Solution
   ): Factory = {
 
     val ( inputRecipes, extraInputs ): (

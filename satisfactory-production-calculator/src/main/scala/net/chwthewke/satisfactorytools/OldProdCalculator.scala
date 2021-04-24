@@ -1,15 +1,33 @@
 package net.chwthewke.satisfactorytools
 
+import buildinfo.Satisfactorytools
+import cats.effect.ExitCode
 import cats.effect.IO
+import com.monovore.decline.Opts
+import com.monovore.decline.effect.CommandIOApp
 
-import data.ProductionConfig
-import model.Model
-import model.Options
+import data.Loader
 import prod.Calculator
 import prod.RecipeMatrix
 
 object OldProdCalculator
-    extends Program[ProductionConfig]( "prod-calculator-old", "Production Calculator (Matrix edition)" ) {
-  override def runProgram( model: Model, config: ProductionConfig ): IO[Unit] =
-    IO.delay( println( Calculator[IO]( model, config, Options.default, RecipeMatrix ) ) )
+    extends CommandIOApp(
+      "prod-calculator-old",
+      "Production Calculator (Matrix edition)",
+      version = Satisfactorytools.shortVersion
+    ) {
+
+  override def main: Opts[IO[ExitCode]] =
+    Program.configOpt.map(
+      cfg =>
+        Loader.io.use(
+          loader =>
+            for {
+              model  <- loader.loadModel
+              inputs <- loader.loadSolverInputs( model, cfg )
+              _      <- IO.delay( Calculator[IO]( model, inputs, RecipeMatrix ) )
+            } yield ExitCode.Success
+        )
+    )
+
 }

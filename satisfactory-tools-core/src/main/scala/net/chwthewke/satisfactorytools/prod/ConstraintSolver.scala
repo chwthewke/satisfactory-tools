@@ -9,6 +9,7 @@ import org.ojalgo.optimisation.Expression
 import org.ojalgo.optimisation.ExpressionsBasedModel
 import org.ojalgo.optimisation.Variable
 
+import model.Bill
 import model.Countable
 import model.Item
 import model.Machine

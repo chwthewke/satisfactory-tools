@@ -30,7 +30,7 @@ final case class Recipe[M, N](
       ingredientsPerMinute.foldMap { case Countable( it, am ) => Map( it -> -am ) }
 
   def isExtraction( implicit ev: M =:= Machine ): Boolean =
-    producedIn.machineType == MachineType.Extractor
+    producedIn.machineType.isExtractor
 
   private def perMinute( ct: Countable[N, Double] ): Countable[N, Double] =
     Countable( ct.item, ct.amount * 60000 / duration.toMillis )

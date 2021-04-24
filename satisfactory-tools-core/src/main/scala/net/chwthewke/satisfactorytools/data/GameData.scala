@@ -2,12 +2,15 @@ package net.chwthewke.satisfactorytools
 package data
 
 import alleycats.std.iterable._
+import alleycats.std.map._
 import cats.Monoid
 import cats.Show
 import cats.data.NonEmptyList
 import cats.data.ValidatedNel
 import cats.syntax.apply._
+import cats.syntax.either._
 import cats.syntax.foldable._
+import cats.syntax.functor._
 import cats.syntax.option._
 import cats.syntax.show._
 import cats.syntax.traverse._
@@ -18,45 +21,37 @@ import mouse.option._
 import model.ClassName
 import model.Countable
 import model.Extractor
+import model.ExtractorType
 import model.Item
 import model.ItemType
 import model.Machine
+import model.MachineType
 import model.Manufacturer
 import model.Model
 import model.NativeClass
 import model.Recipe
-import model.ResourceDistrib
 
 final case class GameData(
     items: Map[ClassName, Item],
-    extractors: Map[ClassName, ( NativeClass, Extractor )],
+    extractors: Map[ClassName, Extractor],
     manufacturers: Map[ClassName, Manufacturer],
     recipes: Vector[Recipe[List[ClassName], ClassName]]
 ) {
 
-  def toModel( map: MapConfig ): ValidatedNel[String, Model] = {
+  def toModel: ValidatedNel[String, Model] = {
     val ( rawSelfExtraction, rawManufacturing ) = recipes.partition( isSelfExtraction )
 
+    val extractorMachines = extractors.traverse( ex => Machine.extractor( ex ).toValidatedNel.tupleLeft( ex ) )
+
     val extractionRecipes: ValidatedNel[String, Vector[( Item, Recipe[Machine, Item] )]] =
-      rawSelfExtraction
-        .traverse( validateRecipeItems )
-        .map( getExtractionRecipes )
+      ( extractorMachines, rawSelfExtraction.traverse( validateRecipeItems ) )
+        .mapN( getExtractionRecipes )
 
     val manufacturing: ValidatedNel[String, Vector[Recipe[Machine, Item]]] =
       rawManufacturing.traverseFilter( validateManufacturingRecipe )
 
-    val resourceNodes: ValidatedNel[String, Map[Machine, Map[Item, ResourceDistrib]]] =
-      extractors.toVector
-        .flatTraverse {
-          case ( _, ( extractorNativeClass, extractor ) ) =>
-            validateResourceNodes( map, extractorNativeClass, extractor )
-        }
-        .map(
-          flat => flat.groupMap( _._1 )( _._2 ).map { case ( ex, dists ) => ( Machine.extractor( ex ), dists.toMap ) }
-        )
-
-    ( extractionRecipes, manufacturing, resourceNodes )
-      .mapN( ( ex, mf, rn ) => Model( mf, items, ex.map( _._1 ).distinct, ex, rn ) )
+    ( extractionRecipes, manufacturing )
+      .mapN( ( ex, mf ) => Model( mf, items, ex.map( _._1 ).distinct, ex ) )
   }
 
   def validateItem( ccn: Countable[ClassName, Double] ): ValidatedNel[String, Countable[Item, Double]] =
@@ -92,61 +87,44 @@ final case class GameData(
           ).mapN( ( producer, itemRecipe ) => itemRecipe.copy( producedIn = producer ) )
       )
 
-  def validateResourceNodes(
-      map: MapConfig,
-      extractorNativeClass: NativeClass,
-      extractor: Extractor
-  ): ValidatedNel[String, Vector[( Extractor, ( Item, ResourceDistrib ) )]] =
-    map.resourceNodes
-      .get( extractorNativeClass )
-      .foldMap(
-        byItem =>
-          byItem.toVector.traverseFilter {
-            case ( itemClass, dist ) =>
-              items
-                .get( itemClass )
-                .toValidNel( show"Unknown item in map data: $itemClass" )
-                .map( item => Option.when( canExtract( extractor, item ) )( ( extractor, ( item, dist ) ) ) )
-          }
-      )
-
   def isSelfExtraction[M, N]( recipe: Recipe[M, N] ): Boolean =
     recipe.ingredients == List( recipe.product.head )
 
   def getExtractionRecipes(
+      machines: Map[ClassName, ( Extractor, Machine )],
       selfExtraction: Vector[Recipe[List[ClassName], Item]]
   ): Vector[( Item, Recipe[Machine, Item] )] = {
-    val ( converterExtractors, otherExtractors ) =
-      extractors.values.toVector.partition( _._1 == NativeClass.resourceExtractorClass )
+    val ( miners, otherExtractors ) =
+      machines.values.toVector.partition( _._2.machineType == MachineType.Extractor( ExtractorType.Miner ) )
 
     (
-      getConverterRecipes( converterExtractors.map( _._2 ), selfExtraction ) ++
-        getOtherExtractionRecipes( otherExtractors.map( _._2 ) )
-    ).map { case ( item, extractor ) => ( item, extractionRecipe( item, extractor ) ) }
+      getConverterRecipes( miners, selfExtraction ) ++
+        getOtherExtractionRecipes( otherExtractors )
+    ).map { case ( item, extractor, machine ) => ( item, extractionRecipe( item, extractor, machine ) ) }
   }
 
   def getConverterRecipes(
-      converterExtractors: Vector[Extractor],
+      converterExtractors: Vector[( Extractor, Machine )],
       selfExtraction: Vector[Recipe[List[ClassName], Item]]
-  ): Vector[( Item, Extractor )] =
+  ): Vector[( Item, Extractor, Machine )] =
     for {
       selfExtractionRecipe <- selfExtraction
       item = selfExtractionRecipe.product.head.item
-      converter <- convertersFor( converterExtractors, item )
-    } yield ( item, converter )
+      ( extractor, machine ) <- converterExtractors
+    } yield ( item, extractor, machine )
 
   def getOtherExtractionRecipes(
-      extractors: Vector[Extractor]
-  ): Vector[( Item, Extractor )] =
+      extractors: Vector[( Extractor, Machine )]
+  ): Vector[( Item, Extractor, Machine )] =
     for {
-      extractor        <- extractors
-      allowedResources <- extractor.allowedResources.toVector
-      resource         <- allowedResources.toList.toVector
-      item             <- items.get( resource )
-    } yield ( item, extractor )
+      ( extractor, machine ) <- extractors
+      allowedResources       <- extractor.allowedResources.toVector
+      resource               <- allowedResources.toList.toVector
+      item                   <- items.get( resource )
+    } yield ( item, extractor, machine )
 
-  def convertersFor( converters: Vector[Extractor], item: Item ): Vector[Extractor] =
-    converters.filter( canExtract( _, item ) )
+  def convertersFor( converters: Vector[( Extractor, Machine )], item: Item ): Vector[( Extractor, Machine )] =
+    converters.filter { case ( ex, _ ) => canExtract( ex, item ) }
 
   def canExtract( extractor: Extractor, item: Item ): Boolean =
     extractor.allowedResources.cata(
@@ -154,8 +132,15 @@ final case class GameData(
       extractor.allowedResourceForms.contains( item.form )
     )
 
-  def extractionRecipe( item: Item, extractor: Extractor ): Recipe[Machine, Item] =
-    extractor.extractionRecipe( item )
+  def extractionRecipe( item: Item, extractor: Extractor, machine: Machine ): Recipe[Machine, Item] =
+    Recipe(
+      ClassName( show"${item.className}_${extractor.className}" ),
+      show"Extract ${item.displayName} with ${extractor.displayName}",
+      Nil,
+      NonEmptyList.of( Countable( item, extractor.itemsPerCycle.toDouble / item.form.simpleAmountFactor ) ),
+      extractor.cycleTime,
+      machine
+    )
 
 }
 
@@ -163,7 +148,7 @@ object GameData {
   val empty: GameData = GameData( Map.empty, Map.empty, Map.empty, Vector.empty )
 
   def items( items: Map[ClassName, Item] ): GameData = GameData( items, Map.empty, Map.empty, Vector.empty )
-  def extractors( extractors: Map[ClassName, ( NativeClass, Extractor )] ): GameData =
+  def extractors( extractors: Map[ClassName, Extractor] ): GameData =
     GameData( Map.empty, extractors, Map.empty, Vector.empty )
   def manufacturers( manufacturers: Map[ClassName, Manufacturer] ): GameData =
     GameData( Map.empty, Map.empty, manufacturers, Vector.empty )
@@ -198,8 +183,7 @@ object GameData {
       case NativeClass.`manufacturerDescClass` =>
         decodeMap( Decoder[Manufacturer] )( _.className ).map( GameData.manufacturers )
       case NativeClass.`resourceExtractorClass` | NativeClass.`waterPumpClass` | NativeClass.`frackingExtractorClass` =>
-        decodeMap( Decoder[Extractor] )( _.className )
-          .map( exs => GameData.extractors( exs.map { case ( c, ex ) => ( c, ( nativeClass, ex ) ) } ) )
+        decodeMap( Decoder[Extractor] )( _.className ).map( GameData.extractors )
       case NativeClass.`recipeClass` =>
         Decoder[Vector[Recipe[List[ClassName], ClassName]]].map( GameData.recipes )
       case _ => Decoder.const( GameData.empty )

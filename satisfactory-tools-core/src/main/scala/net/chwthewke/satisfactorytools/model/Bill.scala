@@ -1,5 +1,5 @@
 package net.chwthewke.satisfactorytools
-package prod
+package model
 
 import cats.syntax.either._
 import cats.syntax.foldable._
@@ -10,9 +10,6 @@ import cats.syntax.traverseFilter._
 import mouse.boolean._
 
 import data.ProductionConfig
-import model.Countable
-import model.Item
-import model.Model
 
 final case class Bill( items: Vector[Countable[Item, Double]] ) {
   def amountOf( item: Item ): Double =

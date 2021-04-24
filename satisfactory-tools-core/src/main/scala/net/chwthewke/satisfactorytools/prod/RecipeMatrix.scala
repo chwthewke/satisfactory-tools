@@ -12,6 +12,7 @@ import com.flowtick.graphs.algorithm._
 import mouse.boolean._
 import org.ojalgo.matrix.Primitive64Matrix
 
+import model.Bill
 import model.Countable
 import model.Item
 import model.Machine

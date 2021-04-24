@@ -1,14 +1,20 @@
 package net.chwthewke.satisfactorytools
 package model
 
-import enumeratum.Enum
-import enumeratum.EnumEntry
+sealed abstract class MachineType( val name: String, val extractorType: Option[ExtractorType] ) {
+  def isExtractor: Boolean = extractorType.isDefined
+}
 
-sealed abstract class MachineType( override val entryName: String ) extends EnumEntry
+object MachineType {
 
-object MachineType extends Enum[MachineType] {
-  final case object Manufacturer extends MachineType( "manufacturer" )
-  final case object Extractor    extends MachineType( "extractor" )
+  final case object Manufacturer extends MachineType( "Manufacturer", None )
+  final case class Extractor( override val name: String, override val extractorType: Option[ExtractorType] )
+      extends MachineType( name, extractorType )
 
-  override def values: IndexedSeq[MachineType] = findValues
+  object Extractor {
+    def apply( extractorType: ExtractorType ): Extractor = Extractor( extractorType.entryName, Some( extractorType ) )
+  }
+
+  val values: Vector[MachineType] = Manufacturer +: ExtractorType.values.map( Extractor( _ ) )
+
 }

@@ -14,31 +14,23 @@ import scala.concurrent.duration._
 final case class Extractor(
     className: ClassName,
     displayName: String,
+    extractorTypeName: String,
     allowedResourceForms: List[Form],
     allowedResources: Option[NonEmptyList[ClassName]],
     powerConsumption: Double,
     cycleTime: FiniteDuration,
     itemsPerCycle: Int
-) {
-  def extractionRecipe( item: Item ): Recipe[Machine, Item] =
-    Recipe(
-      ClassName( show"${item.className}_$className" ),
-      show"Extract ${item.displayName} with $displayName",
-      Nil,
-      NonEmptyList.of( Countable( item, itemsPerCycle.toDouble / item.form.simpleAmountFactor ) ),
-      cycleTime,
-      Machine.extractor( this )
-    )
-}
+)
 
 object Extractor {
 
   implicit val extractorDecoder: Decoder[Extractor] = {
     import Parsers._
 
-    Decoder.forProduct8(
+    Decoder.forProduct9(
       "ClassName",
       "mDisplayName",
+      "mExtractorTypeName",
       "mAllowedResourceForms",
       "mOnlyAllowCertainResources",
       "mAllowedResources",
@@ -49,15 +41,17 @@ object Extractor {
       (
           cn: ClassName,
           dn: String,
+          etn: String,
           arf: List[Form],
           fr: Boolean,
           rf: List[ClassName],
           pc: Double,
           ct: Double,
           ic: Int
-      ) => Extractor( cn, dn, arf, NonEmptyList.fromList( rf ).flatMap( fr.option( _ ) ), pc, ct.seconds, ic )
+      ) => Extractor( cn, dn, etn, arf, NonEmptyList.fromList( rf ).flatMap( fr.option( _ ) ), pc, ct.seconds, ic )
     )(
       Decoder[ClassName],
+      Decoder[String],
       Decoder[String],
       listOf( `enum`( Form ) ).decoder,
       Decoders.booleanStringDecoder,

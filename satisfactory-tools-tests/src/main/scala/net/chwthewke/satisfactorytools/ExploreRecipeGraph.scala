@@ -1,37 +1,40 @@
 package net.chwthewke.satisfactorytools
 
-import cats.Monoid
-import cats.effect.Blocker
+import buildinfo.Satisfactorytools
 import cats.effect.ExitCode
 import cats.effect.IO
-import cats.effect.IOApp
 import cats.syntax.apply._
-import cats.syntax.either._
-import cats.syntax.foldable._
-import io.circe.Decoder
+import cats.syntax.flatMap._
+import com.monovore.decline.Opts
+import com.monovore.decline.effect.CommandIOApp
 import org.scalameta.ascii.graph.Graph
 import org.scalameta.ascii.layout._
-import pureconfig.ConfigSource
-import pureconfig.module.catseffect.syntax._
 
-import data.GameData
 import data.Loader
 import data.ProductionConfig
 import model.Model
-import net.chwthewke.satisfactorytools.data.MapConfig
 
-object ExploreRecipeGraph extends IOApp {
+object ExploreRecipeGraph
+    extends CommandIOApp(
+      "test-ascii-graph",
+      "Print the selected recipes as an ascii graph",
+      version = Satisfactorytools.shortVersion
+    ) {
 
-  override def run( args: List[String] ): IO[ExitCode] =
-    for {
-      ( data, config, map ) <- Blocker[IO]
-                                .use(
-                                  blocker =>
-                                    ( loadData[GameData]( blocker ), loadConfig( blocker ), loadMapConfig( blocker ) ).tupled
-                                )
-      model <- data.toModel( map ).toEither.leftMap( m => new RuntimeException( m.intercalate( ", " ) ) ).liftTo[IO]
-      _     <- IO.delay( println( asciiGraph( config, model ) ) )
-    } yield ExitCode.Success
+  override def main: Opts[IO[ExitCode]] =
+    Program.configOpt.map(
+      cfg =>
+        Loader.io.use(
+          loader =>
+            ( loader.loadModel, loader.loadProductionConfig( cfg ) )
+              .mapN( runProgram )
+              .flatten
+              .as( ExitCode.Success )
+        )
+    )
+
+  def runProgram( model: Model, config: ProductionConfig ): IO[Unit] =
+    IO.delay( println( asciiGraph( config, model ) ) )
 
   def asciiGraph( config: ProductionConfig, model: Model ): String = {
     val mat = MkRecipeMatrix( config, model )
@@ -53,14 +56,5 @@ object ExploreRecipeGraph extends IOApp {
 
     GraphLayout.renderGraph( Graph( vertices, edges ) )
   }
-
-  def loadData[A: Decoder: Monoid]( blocker: Blocker ): IO[A] =
-    Loader.io.loadResource[A]( blocker )
-
-  def loadConfig( blocker: Blocker ): IO[ProductionConfig] =
-    ConfigSource.default.loadF[IO, ProductionConfig]( blocker )
-
-  def loadMapConfig( blocker: Blocker ): IO[MapConfig] =
-    ConfigSource.resources( "map.conf" ).loadF[IO, MapConfig]( blocker )
 
 }

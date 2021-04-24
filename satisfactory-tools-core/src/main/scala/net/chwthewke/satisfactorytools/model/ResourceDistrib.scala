@@ -1,7 +1,9 @@
 package net.chwthewke.satisfactorytools
 package model
 
+import cats.Monoid
 import cats.Show
+import cats.derived.semiauto
 import cats.syntax.foldable._
 import cats.syntax.show._
 
@@ -19,5 +21,7 @@ case class ResourceDistrib( impureNodes: Int, normalNodes: Int, pureNodes: Int )
 }
 
 object ResourceDistrib {
+  implicit val resourceDistribMonoid: Monoid[ResourceDistrib] = semiauto.monoid[ResourceDistrib]
+
   implicit val resourceDistribShow: Show[ResourceDistrib] = Show.fromToString[ResourceDistrib]
 }

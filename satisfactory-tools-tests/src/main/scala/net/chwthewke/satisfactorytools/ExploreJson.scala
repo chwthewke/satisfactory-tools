@@ -21,11 +21,12 @@ import model.NativeClass
 object ExploreJson extends IOApp {
 
   def loadJson( blocker: Blocker ): IO[Vector[Json]] =
-    Loader.io
-      .streamDocsResource( blocker )
-      .through( byteArrayParser )
-      .compile
-      .toVector
+    Loader.io.use(
+      _.streamDocsResource
+        .through( byteArrayParser )
+        .compile
+        .toVector
+    )
 
   def printNativeClasses( array: Vector[Json] ): IO[Unit] = {
     val ( notices, nativeClasses ) =

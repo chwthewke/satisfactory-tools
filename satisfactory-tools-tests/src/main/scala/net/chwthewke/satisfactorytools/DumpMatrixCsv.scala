@@ -1,14 +1,37 @@
 package net.chwthewke.satisfactorytools
 
+import buildinfo.Satisfactorytools
+import cats.effect.ExitCode
 import cats.effect.IO
 import cats.syntax.foldable._
+import com.monovore.decline.Opts
+import com.monovore.decline.effect.CommandIOApp
 
+import data.Loader
 import data.ProductionConfig
 import model.Model
 
-object DumpMatrixCsv extends Program[ProductionConfig]( "dump-matrix-csv", "Dump recipe matrix as csv" ) {
+object DumpMatrixCsv
+    extends CommandIOApp(
+      "dump-matrix-csv",
+      "Dump recipe matrix as csv",
+      version = Satisfactorytools.shortVersion
+    ) {
 
-  override def runProgram( model: Model, config: ProductionConfig ): IO[Unit] = {
+  override def main: Opts[IO[ExitCode]] =
+    Program.configOpt.map(
+      cfg =>
+        Loader.io.use(
+          loader =>
+            for {
+              model      <- loader.loadModel
+              prodConfig <- loader.loadProductionConfig( cfg )
+              _          <- runProgram( model, prodConfig )
+            } yield ExitCode.Success
+        )
+    )
+
+  def runProgram( model: Model, config: ProductionConfig ): IO[Unit] = {
 
     val matrix = MkRecipeMatrix( config, model )
 

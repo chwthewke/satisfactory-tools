@@ -3,9 +3,11 @@ package net.chwthewke.satisfactorytools
 import breeze.linalg.DenseVector
 import breeze.optimize.linear.LinearProgram
 import breeze.optimize.linear.LinearProgram.ApacheSimplexSolver
+import buildinfo.Satisfactorytools
 import cats.Semigroup
 import cats.data.State
 import cats.data.ValidatedNel
+import cats.effect.ExitCode
 import cats.effect.IO
 import cats.syntax.apply._
 import cats.syntax.either._
@@ -16,21 +18,30 @@ import cats.syntax.option._
 import cats.syntax.semigroup._
 import cats.syntax.show._
 import cats.syntax.traverse._
+import com.monovore.decline.Opts
+import com.monovore.decline.effect.CommandIOApp
 import mouse.option._
 
+import data.Loader
 import data.ProductionConfig
+import model.Bill
 import model.ClassName
 import model.Countable
 import model.Item
 import model.Machine
+import model.MapOptions
 import model.Model
 import model.Options
 import model.Recipe
-import prod.Bill
+import model.RecipeList
 import prod.RecipeSelection
 
 object ExploreLinProg
-    extends Program[ProductionConfig]( "test-linear-programming", "Sample linear programming solver with breeze" ) {
+    extends CommandIOApp(
+      "test-linear-programming",
+      "Sample linear programming solver with breeze",
+      version = Satisfactorytools.shortVersion
+    ) {
 
   val options: Options = Options.full
 
@@ -227,16 +238,36 @@ object ExploreLinProg
           |Cost: ${f"$cost%.4f"}
           |""".stripMargin
 
-  override def runProgram( model: Model, config: ProductionConfig ): IO[Unit] = {
+  override def main: Opts[IO[ExitCode]] =
+    Program.configOpt.map(
+      cfg =>
+        Loader.io.use(
+          loader =>
+            for {
+              model      <- loader.loadModel
+              prodConfig <- loader.loadProductionConfig( cfg )
+              map        <- loader.loadMapOptions( model )
+              _          <- runProgram( model, prodConfig, map )
+            } yield ExitCode.Success
+        )
+    )
+
+  def runProgram( model: Model, config: ProductionConfig, map: MapOptions ): IO[Unit] = {
     val configWithTestBill = config.copy( items = Vector( Countable( ClassName( "Desc_IronPlate_C" ), 60.0 ) ) )
 
-    val bill = Bill
-      .init( model, configWithTestBill )
-      .leftMap( e => new IllegalArgumentException( e ) )
-      .liftTo[IO]
+    val bill: IO[Bill] =
+      Bill
+        .init( model, configWithTestBill )
+        .leftMap( e => new IllegalArgumentException( e ) )
+        .liftTo[IO]
 
-    val recipeSelection = RecipeSelection.init( model, config, options )
-    val resourceWeights = recipeSelection.map( _.resourceWeights )
+    val resourceWeights: IO[Map[Item, Double]] =
+      RecipeList
+        .init( model, config )
+        .map( RecipeSelection( model, _, options, map ) )
+        .map( _.resourceWeights )
+        .leftMap( Error( _ ) )
+        .liftTo[IO]
 
     val lps = new LPS( new LinearProgram )
 
@@ -256,7 +287,7 @@ object ExploreLinProg
 
     for {
       b                      <- bill
-      w                      <- resourceWeights.leftMap( new IllegalArgumentException( _ ) ).liftTo[IO]
+      w                      <- resourceWeights
       ( v, p )               <- IO.delay( lps.toLinearProblem( b, w, model ).run( lps.VarDict.empty ).value )
       _                      <- IO.delay( println( p ) )
       ( blocks, extr, cost ) <- lps.solveLinearProblem( p, model ).runA( v ).value.liftTo[IO]
