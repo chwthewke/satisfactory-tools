@@ -43,10 +43,26 @@ val `satisfactory-tools-app` = project
       catsEffect ++
         pureconfigCatsEffect ++
         fs2 ++
-        circeFs2 ++
-        decline
+        circeFs2
   )
   .dependsOn( `satisfactory-tools-core` )
+  .enablePlugins( ScalacPlugin )
+
+val `satisfactory-tools-web` = project
+  .settings( compilerPlugins )
+  .settings(
+    libraryDependencies ++=
+      catsEffect ++
+        pureconfigCatsEffect ++
+        fs2 ++
+        circeFs2 ++
+        http4s ++
+        http4sBlazeServer ++
+        scodec ++
+        scalatags ++
+        logging
+  )
+  .dependsOn( `satisfactory-tools-app` )
   .enablePlugins( ScalacPlugin )
 
 val `satisfactory-tools-dev` = project
@@ -57,6 +73,7 @@ val `satisfactory-tools-dev` = project
 val `satisfactory-production-calculator` = project
   .settings( compilerPlugins )
   .settings( mainClass := Some( "net.chwthewke.satisfactory.ProdCalculator" ) )
+  .settings( libraryDependencies ++= decline )
   .dependsOn( `satisfactory-tools-app` )
   .enablePlugins( ScalacPlugin )
 
@@ -73,7 +90,7 @@ val `satisfactory-tools-tests` = project
       "import net.chwthewke.satisfactorytools._"
     ).mkString( "\n" )
   )
-  .dependsOn( `satisfactory-tools-app` )
+  .dependsOn( `satisfactory-production-calculator`, `satisfactory-tools-web` )
   .enablePlugins( ScalacPlugin )
 
 val `satisfactory-tools-all` = project
