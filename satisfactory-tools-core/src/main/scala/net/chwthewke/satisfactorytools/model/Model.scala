@@ -5,10 +5,11 @@ import alleycats.std.iterable._
 import cats.Show
 import cats.syntax.foldable._
 import cats.syntax.show._
+import scala.collection.immutable.SortedMap
 
 case class Model(
     manufacturingRecipes: Vector[Recipe[Machine, Item]],
-    items: Map[ClassName, Item],
+    items: SortedMap[ClassName, Item],
     extractedItems: Vector[Item],
     extractionRecipes: Vector[( Item, Recipe[Machine, Item] )] // TODO can we make these Recipe[Extractor, Item]? useful?
 )

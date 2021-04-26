@@ -23,12 +23,14 @@ object ConstraintSolver extends Solver {
 
   override def solve( bill: Bill, recipes: RecipeSelection ): Either[String, Solution] = {
 
-    val actualRecipes = recipes.allowedRecipes
+    val allowedRecipes = recipes.allowedRecipes.map( _._1 )
 
     val model = new ExpressionsBasedModel
 
     val recipeVars: Map[Recipe[Machine, Item], Variable] =
-      actualRecipes.fproduct( recipe => model.addVariable( varName( recipe ) ).lower( 0d ) ).toMap
+      recipes.allowedRecipes.map {
+        case ( recipe, weight ) => ( recipe, model.addVariable( varName( recipe ) ).weight( weight ).lower( 0d ) )
+      }.toMap
 
     def inputVar( item: Item ): Variable = {
       val setUpper  = (v: Variable) => recipes.resourceCaps.get( item ).fold( v )( v.upper )
@@ -41,7 +43,7 @@ object ConstraintSolver extends Solver {
       recipes.extractionRecipes.map { case ( item, _ ) => ( item, inputVar( item ) ) }
 
     val itemExprs: Map[Item, Expression] =
-      actualRecipes
+      allowedRecipes
         .foldMap( _.reducedItemsPerMinute.keySet )
         .toVector
         .fproduct(
@@ -52,7 +54,7 @@ object ConstraintSolver extends Solver {
         )
         .toMap
 
-    actualRecipes.foreach(
+    allowedRecipes.foreach(
       recipe =>
         recipe.reducedItemsPerMinute.foreach {
           case ( item, amount ) =>

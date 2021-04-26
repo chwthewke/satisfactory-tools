@@ -56,8 +56,8 @@ object Options {
     private def allowsClass( className: ClassName ): Boolean =
       className == extractorClass || Miner.values.forall( _.extractorClass != className )
 
-    def allows( extractor: Extractor ): Boolean =
-      allowsClass( extractor.className )
+    def allows( machine: Machine ): Boolean =
+      allowsClass( machine.className )
 
     def allows( recipe: Recipe[Machine, Item] ): Boolean =
       allowsClass( recipe.producedIn.className )

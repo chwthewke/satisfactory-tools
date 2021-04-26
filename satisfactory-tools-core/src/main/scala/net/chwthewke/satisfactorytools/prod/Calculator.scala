@@ -4,7 +4,9 @@ package prod
 import cats.Id
 import cats.syntax.flatMap._
 import cats.syntax.foldable._
+import cats.syntax.functor._
 import cats.syntax.option._
+import cats.syntax.semigroup._
 import cats.syntax.show._
 import cats.syntax.traverse._
 import mouse.option._
@@ -77,6 +79,15 @@ object Calculator {
       solution: Solution
   ): Factory = {
 
+    val extraOutputs =
+      (solution.recipes
+        .filter( _.amount > Tolerance )
+        .foldMap( r => r.item.reducedItemsPerMinute.map( _.map( _ * r.amount ) ) ) |+|
+        bill.items.map { case Countable( item, amount ) => ( item, -amount ) }.toMap)
+        .filter( _._2 > Tolerance )
+        .map { case ( item, amount ) => Countable( item, amount ) }
+        .toVector
+
     val ( inputRecipes, extraInputs ): (
         Vector[FactoryBlock],
         Vector[Countable[Item, Double]]
@@ -117,7 +128,7 @@ object Calculator {
           }
       }
 
-    Factory( bill, sortedBlocks, extraInputs )
+    Factory( bill, sortedBlocks, extraInputs, extraOutputs )
   }
 
 }

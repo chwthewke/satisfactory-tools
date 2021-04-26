@@ -54,13 +54,19 @@ object FactoryTable {
       AlignLeft,
       AlignLeft,
       AlignRight,
-      AlignLeft,
+      //
+      AlignLeft, // sep
+      //
       AlignRight,
       AlignLeft,
       AlignLeft,
-      AlignLeft,
+      //
+      AlignLeft, // sep
+      //
       AlignRight,
-      AlignLeft,
+      //
+      AlignLeft, // sep
+      //
       AlignRight,
       AlignLeft
     )

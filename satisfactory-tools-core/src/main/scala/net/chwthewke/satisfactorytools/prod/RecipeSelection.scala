@@ -4,12 +4,11 @@ package prod
 import cats.data.NonEmptyList
 import cats.syntax.apply._
 import cats.syntax.foldable._
+import cats.syntax.functor._
 import cats.syntax.option._
 import cats.syntax.reducible._
 import cats.syntax.show._
-import cats.syntax.traverse._
 
-import data.ProductionConfig
 import model.Countable
 import model.ExtractionRecipe
 import model.Form
@@ -24,7 +23,7 @@ import model.ResourceDistrib
 import model.ResourcePurity
 
 case class RecipeSelection(
-    allowedRecipes: Vector[Recipe[Machine, Item]],
+    allowedRecipes: Vector[( Recipe[Machine, Item], Double )],
     extractionRecipes: Map[Item, Vector[( ResourceDistrib, Recipe[Machine, Item] )]],
     tieredExtractionRecipes: Map[Item, Vector[ExtractionRecipe]],
     resourceCaps: Map[Item, Double],
@@ -62,19 +61,18 @@ object RecipeSelection {
       distrib: ResourceDistrib,
       recipe: Recipe[Machine, Item],
       options: Options
-  ): Vector[ExtractionRecipe] =
-    Vector(
-      ( distrib.pureNodes, ResourcePurity.Pure ),
-      ( distrib.normalNodes, ResourcePurity.Normal ),
-      ( distrib.impureNodes, ResourcePurity.Impure )
-    ).flatMap {
-      case ( nodeCount, purity ) =>
-        Option.when( nodeCount > 0 )(
-          configuredRecipe( recipe, options, purity ) match {
-            case ( recipe, clockSpeed ) => ExtractionRecipe( recipe, clockSpeed, nodeCount )
-          }
-        )
-    }
+  ): Vector[ExtractionRecipe] = {
+    ResourcePurity.values.reverse
+      .fproduct( distrib.get )
+      .flatMap {
+        case ( purity, nodeCount ) =>
+          Option.when( nodeCount > 0 )(
+            configuredRecipe( recipe, options, purity ) match {
+              case ( recipe, clockSpeed ) => ExtractionRecipe( recipe, clockSpeed, nodeCount )
+            }
+          )
+      }
+  }
 
   def configuredRecipe(
       source: Recipe[Machine, Item],
@@ -122,31 +120,19 @@ object RecipeSelection {
     }
 
   def apply( model: Model, recipeList: RecipeList, options: Options, map: MapOptions ): RecipeSelection = {
-    val extraction = extractionRecipes( model, options, map )
-    val tiered     = tieredExtractionRecipes( extraction, options )
-    val caps       = resourceCaps( tiered )
+    val recipesWithCost = recipeList.recipes.fproduct( _.producedIn.powerConsumption / 10d )
+    val extraction      = extractionRecipes( model, options, map )
+    val tiered          = tieredExtractionRecipes( extraction, options )
+    val caps            = resourceCaps( tiered )
 
     RecipeSelection(
-      recipeList.recipes,
+      recipesWithCost,
       extraction,
       tiered,
       caps,
-      caps.map { case ( item, cap ) => ( item, 1e4d / cap ) }
+      caps.map { case ( item, cap ) => ( item, 1e6d / (cap * caps.size) ) }
     )
 
   }
 
-  @deprecated( "init", "0.1.0" )
-  def init(
-      model: Model,
-      config: ProductionConfig,
-      options: Options,
-      map: MapOptions
-  ): Either[String, RecipeSelection] =
-    config.allowedRecipes
-      .traverse( cn => model.manufacturingRecipes.find( _.className == cn ).toValidNel( cn.show ) )
-      .leftMap( missing => show"Unknown recipe(s) in config: ${missing.mkString_( ", " )}" )
-      .toEither
-      .map( RecipeList( _ ) )
-      .map( apply( model, _, options, map ) )
 }

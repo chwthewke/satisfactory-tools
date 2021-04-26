@@ -144,7 +144,7 @@ object RecipeMatrix extends Solver {
 
   def init( bill: Bill, recipeSelection: RecipeSelection ): RecipeMatrix =
     init(
-      recipeSelection.allowedRecipes ++
+      recipeSelection.allowedRecipes.map( _._1 ) ++
         recipeSelection.extractionRecipes.values.toVector.flatMap( _.headOption.map( _._2 ) ),
       bill.items.map( _.item )
     )

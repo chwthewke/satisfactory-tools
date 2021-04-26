@@ -39,7 +39,11 @@ class LoadingSpec extends AnyWordSpec with Matchers {
           .use( loader => loader.loadModel )
           .attempt
           .unsafeRunSync()
-      ) { case Right( _ ) => succeed }
+      ) {
+        case Right( model ) =>
+          model.items.size shouldBe <=( 256 )
+          model.manufacturingRecipes.size shouldBe <=( 256 )
+      }
 
     }
   }

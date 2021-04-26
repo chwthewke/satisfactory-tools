@@ -16,7 +16,12 @@ import model.Bill
 import model.Countable
 import model.Item
 
-final case class Factory( bill: Bill, blocks: Vector[FactoryBlock], extraInputs: Vector[Countable[Item, Double]] ) {
+final case class Factory(
+    bill: Bill,
+    blocks: Vector[FactoryBlock],
+    extraInputs: Vector[Countable[Item, Double]],
+    extraOutputs: Vector[Countable[Item, Double]]
+) {
 
   import FactoryTable.alignment
   import FactoryTable.headers
@@ -93,7 +98,18 @@ final case class Factory( bill: Bill, blocks: Vector[FactoryBlock], extraInputs:
           )
       }
 
-    (internalDestinations |+| billDestinations)
+    val extraOutputDestinations: SortedMap[Item, SortedSet[( FactoryBlock.Direction, String, Double )]] =
+      extraOutputs
+        .map {
+          case Countable( item, amount ) =>
+            (
+              item,
+              SortedSet[( FactoryBlock.Direction, String, Double )]( ( FactoryBlock.Direction.In, "EXTRA", amount ) )
+            )
+        }
+        .to( SortedMap )
+
+    (internalDestinations |+| billDestinations |+| extraOutputDestinations)
       .map( (ingredientTree _).tupled )
       .to( Iterable )
       .intercalate( "\n" )

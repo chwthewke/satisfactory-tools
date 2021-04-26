@@ -17,6 +17,12 @@ case class ResourceDistrib( impureNodes: Int, normalNodes: Int, pureNodes: Int )
               .min( belt.itemsPerMinute.toDouble )
       }
 
+  def get( purity: ResourcePurity ): Int = purity match {
+    case ResourcePurity.Impure => impureNodes
+    case ResourcePurity.Normal => normalNodes
+    case ResourcePurity.Pure   => pureNodes
+  }
+
   override def toString: String = show"Impure: $impureNodes, Normal: $normalNodes, Pure: $pureNodes"
 }
 

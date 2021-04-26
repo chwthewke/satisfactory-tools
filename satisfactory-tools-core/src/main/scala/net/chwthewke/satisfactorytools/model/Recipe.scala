@@ -17,7 +17,7 @@ import scala.concurrent.duration._
 final case class Recipe[M, N](
     className: ClassName,
     displayName: String,
-    ingredients: List[Countable[N, Double]],
+    ingredients: List[Countable[N, Double]], // TODO can be NEL?
     product: NonEmptyList[Countable[N, Double]],
     duration: FiniteDuration,
     producedIn: M

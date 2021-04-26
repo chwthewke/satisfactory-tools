@@ -4,6 +4,7 @@ package data
 import alleycats.std.iterable._
 import alleycats.std.map._
 import cats.Monoid
+import cats.Order.catsKernelOrderingForOrder
 import cats.Show
 import cats.data.NonEmptyList
 import cats.data.ValidatedNel
@@ -17,6 +18,7 @@ import cats.syntax.traverse._
 import cats.syntax.traverseFilter._
 import io.circe.Decoder
 import mouse.option._
+import scala.collection.immutable.SortedMap
 
 import model.ClassName
 import model.Countable
@@ -51,7 +53,7 @@ final case class GameData(
       rawManufacturing.traverseFilter( validateManufacturingRecipe )
 
     ( extractionRecipes, manufacturing )
-      .mapN( ( ex, mf ) => Model( mf, items, ex.map( _._1 ).distinct, ex ) )
+      .mapN( ( ex, mf ) => Model( mf, items.to( SortedMap ), ex.map( _._1 ).distinct, ex ) )
   }
 
   def validateItem( ccn: Countable[ClassName, Double] ): ValidatedNel[String, Countable[Item, Double]] =
