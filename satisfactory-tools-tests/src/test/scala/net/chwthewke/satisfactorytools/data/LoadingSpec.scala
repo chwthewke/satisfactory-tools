@@ -1,16 +1,13 @@
 package net.chwthewke.satisfactorytools
 package data
 
-import cats.effect.ContextShift
-import cats.effect.IO
+import cats.effect.unsafe.implicits._
 import org.scalatest.Inside
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import pureconfig.ConfigSource
-import scala.concurrent.ExecutionContext
 
 class LoadingSpec extends AnyWordSpec with Matchers {
-  implicit val ioCS: ContextShift[IO] = IO.contextShift( ExecutionContext.global )
 
   "The prod configuration" should {
     "be loadable from reference.conf" in {
@@ -27,19 +24,14 @@ class LoadingSpec extends AnyWordSpec with Matchers {
   "The GameData" should {
     "be loadable from resources" in {
 
-      Inside.inside( Loader.io.use( _.loadResource[GameData] ).attempt.unsafeRunSync() ) { case Right( _ ) => succeed }
+      Inside.inside( Loader.io.loadResource[GameData].attempt.unsafeRunSync() ) { case Right( _ ) => succeed }
     }
   }
 
   "The model" should {
     "be loadable from resources" in {
 
-      Inside.inside(
-        Loader[IO]
-          .use( loader => loader.loadModel )
-          .attempt
-          .unsafeRunSync()
-      ) {
+      Inside.inside( Loader.io.loadModel.attempt.unsafeRunSync() ) {
         case Right( model ) =>
           model.items.size shouldBe <=( 256 )
           model.manufacturingRecipes.size shouldBe <=( 256 )
@@ -51,8 +43,8 @@ class LoadingSpec extends AnyWordSpec with Matchers {
   "The whole solver inputs" should {
     "be loadable from resources" in {
       Inside.inside(
-        Loader[IO]
-          .use( loader => loader.loadModel.flatMap( loader.loadSolverInputs( _, ConfigSource.defaultReference ) ) )
+        Loader.io.loadModel
+          .flatMap( Loader.io.loadSolverInputs( _, ConfigSource.defaultReference ) )
           .attempt
           .unsafeRunSync()
       ) { case Right( _ ) => succeed }

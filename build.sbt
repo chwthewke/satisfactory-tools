@@ -42,8 +42,7 @@ val `satisfactory-tools-app` = project
     libraryDependencies ++=
       catsEffect ++
         pureconfigCatsEffect ++
-        fs2 ++
-        circeFs2
+        fs2 // ++ circeFs2
   )
   .dependsOn( `satisfactory-tools-core` )
   .enablePlugins( ScalacPlugin )
@@ -52,11 +51,7 @@ val `satisfactory-tools-web` = project
   .settings( compilerPlugins )
   .settings(
     libraryDependencies ++=
-      catsEffect ++
-        pureconfigCatsEffect ++
-        fs2 ++
-        circeFs2 ++
-        http4s ++
+      http4s ++
         http4sBlazeServer ++
         scodec ++
         scalatags ++
@@ -97,5 +92,9 @@ val `satisfactory-tools-all` = project
   .in( file( "." ) )
   .aggregate(
     `satisfactory-tools-core`,
+    `satisfactory-tools-app`,
+    `satisfactory-tools-dev`,
+    `satisfactory-tools-web`,
+    `satisfactory-production-calculator`,
     `satisfactory-tools-tests`
   )

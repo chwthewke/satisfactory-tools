@@ -2,8 +2,7 @@ package net.chwthewke.satisfactorytools
 package web.protocol
 
 import alleycats.std.map._
-import cats.effect.ContextShift
-import cats.effect.IO
+import cats.effect.unsafe.implicits._
 import cats.syntax.apply._
 import cats.syntax.flatMap._
 import cats.syntax.traverse._
@@ -16,7 +15,6 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 import scala.collection.Factory
-import scala.concurrent.ExecutionContext
 import scodec.Attempt
 import scodec.Codec
 import scodec.DecodeResult
@@ -38,8 +36,7 @@ class SolverInputsCodecSpec
   override implicit val generatorDrivenConfig: PropertyCheckConfiguration =
     PropertyCheckConfiguration( minSuccessful = 100 )
 
-  implicit val ioCS: ContextShift[IO] = IO.contextShift( ExecutionContext.global )
-  val ( model, mapOptions )           = Loader.io.use( l => l.loadModel.mproduct( l.loadMapOptions ) ).unsafeRunSync()
+  val ( model, mapOptions ) = Loader.io.loadModel.mproduct( Loader.io.loadMapOptions ).unsafeRunSync()
 
   def roundTrip[A]( codec: Codec[A], generator: Gen[A] ): Unit =
     "round trip" in {

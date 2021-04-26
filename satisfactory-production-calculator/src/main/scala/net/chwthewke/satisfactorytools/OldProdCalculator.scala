@@ -20,14 +20,11 @@ object OldProdCalculator
   override def main: Opts[IO[ExitCode]] =
     Program.configOpt.map(
       cfg =>
-        Loader.io.use(
-          loader =>
-            for {
-              model  <- loader.loadModel
-              inputs <- loader.loadSolverInputs( model, cfg )
-              _      <- IO.delay( Calculator[IO]( model, inputs, RecipeMatrix ) )
-            } yield ExitCode.Success
-        )
+        for {
+          model  <- Loader.io.loadModel
+          inputs <- Loader.io.loadSolverInputs( model, cfg )
+          _      <- IO.println( Calculator[IO]( model, inputs, RecipeMatrix ) )
+        } yield ExitCode.Success
     )
 
 }

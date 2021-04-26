@@ -1,15 +1,13 @@
 package net.chwthewke.satisfactorytools
 package web
 
-import cats.Applicative
 import cats.Defer
-import cats.effect.ConcurrentEffect
-import cats.effect.ContextShift
+import cats.Monad
+import cats.effect.Async
 import cats.effect.ExitCode
+import cats.effect.Ref
 import cats.effect.Resource
 import cats.effect.Sync
-import cats.effect.Timer
-import cats.effect.concurrent.Ref
 import cats.syntax.apply._
 import cats.syntax.flatMap._
 import cats.syntax.functor._
@@ -30,13 +28,13 @@ import model.SolverInputs
 
 object WebApp {
 
-  def httpApp[F[_]: Sync: ContextShift]( shutdownCommand: Ref[F, Boolean] ): Resource[F, HttpApp[F]] =
+  def httpApp[F[_]: Async]( shutdownCommand: Ref[F, Boolean] ): Resource[F, HttpApp[F]] =
     Resource.eval( loadAll[F] ).map {
       case ( model, inputs ) =>
         AutoSlash.httpRoutes( Pages( model, inputs ).routes <+> shutdown( shutdownCommand ) ).orNotFound
     }
 
-  private def shutdown[F[_]: Defer: Applicative]( shutdownCommand: Ref[F, Boolean] ): HttpRoutes[F] = {
+  private def shutdown[F[_]: Defer: Monad]( shutdownCommand: Ref[F, Boolean] ): HttpRoutes[F] = {
     val dsl = new Http4sDsl[F] {}
     import dsl._
 
@@ -45,7 +43,7 @@ object WebApp {
     }
   }
 
-  def server[F[_]: ConcurrentEffect: Timer: ContextShift]: F[ExitCode] = {
+  def server[F[_]: Async]: F[ExitCode] = {
     Resource.eval( SignallingRef[F, Boolean]( false ) ).mproduct( httpApp[F] ).use {
       case ( signal, app ) =>
         Ref
@@ -63,13 +61,10 @@ object WebApp {
     }
   }
 
-  def loadAll[F[_]: Sync: ContextShift]: F[( Model, SolverInputs )] =
-    Loader[F].use(
-      loader =>
-        for {
-          model  <- loader.loadModel
-          inputs <- loader.loadSolverInputs( model, ConfigSource.default )
-        } yield ( model, inputs )
-    )
+  def loadAll[F[_]: Sync]: F[( Model, SolverInputs )] =
+    for {
+      model  <- Loader[F].loadModel
+      inputs <- Loader[F].loadSolverInputs( model, ConfigSource.default )
+    } yield ( model, inputs )
 
 }

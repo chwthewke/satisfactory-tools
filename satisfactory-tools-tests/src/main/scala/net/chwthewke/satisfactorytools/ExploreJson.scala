@@ -2,7 +2,6 @@ package net.chwthewke.satisfactorytools
 
 import cats.Monoid
 import cats.data.NonEmptyVector
-import cats.effect.Blocker
 import cats.effect.ExitCode
 import cats.effect.IO
 import cats.effect.IOApp
@@ -11,7 +10,7 @@ import cats.syntax.option._
 import cats.syntax.show._
 import io.circe.Json
 import io.circe.JsonObject
-import io.circe.fs2.byteArrayParser
+import net.chwthewke.vendor.io.circe.fs2.byteArrayParser
 import scala.collection.immutable.SortedMap
 import scala.collection.immutable.SortedSet
 
@@ -20,13 +19,11 @@ import model.NativeClass
 
 object ExploreJson extends IOApp {
 
-  def loadJson( blocker: Blocker ): IO[Vector[Json]] =
-    Loader.io.use(
-      _.streamDocsResource
-        .through( byteArrayParser )
-        .compile
-        .toVector
-    )
+  def loadJson: IO[Vector[Json]] =
+    Loader.io.streamDocsResource
+      .through( byteArrayParser )
+      .compile
+      .toVector
 
   def printNativeClasses( array: Vector[Json] ): IO[Unit] = {
     val ( notices, nativeClasses ) =
@@ -42,12 +39,8 @@ object ExploreJson extends IOApp {
 
     NonEmptyVector
       .fromVector( notices )
-      .traverse_( msgs => IO.delay( println( "NOTICE:\n" + msgs.intercalate( "\n" ) ) ) ) *>
-      IO.delay(
-        println(
-          "NativeClasses:\n" + nativeClasses.intercalate( "\n" )
-        )
-      )
+      .traverse_( msgs => IO.println( "NOTICE:\n" + msgs.intercalate( "\n" ) ) ) *>
+      IO.println( "NativeClasses:\n" + nativeClasses.intercalate( "\n" ) )
 
   }
 
@@ -84,18 +77,14 @@ object ExploreJson extends IOApp {
 
   override def run( args: List[String] ): IO[ExitCode] =
     for {
-      array <- Blocker[IO].use( loadJson )
+      array <- loadJson
 //      _     <- printNativeClasses( array )
-      _ <- IO.delay(
-            println( collectNativeClassFields( NativeClass.resourceExtractorClass )( array ).intercalate( "\n" ) )
-          )
-      _ <- IO.delay(
-            println(
-              collectNativeClassFieldValues( NativeClass.resourceExtractorClass, "mDisplayName" )( array )
-                .map( _.show )
-                .toVector
-                .intercalate( "\n" )
-            )
+      _ <- IO.println( collectNativeClassFields( NativeClass.resourceExtractorClass )( array ).intercalate( "\n" ) )
+      _ <- IO.println(
+            collectNativeClassFieldValues( NativeClass.resourceExtractorClass, "mDisplayName" )( array )
+              .map( _.show )
+              .toVector
+              .intercalate( "\n" )
           )
     } yield ExitCode.Success
 }

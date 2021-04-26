@@ -1,9 +1,8 @@
 package net.chwthewke.satisfactorytools
 package web
 
-import cats.Monad
 import cats.data.ValidatedNel
-import cats.effect.Sync
+import cats.effect.Concurrent
 import cats.syntax.either._
 import cats.syntax.flatMap._
 import cats.syntax.foldable._
@@ -24,7 +23,7 @@ import prod.Factory
 import web.protocol.SolverInputsCodec
 import web.view.View
 
-case class Pages[F[_]: Sync: Monad]( model: Model, defaultInputs: SolverInputs ) {
+case class Pages[F[_]: Concurrent]( model: Model, defaultInputs: SolverInputs ) {
 
   import Pages._
   val dsl: Http4sDsl[F] = new Http4sDsl[F] {}

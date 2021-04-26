@@ -21,14 +21,11 @@ object DumpMatrixCsv
   override def main: Opts[IO[ExitCode]] =
     Program.configOpt.map(
       cfg =>
-        Loader.io.use(
-          loader =>
-            for {
-              model      <- loader.loadModel
-              prodConfig <- loader.loadProductionConfig( cfg )
-              _          <- runProgram( model, prodConfig )
-            } yield ExitCode.Success
-        )
+        for {
+          model      <- Loader.io.loadModel
+          prodConfig <- Loader.io.loadProductionConfig( cfg )
+          _          <- runProgram( model, prodConfig )
+        } yield ExitCode.Success
     )
 
   def runProgram( model: Model, config: ProductionConfig ): IO[Unit] = {
@@ -48,7 +45,7 @@ object DumpMatrixCsv
         }
     ).intercalate( "\n" )
 
-    IO.delay( println( output ) )
+    IO.println( output )
   }
 
 }

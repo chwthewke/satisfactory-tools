@@ -109,12 +109,9 @@ object ExploreLinProg
           case ( item, expr ) => ( item.displayName, expr >= bill.items.find( _.item == item ).fold( 0d )( _.amount ) )
         }
 
-        println( itemConstraints.mkString( "Item Constraints: \n", "\n", "\n\n" ) )
-
         val recipeConstraints = v.vars.collect {
           case ( RecipeVariable( r ), v ) => ( r.displayName, v >= 0 )
         }
-        println( recipeConstraints.mkString( "Recipe Constraints: \n", "\n", "\n\n" ) )
 
         val constraints = (itemConstraints.values ++ recipeConstraints.values).toVector
 
@@ -241,15 +238,12 @@ object ExploreLinProg
   override def main: Opts[IO[ExitCode]] =
     Program.configOpt.map(
       cfg =>
-        Loader.io.use(
-          loader =>
-            for {
-              model      <- loader.loadModel
-              prodConfig <- loader.loadProductionConfig( cfg )
-              map        <- loader.loadMapOptions( model )
-              _          <- runProgram( model, prodConfig, map )
-            } yield ExitCode.Success
-        )
+        for {
+          model      <- Loader.io.loadModel
+          prodConfig <- Loader.io.loadProductionConfig( cfg )
+          map        <- Loader.io.loadMapOptions( model )
+          _          <- runProgram( model, prodConfig, map )
+        } yield ExitCode.Success
     )
 
   def runProgram( model: Model, config: ProductionConfig, map: MapOptions ): IO[Unit] = {
@@ -289,13 +283,13 @@ object ExploreLinProg
       b                      <- bill
       w                      <- resourceWeights
       ( v, p )               <- IO.delay( lps.toLinearProblem( b, w, model ).run( lps.VarDict.empty ).value )
-      _                      <- IO.delay( println( p ) )
+      _                      <- IO.println( p )
       ( blocks, extr, cost ) <- lps.solveLinearProblem( p, model ).runA( v ).value.liftTo[IO]
       _                      <- IO( println( showResult( blocks, extr, cost ) ) )
       r1 = mkSol( model, p ).runA( v ).value
-      _ <- IO( println( s"My results constraints ${lps.checkResult( r1 )}" ) )
+      _ <- IO.println( s"My results constraints ${lps.checkResult( r1 )}" )
       ( b1, e1, c1 ) = lps.presentRawSolution( model, r1 ).runA( v ).value
-      _ <- IO( println( showResult( b1, e1, c1 ) ) )
+      _ <- IO.println( showResult( b1, e1, c1 ) )
     } yield ()
 
   }

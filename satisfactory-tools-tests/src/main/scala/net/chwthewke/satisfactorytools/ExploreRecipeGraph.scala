@@ -4,7 +4,6 @@ import buildinfo.Satisfactorytools
 import cats.effect.ExitCode
 import cats.effect.IO
 import cats.syntax.apply._
-import cats.syntax.flatMap._
 import com.monovore.decline.Opts
 import com.monovore.decline.effect.CommandIOApp
 import org.scalameta.ascii.graph.Graph
@@ -24,17 +23,14 @@ object ExploreRecipeGraph
   override def main: Opts[IO[ExitCode]] =
     Program.configOpt.map(
       cfg =>
-        Loader.io.use(
-          loader =>
-            ( loader.loadModel, loader.loadProductionConfig( cfg ) )
-              .mapN( runProgram )
-              .flatten
-              .as( ExitCode.Success )
-        )
+        ( Loader.io.loadModel, Loader.io.loadProductionConfig( cfg ) )
+          .mapN( runProgram )
+          .flatten
+          .as( ExitCode.Success )
     )
 
   def runProgram( model: Model, config: ProductionConfig ): IO[Unit] =
-    IO.delay( println( asciiGraph( config, model ) ) )
+    IO.println( asciiGraph( config, model ) )
 
   def asciiGraph( config: ProductionConfig, model: Model ): String = {
     val mat = MkRecipeMatrix( config, model )

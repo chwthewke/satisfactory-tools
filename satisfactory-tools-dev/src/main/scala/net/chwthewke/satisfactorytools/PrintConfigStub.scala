@@ -14,9 +14,8 @@ import model.Recipe
 object PrintConfigStub extends IOApp {
 
   override def run( args: List[String] ): IO[ExitCode] =
-    Loader.io
-      .use( _.loadModel )
-      .flatMap( model => IO.delay( println( configStub( model ) ) ) )
+    Loader.io.loadModel
+      .flatMap( model => IO.println( configStub( model ) ) )
       .as( ExitCode.Success )
 
   def recipeLine( recipe: Recipe[_, Item], w: Int ): String = {
