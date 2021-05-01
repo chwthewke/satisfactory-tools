@@ -103,7 +103,8 @@ object RecipeSelection {
 
     (
       source.copy(
-        displayName = show"${source.displayName} (${purity.entryName}, ${finalClock.round}%)",
+        displayName =
+          show"${source.product.head.item.displayName} (${purity.entryName}, ${source.producedIn.displayName})",
         product = configuredProduct.map( _._1 )
       ),
       finalClock
