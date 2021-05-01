@@ -29,7 +29,6 @@ import model.ClassName
 import model.Countable
 import model.Item
 import model.Machine
-import model.MapOptions
 import model.Model
 import model.Options
 import model.Recipe
@@ -241,12 +240,11 @@ object ExploreLinProg
         for {
           model      <- Loader.io.loadModel
           prodConfig <- Loader.io.loadProductionConfig( cfg )
-          map        <- Loader.io.loadMapOptions( model )
-          _          <- runProgram( model, prodConfig, map )
+          _          <- runProgram( model, prodConfig )
         } yield ExitCode.Success
     )
 
-  def runProgram( model: Model, config: ProductionConfig, map: MapOptions ): IO[Unit] = {
+  def runProgram( model: Model, config: ProductionConfig ): IO[Unit] = {
     val configWithTestBill = config.copy( items = Vector( Countable( ClassName( "Desc_IronPlate_C" ), 60.0 ) ) )
 
     val bill: IO[Bill] =
@@ -258,7 +256,7 @@ object ExploreLinProg
     val resourceWeights: IO[Map[Item, Double]] =
       RecipeList
         .init( model, config )
-        .map( RecipeSelection( model, _, options, map ) )
+        .map( RecipeSelection( model, _, options, model.defaultMapOptions ) )
         .map( _.resourceWeights )
         .leftMap( Error( _ ) )
         .liftTo[IO]

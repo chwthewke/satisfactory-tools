@@ -4,6 +4,7 @@ package data
 import cats.Monoid
 import cats.effect.IO
 import cats.effect.Sync
+import cats.syntax.apply._
 import cats.syntax.either._
 import cats.syntax.flatMap._
 import cats.syntax.functor._
@@ -17,7 +18,6 @@ import pureconfig.ConfigSource
 import pureconfig.module.catseffect.syntax._
 
 import model.Bill
-import model.MapOptions
 import model.Model
 import model.Options
 import model.RecipeList
@@ -44,24 +44,21 @@ class Loader[F[_]]( implicit val syncInstance: Sync[F] ) {
   def loadGameData: F[GameData] = loadResource[GameData]
 
   def loadModel: F[Model] =
-    loadResource[GameData]
-      .flatMap( data => data.toModel.leftMap( Error( _ ) ).liftTo[F] )
+    ( loadResource[GameData], loadMapConfig ).tupled
+      .flatMap { case ( data, map ) => data.toModel( map ).leftMap( Error( _ ) ).liftTo[F] }
 
   def loadProductionConfig( src: ConfigSource ): F[ProductionConfig] =
     src.loadF[F, ProductionConfig]()
 
-  def loadMapOptions( model: Model ): F[MapOptions] =
-    Loader.mapConf
-      .loadF[F, MapConfig]()
-      .flatMap( MapOptions.init( model, _ ).leftMap( Error( _ ) ).liftTo[F] )
+  def loadMapConfig: F[MapConfig] =
+    Loader.mapConf.loadF[F, MapConfig]()
 
   def loadSolverInputs( model: Model, src: ConfigSource ): F[SolverInputs] =
     for {
       prodConfig <- loadProductionConfig( src )
       bill       <- Bill.init( model, prodConfig ).leftMap( Error( _ ) ).liftTo[F]
       recipeList <- RecipeList.init( model, prodConfig ).leftMap( Error( _ ) ).liftTo[F]
-      mapOptions <- loadMapOptions( model )
-    } yield SolverInputs( bill, recipeList, Options.default, mapOptions )
+    } yield SolverInputs( bill, recipeList, Options.default, model.defaultMapOptions )
 
 }
 

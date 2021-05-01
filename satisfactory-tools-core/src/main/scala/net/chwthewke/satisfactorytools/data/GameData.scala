@@ -29,6 +29,7 @@ import model.ItemType
 import model.Machine
 import model.MachineType
 import model.Manufacturer
+import model.MapOptions
 import model.Model
 import model.NativeClass
 import model.Recipe
@@ -40,7 +41,7 @@ final case class GameData(
     recipes: Vector[Recipe[List[ClassName], ClassName]]
 ) {
 
-  def toModel: ValidatedNel[String, Model] = {
+  def toModel( mapConfig: MapConfig ): ValidatedNel[String, Model] = {
     val ( rawSelfExtraction, rawManufacturing ) = recipes.partition( isSelfExtraction )
 
     val extractorMachines = extractors.traverse( ex => Machine.extractor( ex ).toValidatedNel.tupleLeft( ex ) )
@@ -52,8 +53,11 @@ final case class GameData(
     val manufacturing: ValidatedNel[String, Vector[Recipe[Machine, Item]]] =
       rawManufacturing.traverseFilter( validateManufacturingRecipe )
 
-    ( extractionRecipes, manufacturing )
-      .mapN( ( ex, mf ) => Model( mf, items.to( SortedMap ), ex.map( _._1 ).distinct, ex ) )
+    val defaultMapOptions: ValidatedNel[String, MapOptions] =
+      MapOptions.init( items, mapConfig ).toValidatedNel
+
+    ( extractionRecipes, manufacturing, defaultMapOptions )
+      .mapN( ( ex, mf, mo ) => Model( mf, items.to( SortedMap ), ex.map( _._1 ).distinct, ex, mo ) )
   }
 
   def validateItem( ccn: Countable[ClassName, Double] ): ValidatedNel[String, Countable[Item, Double]] =
@@ -137,7 +141,7 @@ final case class GameData(
   def extractionRecipe( item: Item, extractor: Extractor, machine: Machine ): Recipe[Machine, Item] =
     Recipe(
       ClassName( show"${item.className}_${extractor.className}" ),
-      show"Extract ${item.displayName} with ${extractor.displayName}",
+      show"${item.displayName} (${extractor.displayName})",
       Nil,
       NonEmptyList.of( Countable( item, extractor.itemsPerCycle.toDouble / item.form.simpleAmountFactor ) ),
       extractor.cycleTime,

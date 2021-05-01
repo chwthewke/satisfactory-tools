@@ -13,7 +13,6 @@ import web.protocol.SolverInputsCodec
 object View {
   def apply(
       model: Model,
-      defaultInputs: SolverInputs,
       inputs: SolverInputs,
       solution: Option[Either[String, Factory]] = None
   ): Text.TypedTag[String] =
@@ -45,7 +44,7 @@ object View {
           div( input( `type` := "submit", value := "Go!" ) ),
           BillView.view( model, inputs.bill ),
           RecipeListView.view( model, inputs.recipeList ),
-          MapOptionsView.view( defaultInputs.mapOptions, inputs.mapOptions ),
+          MapOptionsView.view( model, inputs.mapOptions ),
           OptionsView.view( inputs.options )
         )
       )

@@ -4,7 +4,6 @@ package web.protocol
 import alleycats.std.map._
 import cats.effect.unsafe.implicits._
 import cats.syntax.apply._
-import cats.syntax.flatMap._
 import cats.syntax.traverse._
 import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck.Gen
@@ -36,7 +35,7 @@ class SolverInputsCodecSpec
   override implicit val generatorDrivenConfig: PropertyCheckConfiguration =
     PropertyCheckConfiguration( minSuccessful = 100 )
 
-  val ( model, mapOptions ) = Loader.io.loadModel.mproduct( Loader.io.loadMapOptions ).unsafeRunSync()
+  val model = Loader.io.loadModel.unsafeRunSync()
 
   def roundTrip[A]( codec: Codec[A], generator: Gen[A] ): Unit =
     "round trip" in {
@@ -63,7 +62,7 @@ class SolverInputsCodecSpec
   }
 
   val genMapOptions: Gen[MapOptions] =
-    mapOptions.resourceNodes
+    model.defaultMapOptions.resourceNodes
       .traverse( _.traverse {
         case ResourceDistrib( impureNodes, normalNodes, pureNodes ) =>
           ( Gen.choose( 0, impureNodes ), Gen.choose( 0, normalNodes ), Gen.choose( 0, pureNodes ) )

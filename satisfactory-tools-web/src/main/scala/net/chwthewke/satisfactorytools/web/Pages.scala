@@ -39,16 +39,16 @@ case class Pages[F[_]: Concurrent]( model: Model, defaultInputs: SolverInputs ) 
       req.as[SolverInputs].flatMap( respondWithFormInput )
   }
 
-  def respondDefault: F[Response[F]] = Ok( View( model, defaultInputs, defaultInputs, None ) )
+  def respondDefault: F[Response[F]] = Ok( View( model, defaultInputs, None ) )
 
   def respondWithState( state: ValidatedNel[ParseFailure, SolverInputs] ): F[Response[F]] =
     state.fold(
       errs => BadRequest( errs.map( err => s"${err.sanitized} ${err.details}" ).mkString_( "\n" ) ),
-      inputs => Ok( View( model, defaultInputs, inputs, Some( solve( inputs ) ) ) )
+      inputs => Ok( View( model, inputs, Some( solve( inputs ) ) ) )
     )
 
   def respondWithFormInput( inputs: SolverInputs ): F[Response[F]] =
-    Ok( View( model, defaultInputs, inputs, Some( solve( inputs ) ) ) )
+    Ok( View( model, inputs, Some( solve( inputs ) ) ) )
 
   def solve( inputs: SolverInputs ): Either[String, Factory] =
     Calculator
