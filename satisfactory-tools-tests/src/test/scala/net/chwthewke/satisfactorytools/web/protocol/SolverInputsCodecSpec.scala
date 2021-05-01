@@ -20,10 +20,14 @@ import scodec.DecodeResult
 import scodec.bits.BitVector
 
 import data.Loader
+import model.Bill
+import model.Countable
 import model.MapOptions
+import model.Model
 import model.Options
 import model.RecipeList
 import model.ResourceDistrib
+import model.SolverInputs
 
 class SolverInputsCodecSpec
     extends AnyWordSpec
@@ -35,7 +39,7 @@ class SolverInputsCodecSpec
   override implicit val generatorDrivenConfig: PropertyCheckConfiguration =
     PropertyCheckConfiguration( minSuccessful = 100 )
 
-  val model = Loader.io.loadModel.unsafeRunSync()
+  val model: Model = Loader.io.loadModel.unsafeRunSync()
 
   def roundTrip[A]( codec: Codec[A], generator: Gen[A] ): Unit =
     "round trip" in {
@@ -70,9 +74,6 @@ class SolverInputsCodecSpec
       } )
       .map( MapOptions( _ ) )
 
-  val genMapData: Gen[Vector[( Byte, Byte, Short, Short, Short )]] =
-    genMapOptions.map( SolverInputsCodec.encodeMapData( model.extractedItems, _ ) )
-
   val genOptions: Gen[Options] =
     (
       Gen.oneOf( Options.Belt.values ),
@@ -88,35 +89,35 @@ class SolverInputsCodecSpec
       .map( _.sortBy( model.manufacturingRecipes.indexOf ) )
       .map( RecipeList( _ ) )
 
-  val genBillData: Gen[Vector[( Byte, Float )]] =
+  val genBill: Gen[Bill] =
     Gen
       .choose( 0, 40 )
-      .flatMap( Gen.containerOfN[Vector, ( Byte, Float )]( _, ( arbitrary[Byte], arbitrary[Float] ).tupled ) )
+      .flatMap( size => Gen.pick( size, model.items.values.toSeq ) )
+      .flatMap( _.toVector.traverse( item => arbitrary[Float].map( am => Countable( item, am.toDouble ) ) ) )
+      .map( Bill( _ ) )
 
-  val genData: Gen[SolverInputsCodec.Data] =
-    ( genBillData, genRecipeList, genOptions, genMapOptions )
-      .mapN(
-        ( b, r, o, m ) => SolverInputsCodec.Data( b, r, o, SolverInputsCodec.encodeMapData( model.extractedItems, m ) )
-      )
+  val genInputs: Gen[SolverInputs] =
+    ( genBill, genRecipeList, genOptions, genMapOptions )
+      .mapN( SolverInputs( _, _, _, _ ) )
 
-  "the map data codec" should {
-    behave like roundTrip( SolverInputsCodec.mapDataCodec, genMapData )
+  "the map options codec" should {
+    behave like roundTrip( Codecs.mapOptionsCodec( model ), genMapOptions )
   }
 
   "the options codec" should {
-    behave like roundTrip( SolverInputsCodec.optionsCodec, genOptions )
+    behave like roundTrip( Codecs.optionsCodec, genOptions )
   }
 
   "the recipe list codec" should {
-    behave like roundTrip( SolverInputsCodec.recipeListCodec( model ), genRecipeList )
+    behave like roundTrip( Codecs.recipeListCodec( model ), genRecipeList )
   }
 
   "the bill data codec" should {
-    behave like roundTrip( SolverInputsCodec.billDataCodec, genBillData )
+    behave like roundTrip( Codecs.billCodec( model ), genBill )
   }
 
   "the data codec" should {
-    behave like roundTrip( SolverInputsCodec.dataCodec( model ), genData )
+    behave like roundTrip( Codecs.inputsCodec( model ), genInputs )
   }
 
 }

@@ -1,6 +1,7 @@
 package net.chwthewke.satisfactorytools
 package model
 
+import cats.Show
 import cats.syntax.foldable._
 import cats.syntax.option._
 import cats.syntax.show._
@@ -17,5 +18,8 @@ object RecipeList {
       .leftMap( missing => show"Unknown recipe(s) in config: ${missing.mkString_( ", " )}" )
       .toEither
       .map( RecipeList( _ ) )
+
+  implicit val recipeListShow: Show[RecipeList] =
+    Show.show( _.recipes.map( _.displayName ).mkString( "\n" ) )
 
 }

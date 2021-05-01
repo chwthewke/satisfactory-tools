@@ -9,6 +9,8 @@ import model.ResourcePurity
 
 object FormNames {
 
+  val state: String = "state"
+
   def billItem( item: Item ): String = show"bill_${item.className}"
 
   val recipes: String = "recipes"

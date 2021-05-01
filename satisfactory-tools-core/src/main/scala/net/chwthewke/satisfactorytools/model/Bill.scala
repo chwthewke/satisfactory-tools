@@ -1,6 +1,7 @@
 package net.chwthewke.satisfactorytools
 package model
 
+import cats.Show
 import cats.syntax.either._
 import cats.syntax.foldable._
 import cats.syntax.option._
@@ -34,5 +35,11 @@ object Bill {
       .toEither
       .leftMap( mi => show"Unknown items in bill: ${mi.intercalate( ", " )}" )
       .map( Bill( _ ) )
+
+  implicit val billShow: Show[Bill] = Show.show(
+    _.items
+      .map { case Countable( item, amount ) => f"$amount%.2f ${item.displayName}" }
+      .mkString( "\n" )
+  )
 
 }

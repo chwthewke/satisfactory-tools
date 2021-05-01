@@ -1,6 +1,8 @@
 package net.chwthewke.satisfactorytools
 package model
 
+import cats.Show
+import cats.derived.semiauto
 import enumeratum.Enum
 import enumeratum.EnumEntry
 
@@ -31,6 +33,8 @@ object Options {
   val default: Options =
     Options( Belt.BeltMk4, Pipe.PipeMk2, Miner.MinerMk2, ClockSpeed.ClockSpeed100, Extractors.values.toSet, Set.empty )
 
+  implicit val optionsShow: Show[Options] = semiauto.show[Options]
+
   sealed abstract class Belt( val itemsPerMinute: Int ) extends EnumEntry
 
   object Belt extends Enum[Belt] {
@@ -41,6 +45,8 @@ object Options {
     final case object BeltMk5 extends Belt( 780 )
 
     override val values: Vector[Belt] = findValues.toVector
+
+    implicit val beltShow: Show[Belt] = Show.fromToString
   }
 
   sealed abstract class Pipe( val cubicMetersPerMinute: Int ) extends EnumEntry
@@ -50,6 +56,8 @@ object Options {
     final case object PipeMk2 extends Pipe( 600 )
 
     override val values: Vector[Pipe] = findValues.toVector
+
+    implicit val pipeShow: Show[Pipe] = Show.fromToString
   }
 
   sealed abstract class Miner( val extractorClass: ClassName ) extends EnumEntry {
@@ -69,6 +77,8 @@ object Options {
     final case object MinerMk3 extends Miner( ClassName( "Build_MinerMk3_C" ) )
 
     override val values: Vector[Miner] = findValues.toVector
+
+    implicit val minerShow: Show[Miner] = Show.fromToString
   }
 
   sealed abstract class ClockSpeed( val percent: Int ) extends EnumEntry
@@ -78,6 +88,8 @@ object Options {
     final case object ClockSpeed250 extends ClockSpeed( 250 )
 
     override val values: Vector[ClockSpeed] = findValues.toVector
+
+    implicit val clockSpeedShow: Show[ClockSpeed] = Show.fromToString
   }
 
   sealed abstract class Extractors extends EnumEntry {
@@ -98,5 +110,7 @@ object Options {
     }
 
     override val values: Vector[Extractors] = findValues.toVector
+
+    implicit val showExtractors: Show[Extractors] = Show.fromToString
   }
 }
