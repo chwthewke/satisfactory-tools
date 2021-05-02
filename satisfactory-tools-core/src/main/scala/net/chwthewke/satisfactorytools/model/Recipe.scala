@@ -17,28 +17,31 @@ import scala.concurrent.duration._
 final case class Recipe[M, N](
     className: ClassName,
     displayName: String,
-    ingredients: List[Countable[N, Double]], // TODO can be NEL?
-    product: NonEmptyList[Countable[N, Double]],
+    ingredients: List[Countable[Double, N]], // TODO can be NEL?
+    product: NonEmptyList[Countable[Double, N]],
     duration: FiniteDuration,
     producedIn: M
 ) {
-  def ingredientsPerMinute: List[Countable[N, Double]]      = ingredients.map( perMinute )
-  def productsPerMinute: NonEmptyList[Countable[N, Double]] = product.map( perMinute )
+  def ingredientsPerMinute: List[Countable[Double, N]]      = ingredients.map( perMinute )
+  def productsPerMinute: NonEmptyList[Countable[Double, N]] = product.map( perMinute )
 
-  def reducedItemsPerMinute: Map[N, Double] =
+  def itemsPerMinuteMap: Map[N, Double] =
     productsPerMinute.foldMap { case Countable( it, am )      => Map( it -> am ) } |+|
       ingredientsPerMinute.foldMap { case Countable( it, am ) => Map( it -> -am ) }
+
+  def itemsPerMinute: Vector[Countable[Double, N]] =
+    itemsPerMinuteMap.map { case ( item, amount ) => Countable( item, amount ) }.toVector
 
   def isExtraction( implicit ev: M =:= Machine ): Boolean =
     producedIn.machineType.isExtractor
 
-  private def perMinute( ct: Countable[N, Double] ): Countable[N, Double] =
+  private def perMinute( ct: Countable[Double, N] ): Countable[Double, N] =
     Countable( ct.item, ct.amount * 60000 / duration.toMillis )
 
   def isAlternate: Boolean = displayName.toLowerCase.startsWith( "alternate" )
 
   def traverseIngredientsAndProducts[F[_]: Applicative, P](
-      f: Countable[N, Double] => F[Countable[P, Double]]
+      f: Countable[Double, N] => F[Countable[Double, P]]
   ): F[Recipe[M, P]] =
     ( ingredients.traverse( f ), product.traverse( f ) )
       .mapN( ( ing, prd ) => copy[M, P]( ingredients = ing, product = prd ) )
@@ -60,8 +63,8 @@ object Recipe {
       (
           cn: ClassName,
           dn: String,
-          in: List[Countable[ClassName, Double]],
-          out: NonEmptyList[Countable[ClassName, Double]],
+          in: List[Countable[Double, ClassName]],
+          out: NonEmptyList[Countable[Double, ClassName]],
           dur: FiniteDuration,
           mch: List[ClassName]
       ) => Recipe( cn, dn, in, out, dur, mch )

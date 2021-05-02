@@ -7,7 +7,6 @@ import cats.syntax.foldable._
 import cats.syntax.functor._
 import cats.syntax.option._
 import cats.syntax.semigroup._
-import cats.syntax.show._
 import cats.syntax.traverse._
 import mouse.option._
 
@@ -21,8 +20,8 @@ import model.SolverInputs
 object Calculator {
   val Tolerance: Double = 1e-6
 
-  def apply[F[_]]( model: Model, inputs: SolverInputs, solver: Solver ): String =
-    computeFactory( model, inputs, solver ).map( _.show ).merge
+  def apply( model: Model, inputs: SolverInputs, solver: Solver ): String =
+    computeFactory( model, inputs, solver ).map( _.render( inputs.bill ) ).merge
 
   def computeFactory(
       model: Model,
@@ -32,17 +31,12 @@ object Calculator {
     val selection = RecipeSelection( model, inputs.recipeList, inputs.options, inputs.mapOptions )
 
     solver
-      .solve(
-        inputs.bill,
-        RecipeSelection( model, inputs.recipeList, inputs.options, inputs.mapOptions )
-      )
-      .map(
-        renderFactory( inputs.bill, selection, _ )
-      )
+      .solve( inputs.bill, RecipeSelection( model, inputs.recipeList, inputs.options, inputs.mapOptions ) )
+      .map( solutionFactory( inputs.bill, selection, _ ) )
   }
 
   def renderExtractionRecipes(
-      input: Countable[Item, Double],
+      input: Countable[Double, Item],
       tieredRecipes: Vector[ExtractionRecipe]
   ): Option[Vector[FactoryBlock]] =
     ( Vector.empty[Option[FactoryBlock]], ( tieredRecipes, input.amount ) )
@@ -58,13 +52,16 @@ object Calculator {
                     .find( _.item == input.item )
                     .cata[( Double, Option[FactoryBlock] )](
                       c =>
-                        if (target > c.amount * countBound)
+                        if (target > c.amount * countBound * clockSpeed / 100d)
                           (
                             c.amount * countBound,
                             FactoryBlock( Countable( recipe, countBound.toDouble ), clockSpeed ).some
                           )
                         else
-                          ( target, FactoryBlock( Countable( recipe, target / c.amount ), clockSpeed ).some ),
+                          (
+                            target,
+                            FactoryBlock( Countable( recipe, 100d * target / (c.amount * clockSpeed) ), clockSpeed ).some
+                          ),
                       ( 0d, none )
                     )
 
@@ -73,7 +70,7 @@ object Calculator {
             .toLeft( acc.sequence )
       }
 
-  def renderFactory(
+  def solutionFactory(
       bill: Bill,
       recipeSelection: RecipeSelection,
       solution: Solution
@@ -82,7 +79,7 @@ object Calculator {
     val extraOutputs =
       (solution.recipes
         .filter( _.amount > Tolerance )
-        .foldMap( r => r.item.reducedItemsPerMinute.map( _.map( _ * r.amount ) ) ) |+|
+        .foldMap( r => r.item.itemsPerMinuteMap.map( _.map( _ * r.amount ) ) ) |+|
         bill.items.map { case Countable( item, amount ) => ( item, -amount ) }.toMap)
         .filter( _._2 > Tolerance )
         .map { case ( item, amount ) => Countable( item, amount ) }
@@ -90,7 +87,7 @@ object Calculator {
 
     val ( inputRecipes, extraInputs ): (
         Vector[FactoryBlock],
-        Vector[Countable[Item, Double]]
+        Vector[Countable[Double, Item]]
     ) =
       solution.inputs
         .filter( _.amount.abs > Tolerance )
@@ -105,30 +102,33 @@ object Calculator {
               )
         )
 
+    def reachable( block: FactoryBlock, fromItems: Set[Item] ): Boolean =
+      block.recipe.item.ingredients.forall { case Countable( item, _ ) => fromItems( item ) }
+
+    val initialItems: Set[Item] =
+      (inputRecipes.foldMap( _.recipe.item.product.toList ).map( _.item ) ++ extraInputs.map( _.item )).to( Set )
+
     val sortedBlocks: Vector[FactoryBlock] =
       (
         Vector.empty[FactoryBlock],
-        ( inputRecipes, solution.recipes.filter( _.amount.abs > Tolerance ).map( FactoryBlock( _, 100d ) ) )
+        initialItems,
+        solution.recipes
+          .filter( _.amount > Tolerance )
+          .map( FactoryBlock( _, 100d ) )
+          .partition( reachable( _, initialItems ) )
       ).tailRecM[Id, Vector[FactoryBlock]] {
-        case ( acc, ( available, rest ) ) =>
+        case ( acc, seen, ( available, rest ) ) =>
           if (available.isEmpty)
             Right( acc ++ rest )
           else {
-            val next = acc ++ available
-            Left(
-              (
-                next,
-                rest.partition(
-                  block =>
-                    block.recipe.item.ingredients
-                      .forall( it => next.exists( _.recipe.item.product.exists( _.item == it.item ) ) )
-                )
-              )
-            )
+            val next     = acc ++ available
+            val nextSeen = seen.union( available.foldMap( _.recipe.item.product.map( _.item ).toList.to( Set ) ) )
+
+            Left( ( next, nextSeen, rest.partition( reachable( _, nextSeen ) ) ) )
           }
       }
 
-    Factory( bill, sortedBlocks, extraInputs, extraOutputs )
+    Factory( inputRecipes.filter( _.recipe.amount > Tolerance ), sortedBlocks, extraInputs, extraOutputs )
   }
 
 }

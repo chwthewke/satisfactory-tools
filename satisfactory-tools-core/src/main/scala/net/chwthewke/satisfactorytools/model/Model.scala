@@ -11,7 +11,7 @@ case class Model(
     manufacturingRecipes: Vector[Recipe[Machine, Item]],
     items: SortedMap[ClassName, Item],
     extractedItems: Vector[Item],
-    extractionRecipes: Vector[( Item, Recipe[Machine, Item] )], // TODO can we make these Recipe[Extractor, Item]? useful?
+    extractionRecipes: Vector[( Item, ResourcePurity, Recipe[Machine, Item] )],
     defaultMapOptions: MapOptions
 )
 

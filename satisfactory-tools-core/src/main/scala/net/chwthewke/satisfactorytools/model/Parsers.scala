@@ -40,11 +40,11 @@ object Parsers {
     (char( '(' ) ~> buildableClass.sepBy1( char( ',' ) ) <~ char( ')' )).map( _.toList ) |
       ok( Nil )
 
-  val countable: Parser[Countable[ClassName, Double]] =
+  val countable: Parser[Countable[Double, ClassName]] =
     ((string( "(ItemClass=" ) ~> bpGeneratedClass <~ string( ",Amount=" )) ~ double <~ char( ')' ))
-      .map( (Countable[ClassName, Double] _).tupled )
+      .map( (Countable[Double, ClassName] _).tupled )
 
-  val countableList: Parser[NonEmptyList[Countable[ClassName, Double]]] =
+  val countableList: Parser[NonEmptyList[Countable[Double, ClassName]]] =
     char( '(' ) ~> countable.sepBy1( char( ',' ) ) <~ char( ')' )
 
   def listOf[A]( p: Parser[A] ): Parser[List[A]]          = char( '(' ) ~> p.sepBy( char( ',' ) ) <~ char( ')' )

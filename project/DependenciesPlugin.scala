@@ -139,9 +139,13 @@ object DependenciesPlugin extends AutoPlugin {
 
     val scalacheck: Deps =
       Seq(
-        "org.scalacheck"    %% "scalacheck"      % "1.15.3",
+        "org.scalacheck"    %% "scalacheck"      % "1.15.4",
         "io.chrisdavenport" %% "cats-scalacheck" % "0.3.0"
       )
+
+    val catsLaws: Deps = Seq( "org.typelevel" %% "cats-laws" % catsVersion )
+    val discipline: Deps =
+      Seq( "org.typelevel" %% "discipline-core" % "1.1.4", "org.typelevel" %% "discipline-scalatest" % "2.1.4" )
 
     val autoDiffVersion          = "0.5.1"
     val autoDiff: Deps           = "fr.thomasdufour" %% Seq( "auto-diff-core", "auto-diff-generic" ) % autoDiffVersion
@@ -204,6 +208,8 @@ object DependenciesPlugin extends AutoPlugin {
       flywayCore ++
       scalatest ++
       scalacheck ++
+      catsLaws ++
+      discipline ++
       autoDiff ++
       autoDiffEnumeratum ++
       autoDiffScalatest

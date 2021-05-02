@@ -12,7 +12,7 @@ import mouse.boolean._
 
 import data.ProductionConfig
 
-final case class Bill( items: Vector[Countable[Item, Double]] ) {
+final case class Bill( items: Vector[Countable[Double, Item]] ) {
   def amountOf( item: Item ): Double =
     items.find( _.item == item ).map( _.amount ).orEmpty
 }

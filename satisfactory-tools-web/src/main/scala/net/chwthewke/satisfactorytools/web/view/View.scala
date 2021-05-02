@@ -1,16 +1,16 @@
 package net.chwthewke.satisfactorytools
 package web.view
 
-import cats.syntax.functor._
+import cats.syntax.option._
 import scalatags.Text
 import scalatags.Text.all._
 import scalatags.Text.tags2.details
 import scalatags.Text.tags2.summary
 
 import model.Model
-import prod.Factory
-import web.protocol.FormNames
+import web.protocol.Forms
 import web.state.InputTab
+import web.state.OutputTab
 import web.state.PageState
 
 object View {
@@ -34,10 +34,9 @@ object View {
 
   def tabbed(
       model: Model,
-      state: PageState,
-      solution: Option[Either[String, Factory]] = None
+      state: PageState
   ): Text.TypedTag[String] = {
-    val stateBase64 = PageState.toBase64( model, state )
+    val stateBase64 = PageState.toBase64( model, state ).toOption
 
     html(
       head( title := "Satisfactory Planner", pageStyle ),
@@ -52,28 +51,32 @@ object View {
               wrap := "hard",
               cols := 120,
               rows := 10,
-              stateBase64
+              stateBase64.orEmpty
             ),
-            solution.as( a( "Bookmark", href := s"?state=$stateBase64" ) )
+            stateBase64.map( b => a( "Bookmark", href := s"?state=$b" ) )
           )
         ),
-        div(
-          id := "main",
-          form(
-            id := "input",
-            action := "/",
-            method := "POST",
-            enctype := "application/x-www-form-urlencoded",
-            div( input( `type` := "submit", value := "Go!" ) ),
-            input( `type` := "hidden", name := FormNames.state, value := stateBase64 ),
-            inputTabs( state.selectedInputTab ),
-            state.selectedInputTab.view( model, state.selectedInputTab.stateLens.get( state.inputs ) )
-          ),
-          div( id := "output", solution.map( FactoryView( _ ) ) )
+        form(
+          action := "/",
+          method := "POST",
+          enctype := "application/x-www-form-urlencoded",
+          div(
+            id := "main",
+            input( `type` := "hidden", name := Forms.state, stateBase64.map( value := _ ) ),
+            inputForm( model, state ),
+            outputForm( model, state )
+          )
         )
       )
     )
   }
+
+  def inputForm( model: Model, state: PageState ): Text.TypedTag[String] =
+    div(
+      id := "input",
+      inputTabs( state.selectedInputTab ),
+      state.selectedInputTab.view( model, state.selectedInputTab.stateLens.get( state.inputs ) )
+    )
 
   def inputTabs( selectedTab: InputTab ): Text.TypedTag[String] =
     div(
@@ -86,10 +89,53 @@ object View {
         case ( text, tab ) =>
           input(
             `type` := "submit",
-            formaction := s"/input/${tab.id}/from/${selectedTab.id}",
+            formaction := s"/input/${tab.id}",
             value := text,
-            Option.when( tab == selectedTab )( disabled )
+            Option.when( tab == selectedTab )( fontWeight := "bold" )
           )
+      }
+    )
+
+  def outputForm( model: Model, state: PageState ): Text.TypedTag[String] =
+    div(
+      id := "output",
+      outputTabs( state ),
+      state.factory.fold[Frag]( "" )(
+        _.fold(
+          err => p( s"Could not find a solution $err" ),
+          factory => state.selectedOutputTab.view( model, state, factory )
+        )
+      )
+    )
+
+  def outputTabs( state: PageState ): Text.TypedTag[String] =
+    div(
+      input(
+        `type` := "submit",
+        formaction := "/",
+        value := state.factory.fold( "Compute" )( _ => "Recompute" )
+      ),
+      Vector(
+        ( "Production steps", OutputTab.BlocksTab ),
+        ( "Raw resources", OutputTab.ResourcesTab ),
+        ( "Item I/O", OutputTab.ItemsTab )
+      ).map {
+        case ( text, tab ) =>
+          input(
+            `type` := "submit",
+            formaction := s"/output/${tab.id}",
+            value := text,
+            Option.when( tab == state.selectedOutputTab )( fontWeight := "bold" )
+          )
+      },
+      1.to( 5 ).map { ix =>
+        input(
+          `type` := "submit",
+          formaction := s"/output/group$ix",
+          value := ix,
+          Option.when( state.selectedOutputTab == OutputTab.CustomGroup( ix ) )( fontWeight := "bold" )
+        )
+
       }
     )
 

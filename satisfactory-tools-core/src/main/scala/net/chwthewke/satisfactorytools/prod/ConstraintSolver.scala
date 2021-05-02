@@ -40,11 +40,11 @@ object ConstraintSolver extends Solver {
     }
 
     val inputVars: Map[Item, Variable] =
-      recipes.extractionRecipes.map { case ( item, _ ) => ( item, inputVar( item ) ) }
+      recipes.extractedItems.map( item => ( item, inputVar( item ) ) ).toMap
 
     val itemExprs: Map[Item, Expression] =
       allowedRecipes
-        .foldMap( _.reducedItemsPerMinute.keySet )
+        .foldMap( _.itemsPerMinuteMap.keySet )
         .toVector
         .fproduct(
           item =>
@@ -56,7 +56,7 @@ object ConstraintSolver extends Solver {
 
     allowedRecipes.foreach(
       recipe =>
-        recipe.reducedItemsPerMinute.foreach {
+        recipe.itemsPerMinuteMap.foreach {
           case ( item, amount ) =>
             itemExprs( item ).set( recipeVars( recipe ), amount )
         }

@@ -15,7 +15,7 @@ import model.Model
 import model.Options
 import model.RecipeList
 import model.SolverInputs
-import web.protocol.Codecs
+import web.protocol.Forms
 import web.view.BillView
 import web.view.MapOptionsView
 import web.view.OptionsView
@@ -38,7 +38,7 @@ object InputTab extends Enum[InputTab] {
   final case object BillTab extends InputTab( "bill" ) {
     type Data = Bill
 
-    override def decoder( model: Model ): FormDataDecoder[Bill] = Codecs.bill( model )
+    override def decoder( model: Model ): FormDataDecoder[Bill] = Forms.bill( model )
 
     override def view( model: Model, state: Bill ): Text.TypedTag[String] = BillView.view( model, state )
 
@@ -48,7 +48,7 @@ object InputTab extends Enum[InputTab] {
   final case object RecipesTab extends InputTab( "recipes" ) {
     type Data = RecipeList
 
-    override def decoder( model: Model ): FormDataDecoder[RecipeList] = Codecs.recipeList( model )
+    override def decoder( model: Model ): FormDataDecoder[RecipeList] = Forms.recipeList( model )
 
     override def view( model: Model, state: RecipeList ): Text.TypedTag[String] = RecipeListView.view( model, state )
 
@@ -58,7 +58,7 @@ object InputTab extends Enum[InputTab] {
   final case object MapOptionsTab extends InputTab( "map" ) {
     type Data = MapOptions
 
-    override def decoder( model: Model ): FormDataDecoder[MapOptions] = Codecs.mapOptions( model )
+    override def decoder( model: Model ): FormDataDecoder[MapOptions] = Forms.mapOptions( model )
 
     override def view( model: Model, state: MapOptions ): Text.TypedTag[String] = MapOptionsView.view( model, state )
 
@@ -68,7 +68,7 @@ object InputTab extends Enum[InputTab] {
   final case object OptionsTab extends InputTab( "options" ) {
     override type Data = Options
 
-    override def decoder( model: Model ): FormDataDecoder[Options] = Codecs.options
+    override def decoder( model: Model ): FormDataDecoder[Options] = Forms.options
 
     override def view( model: Model, state: Options ): Text.TypedTag[String] = OptionsView.view( state )
 

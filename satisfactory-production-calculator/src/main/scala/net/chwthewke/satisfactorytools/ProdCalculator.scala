@@ -24,7 +24,7 @@ object ProdCalculator
         for {
           model  <- Loader.io.loadModel
           inputs <- Loader.io.loadSolverInputs( model, cfg )
-          _      <- IO.println( Calculator[IO]( model, inputs.copy( options = myOptions ), ConstraintSolver ) )
+          _      <- IO.println( Calculator( model, inputs.copy( options = myOptions ), ConstraintSolver ) )
         } yield ExitCode.Success
     )
 

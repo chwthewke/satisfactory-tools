@@ -11,7 +11,7 @@ import model.Countable
 import model.Item
 import model.MachineType
 import model.Model
-import web.protocol.FormNames
+import web.protocol.Forms
 
 object BillView {
 
@@ -37,8 +37,8 @@ object BillView {
     )
   }
 
-  def itemField( item: Countable[Item, Double] ): Text.TypedTag[String] = {
-    val inputName = FormNames.billItem( item.item )
+  def itemField( item: Countable[Double, Item] ): Text.TypedTag[String] = {
+    val inputName = Forms.billItem( item.item )
     val elId      = show"input_$inputName"
 
     tr(

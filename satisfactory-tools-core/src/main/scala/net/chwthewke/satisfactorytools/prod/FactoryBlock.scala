@@ -14,7 +14,7 @@ import model.Item
 import model.Machine
 import model.Recipe
 
-final case class FactoryBlock( recipe: Countable[Recipe[Machine, Item], Double], baseClock: Double ) {
+final case class FactoryBlock( recipe: Countable[Double, Recipe[Machine, Item]], baseClock: Double ) {
 
   val machineCount: Int        = recipe.amount.ceil.toInt
   val clockSpeedMillionth: Int = (recipe.amount / machineCount * 10000 * baseClock).ceil.toInt
@@ -22,9 +22,9 @@ final case class FactoryBlock( recipe: Countable[Recipe[Machine, Item], Double],
   val machine: Machine = recipe.item.producedIn
   val power: Double    = machineCount * machine.powerConsumption * math.pow( clockSpeedMillionth / 1e6d, 1.6d )
 
-  def computeItemAmount( ci: Countable[Item, Double] ): Double = ci.amount * recipe.amount
+  def computeItemAmount( ci: Countable[Double, Item] ): Double = ci.amount * recipe.amount
 
-  val firstItem: Countable[Item, Double] = recipe.item.productsPerMinute.head
+  val firstItem: Countable[Double, Item] = recipe.item.productsPerMinute.head
   val itemAmount: Double                 = computeItemAmount( firstItem )
   val itemAmountPerUnit: Double          = itemAmount / machineCount
 
@@ -42,7 +42,7 @@ final case class FactoryBlock( recipe: Countable[Recipe[Machine, Item], Double],
   def inputsOutputs: SortedMap[Item, SortedSet[( FactoryBlock.Direction, String, Double )]] = {
     def line(
         direction: FactoryBlock.Direction,
-        lineItem: Countable[Item, Double]
+        lineItem: Countable[Double, Item]
     ): SortedSet[( FactoryBlock.Direction, String, Double )] =
       SortedSet( ( direction, recipe.item.displayName, computeItemAmount( lineItem ) ) )
 

@@ -3,6 +3,7 @@ package data
 
 import alleycats.std.iterable._
 import alleycats.std.map._
+import cats.Id
 import cats.Monoid
 import cats.Order.catsKernelOrderingForOrder
 import cats.Show
@@ -33,6 +34,7 @@ import model.MapOptions
 import model.Model
 import model.NativeClass
 import model.Recipe
+import net.chwthewke.satisfactorytools.model.ResourcePurity
 
 final case class GameData(
     items: Map[ClassName, Item],
@@ -46,7 +48,7 @@ final case class GameData(
 
     val extractorMachines = extractors.traverse( ex => Machine.extractor( ex ).toValidatedNel.tupleLeft( ex ) )
 
-    val extractionRecipes: ValidatedNel[String, Vector[( Item, Recipe[Machine, Item] )]] =
+    val extractionRecipes: ValidatedNel[String, Vector[( Item, ResourcePurity, Recipe[Machine, Item] )]] =
       ( extractorMachines, rawSelfExtraction.traverse( validateRecipeItems ) )
         .mapN( getExtractionRecipes )
 
@@ -60,7 +62,7 @@ final case class GameData(
       .mapN( ( ex, mf, mo ) => Model( mf, items.to( SortedMap ), ex.map( _._1 ).distinct, ex, mo ) )
   }
 
-  def validateItem( ccn: Countable[ClassName, Double] ): ValidatedNel[String, Countable[Item, Double]] =
+  def validateItem( ccn: Countable[Double, ClassName] ): ValidatedNel[String, Countable[Double, Item]] =
     items
       .get( ccn.item )
       .toValidNel( show"Unknown item class ${ccn.item}" )
@@ -99,14 +101,18 @@ final case class GameData(
   def getExtractionRecipes(
       machines: Map[ClassName, ( Extractor, Machine )],
       selfExtraction: Vector[Recipe[List[ClassName], Item]]
-  ): Vector[( Item, Recipe[Machine, Item] )] = {
+  ): Vector[( Item, ResourcePurity, Recipe[Machine, Item] )] = {
     val ( miners, otherExtractors ) =
       machines.values.toVector.partition( _._2.machineType == MachineType.Extractor( ExtractorType.Miner ) )
 
     (
       getConverterRecipes( miners, selfExtraction ) ++
         getOtherExtractionRecipes( otherExtractors )
-    ).map { case ( item, extractor, machine ) => ( item, extractionRecipe( item, extractor, machine ) ) }
+    ).flatMap {
+      case ( item, extractor, machine ) =>
+        ResourcePurity.values
+          .map( purity => ( item, purity, extractionRecipe( item, extractor, purity, machine ) ) )
+    }
   }
 
   def getConverterRecipes(
@@ -138,15 +144,22 @@ final case class GameData(
       extractor.allowedResourceForms.contains( item.form )
     )
 
-  def extractionRecipe( item: Item, extractor: Extractor, machine: Machine ): Recipe[Machine, Item] =
+  def extractionRecipe(
+      item: Item,
+      extractor: Extractor,
+      purity: ResourcePurity,
+      machine: Machine
+  ): Recipe[Machine, Item] =
     Recipe(
       ClassName( show"${item.className}_${extractor.className}" ),
-      show"${item.displayName} (${extractor.displayName})",
+      show"${item.displayName} ($purity, ${extractor.displayName})",
       Nil,
       NonEmptyList.of( Countable( item, extractor.itemsPerCycle.toDouble / item.form.simpleAmountFactor ) ),
       extractor.cycleTime,
       machine
-    )
+    ).traverseIngredientsAndProducts[Id, Item] {
+      case Countable( item, amount ) => Countable( item, amount * purity.multiplier )
+    }
 
 }
 

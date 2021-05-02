@@ -14,7 +14,7 @@ import model.Item
 import model.Model
 import model.Recipe
 import model.RecipeList
-import web.protocol.FormNames
+import web.protocol.Forms
 
 object RecipeListView {
 
@@ -48,7 +48,7 @@ object RecipeListView {
         `type` := "checkbox",
         `id` := elId,
         value := recipe.className.name,
-        name := FormNames.recipes,
+        name := Forms.recipes,
         Option.when( selected )( checked )
       ),
       label(
@@ -65,10 +65,10 @@ object RecipeListView {
       else if (d > 1) f"$d%.1f"
       else f"$d%.2f"
 
-    def showItem( item: Countable[Item, Double], perMinute: Countable[Item, Double] ) =
+    def showItem( item: Countable[Double, Item], perMinute: Countable[Double, Item] ) =
       show"${showAmount( item.amount )} x ${item.item.displayName} @ ${showAmount( perMinute.amount )}/min."
 
-    def showItemList[F[_]: Traverse]( items: F[( Countable[Item, Double], Countable[Item, Double] )] ) =
+    def showItemList[F[_]: Traverse]( items: F[( Countable[Double, Item], Countable[Double, Item] )] ) =
       items
         .map( (showItem _).tupled )
         .mkString_( ", " )

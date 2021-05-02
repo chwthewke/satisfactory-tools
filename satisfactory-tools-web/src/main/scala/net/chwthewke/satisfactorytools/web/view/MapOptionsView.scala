@@ -11,7 +11,7 @@ import model.MapOptions
 import model.Model
 import model.ResourceDistrib
 import model.ResourcePurity
-import web.protocol.FormNames
+import web.protocol.Forms
 
 object MapOptionsView {
 
@@ -36,7 +36,7 @@ object MapOptionsView {
   ): Text.TypedTag[String] =
     tr(
       td( item.displayName ),
-      ResourcePurity.values.reverse
+      ResourcePurity.values
         .map( purity => td( nodeInput( extractorType, item, purity, resourceDistrib, default ) ) )
     )
 
@@ -49,7 +49,7 @@ object MapOptionsView {
   ): Text.TypedTag[String] =
     input(
       `type` := "number",
-      name := FormNames.extractorItemPurityKey( extractorType, item, purity ),
+      name := Forms.extractorItemPurityKey( extractorType, item, purity ),
       value := resourceDistrib.get( purity ),
       min := 0,
       max := default.get( purity )

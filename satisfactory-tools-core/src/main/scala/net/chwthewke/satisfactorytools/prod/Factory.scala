@@ -3,7 +3,6 @@ package prod
 
 import alleycats.std.iterable._
 import cats.Order.catsKernelOrderingForOrder
-import cats.Show
 import cats.data.ZipVector
 import cats.syntax.apply._
 import cats.syntax.foldable._
@@ -17,17 +16,19 @@ import model.Countable
 import model.Item
 
 final case class Factory(
-    bill: Bill,
-    blocks: Vector[FactoryBlock],
-    extraInputs: Vector[Countable[Item, Double]],
-    extraOutputs: Vector[Countable[Item, Double]]
+    extraction: Vector[FactoryBlock],
+    manufacturing: Vector[FactoryBlock],
+    extraInputs: Vector[Countable[Double, Item]],
+    extraOutputs: Vector[Countable[Double, Item]]
 ) {
 
   import FactoryTable.alignment
   import FactoryTable.headers
 
+  private def allRecipes = extraction ++ manufacturing
+
   def blocksTable: String = {
-    val tableRows = blocks.map( _.tableColumns )
+    val tableRows = allRecipes.map( _.tableColumns )
     val columnWidths: Vector[( Int, Alignment )] =
       tableRows
         .foldLeft( ZipVector( Vector.fill( alignment.size )( 0 ) ) )(
@@ -43,7 +44,7 @@ final case class Factory(
 
     val powerLine: String =
       formatLine(
-        ("TOTAL POWER" +: Vector.fill( 11 )( "" )) ++ Vector( f"${blocks.foldMap( _.power )}%6.2f", " MW" )
+        ("TOTAL POWER" +: Vector.fill( 11 )( "" )) ++ Vector( f"${allRecipes.foldMap( _.power )}%6.2f", " MW" )
       )
 
     val headersLine: String =
@@ -61,8 +62,7 @@ final case class Factory(
   }
 
   def extractedResources: String =
-    blocks
-      .filter( _.recipe.item.isExtraction )
+    extraction
       .foldMap {
         case FactoryBlock( Countable( recipe, amount ), _ ) =>
           val product = recipe.productsPerMinute.head
@@ -84,9 +84,9 @@ final case class Factory(
           |""".stripMargin
   }
 
-  def ingredientsTree: String = {
+  def ingredientsTree( bill: Bill ): String = {
     val internalDestinations: SortedMap[Item, SortedSet[( FactoryBlock.Direction, String, Double )]] =
-      blocks.foldMap( _.inputsOutputs )
+      allRecipes.foldMap( _.inputsOutputs )
 
     val billDestinations: SortedMap[Item, SortedSet[( FactoryBlock.Direction, String, Double )]] =
       bill.items.foldMap {
@@ -115,22 +115,19 @@ final case class Factory(
       .intercalate( "\n" )
   }
 
-}
-
-object Factory {
-  implicit val factoryShow: Show[Factory] = Show.show { factory =>
+  def render( bill: Bill ): String =
     show"""BLOCKS
           |
-          |${factory.blocksTable}
+          |$blocksTable
           |
           |
           |RAW RESOURCES
           |
-          |${factory.extractedResources}
+          |$extractedResources
           |
           |INGREDIENTS
           |
-          |${factory.ingredientsTree}
+          |${ingredientsTree( bill )}
           |""".stripMargin
-  }
+
 }

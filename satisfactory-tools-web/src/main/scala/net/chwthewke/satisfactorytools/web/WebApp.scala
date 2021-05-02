@@ -54,6 +54,7 @@ object WebApp {
                 .withHttpApp( app )
                 .bindHttp( port = 7284 )
                 .withWebSockets( false )
+                .withLengthLimits( 65536, 65536 )
                 .serveWhile( signal, exitRef )
                 .compile
                 .lastOrError

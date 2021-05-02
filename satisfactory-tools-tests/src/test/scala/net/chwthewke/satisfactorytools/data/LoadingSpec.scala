@@ -35,6 +35,7 @@ class LoadingSpec extends AnyWordSpec with Matchers {
         case Right( model ) =>
           model.items.size shouldBe <=( 256 )
           model.manufacturingRecipes.size shouldBe <=( 256 )
+          model.extractionRecipes.size shouldBe <=( 256 )
       }
 
     }

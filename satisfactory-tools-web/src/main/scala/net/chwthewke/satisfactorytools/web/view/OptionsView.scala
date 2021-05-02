@@ -13,7 +13,7 @@ import model.Options.ClockSpeed
 import model.Options.Extractors
 import model.Options.Miner
 import model.Options.Pipe
-import web.protocol.FormNames
+import web.protocol.Forms
 
 object OptionsView {
 
@@ -22,28 +22,28 @@ object OptionsView {
       legend( "Options" ),
       div(
         "Belts",
-        enumRadios[Belt]( FormNames.optionsBeltKey, beltOptionLabel, options.belt )
+        enumRadios[Belt]( Forms.optionsBeltKey, beltOptionLabel, options.belt )
       ),
       div(
         "Pipelines",
-        enumRadios[Pipe]( FormNames.optionsPipeKey, pipeOptionLabel, options.pipe )
+        enumRadios[Pipe]( Forms.optionsPipeKey, pipeOptionLabel, options.pipe )
       ),
       div(
         "Miners",
-        enumRadios[Miner]( FormNames.optionsMinerKey, minerOptionLabel, options.miner )
+        enumRadios[Miner]( Forms.optionsMinerKey, minerOptionLabel, options.miner )
       ),
       div(
         "Extractor clock speed",
-        enumRadios[ClockSpeed]( FormNames.optionsClockKey, clockSpeedOptionLabel, options.clockSpeed )
+        enumRadios[ClockSpeed]( Forms.optionsClockKey, clockSpeedOptionLabel, options.clockSpeed )
       ),
       div(
         "Available extractors",
-        enumSetCheckboxes[Extractors]( FormNames.optionsExtractorsKey, extractorsOptionLabel, options.extractors )
+        enumSetCheckboxes[Extractors]( Forms.optionsExtractorsKey, extractorsOptionLabel, options.extractors )
       ),
       div(
         "Prefer fracking for",
         enumSetCheckboxes(
-          FormNames.optionsFrackingKey,
+          Forms.optionsFrackingKey,
           extractorsOptionLabel,
           options.preferFracking,
           Some( Vector( Extractors.OilExtractor, Extractors.WaterExtractor ) )

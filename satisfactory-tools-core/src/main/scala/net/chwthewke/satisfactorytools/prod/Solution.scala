@@ -7,6 +7,6 @@ import model.Machine
 import model.Recipe
 
 case class Solution(
-    recipes: Vector[Countable[Recipe[Machine, Item], Double]],
-    inputs: Vector[Countable[Item, Double]]
+    recipes: Vector[Countable[Double, Recipe[Machine, Item]]],
+    inputs: Vector[Countable[Double, Item]]
 )
