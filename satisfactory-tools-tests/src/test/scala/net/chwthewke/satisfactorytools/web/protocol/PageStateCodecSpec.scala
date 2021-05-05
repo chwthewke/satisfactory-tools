@@ -7,6 +7,10 @@ import cats.effect.unsafe.implicits._
 import cats.syntax.apply._
 import cats.syntax.functor._
 import cats.syntax.traverse._
+import fr.thomasdufour.autodiff.Diff
+import fr.thomasdufour.autodiff.derived
+import fr.thomasdufour.autodiff.extra.enumeratum._
+import fr.thomasdufour.autodiff.extra.scalatest.AutodiffMatchers.~=
 import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck.Gen
 import org.scalacheck.cats.implicits._
@@ -15,7 +19,9 @@ import org.scalatest.Inside
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
+import scala.annotation.nowarn
 import scala.collection.{Factory => CBF}
+import scala.concurrent.duration.FiniteDuration
 import scodec.Attempt
 import scodec.Codec
 import scodec.DecodeResult
@@ -33,8 +39,8 @@ import model.Recipe
 import model.RecipeList
 import model.ResourceDistrib
 import model.SolverInputs
+import prod.ClockedRecipe
 import prod.Factory
-import prod.FactoryBlock
 import web.state.CustomGroupSelection
 import web.state.InputTab
 import web.state.OutputTab
@@ -63,6 +69,23 @@ class PageStateCodecSpec
               case Attempt.Failure( cause ) => fail( "DECODE FAILED " + cause.messageWithContext )
               case Attempt.Successful( DecodeResult( result, remainder ) ) =>
                 result should ===( value )
+                remainder should ===( BitVector.empty )
+            }
+        }
+
+      }
+    }
+
+  def roundTripD[A: Diff]( codec: Codec[A], generator: Gen[A] ): Unit =
+    "round trip" in {
+      forAll( generator ) { value =>
+        inside( codec.encode( value ) ) {
+          case Attempt.Failure( cause ) => fail( "ENCODE FAILED " + cause.messageWithContext )
+          case Attempt.Successful( bits ) =>
+            inside( codec.decode( bits ) ) {
+              case Attempt.Failure( cause ) => fail( "DECODE FAILED " + cause.messageWithContext )
+              case Attempt.Successful( DecodeResult( result, remainder ) ) =>
+                result should ~=( value )
                 remainder should ===( BitVector.empty )
             }
         }
@@ -112,20 +135,32 @@ class PageStateCodecSpec
     ( genBill, genRecipeList, genOptions, genMapOptions )
       .mapN( SolverInputs( _, _, _, _ ) )
 
-  def genFactoryBlocks( recipes: Vector[Recipe[Machine, Item]] ): Gen[Vector[FactoryBlock]] =
+  def genClockedRecipes( recipes: Vector[Recipe[Machine, Item]] ): Gen[Vector[ClockedRecipe]] =
     pick[Vector]( recipes )
       .flatMap(
         _.traverse(
           recipe =>
-            ( arbitrary[Float], arbitrary[Float] )
-              .mapN( ( am, bc ) => FactoryBlock( Countable( recipe, am.toDouble ), bc.toDouble ) )
+            ( arbitrary[Short], arbitrary[Float] )
+              .mapN( ( am, bc ) => ClockedRecipe.overclocked( Countable( recipe, am & 0xFFFF ), bc.toDouble ) )
+        )
+      )
+
+  def genManufacturingRecipes(
+      recipes: Vector[Recipe[Machine, Item]]
+  ): Gen[Vector[Countable[Double, Recipe[Machine, Item]]]] =
+    pick[Vector]( recipes )
+      .flatMap(
+        _.traverse(
+          recipe =>
+            arbitrary[Float]
+              .map( am => Countable( recipe, am.toDouble ) )
         )
       )
 
   val genFactory: Gen[Factory] =
     for {
-      extractionBlocks    <- genFactoryBlocks( model.extractionRecipes.map( _._3 ) )
-      manufacturingBlocks <- genFactoryBlocks( model.manufacturingRecipes )
+      extractionBlocks    <- genClockedRecipes( model.extractionRecipes.map( _._3 ) )
+      manufacturingBlocks <- genManufacturingRecipes( model.manufacturingRecipes )
       itemsIn             <- pick[Vector]( model.items.values.toVector )
       itemsInCountable    <- genCountables( itemsIn )
       itemsOut            <- pick[Vector]( model.items.values.toVector )
@@ -149,6 +184,8 @@ class PageStateCodecSpec
       factory      <- Gen.option( Gen.oneOf( Gen.alphaNumStr.map( Left( _ ) ), genFactory.map( Right( _ ) ) ) )
       customGroups <- genCustomGroupSelection
     } yield PageState( inputs, inputTab, outputTab, factory, customGroups )
+
+  import diff._
 
   "the map options codec" should {
     behave like roundTrip( Codecs.mapOptionsCodec( model ), genMapOptions )
@@ -175,7 +212,31 @@ class PageStateCodecSpec
   }
 
   "the state codec" should {
-    behave like roundTrip( PageState.pageStateCodec( model ), genState )
+    behave like roundTripD( PageState.pageStateCodec( model ), genState )
+  }
+
+  object diff {
+    implicit val finiteDurationDiff: Diff[FiniteDuration] = Diff.defaultEqShow[FiniteDuration]
+
+    implicit val outputTabDiff: Diff[OutputTab] = Diff.defaultEqShow[OutputTab]
+
+    implicit val customGroupSelectionDiff: Diff[CustomGroupSelection] = {
+      import derived.auto._
+
+      implicit val mapDiff: Diff[Map[Recipe[Machine, Item], Int]] =
+        (Diff
+          .mapDiff[Recipe[Machine, Item], Int]: @nowarn( "cat=lint-byname-implicit" ))
+          .contramap[Map[Recipe[Machine, Item], Int]]( _.filter { case ( _, v ) => v != 0 } )
+
+      derived.semi.diff[CustomGroupSelection]: @nowarn( "cat=lint-byname-implicit" )
+    }
+
+    implicit val pageStateDiff: Diff[PageState] = {
+      import derived.auto._
+
+      derived.semi.diff[PageState]: @nowarn( "cat=lint-byname-implicit" )
+    }
+
   }
 
 }

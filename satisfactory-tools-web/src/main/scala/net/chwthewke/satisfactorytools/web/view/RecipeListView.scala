@@ -26,7 +26,7 @@ object RecipeListView {
 
   def recipeFieldSets[M]( recipes: Vector[Recipe[M, Item]], selected: Set[Recipe[M, Item]] ): Frag =
     recipes
-      .groupBy( _.product.head.item )
+      .groupBy( _.products.head.item )
       .toVector
       .sortBy( _._1 )
       .map { case ( item, recipes ) => recipeFieldSet( item, recipes, selected ) }
@@ -74,7 +74,7 @@ object RecipeListView {
         .mkString_( ", " )
 
     val ingredients = showItemList( recipe.ingredients zip recipe.ingredientsPerMinute )
-    val products    = showItemList( recipe.product zip recipe.productsPerMinute )
+    val products    = showItemList( recipe.products zip recipe.productsPerMinute )
 
     show"$ingredients \u21d2 $products"
   }

@@ -24,9 +24,9 @@ import model.Recipe
 import model.RecipeList
 import model.ResourceDistrib
 import model.SolverInputs
-import net.chwthewke.satisfactorytools.web.state.CustomGroupSelection
+import prod.ClockedRecipe
 import prod.Factory
-import prod.FactoryBlock
+import web.state.CustomGroupSelection
 
 object Codecs {
 
@@ -39,12 +39,12 @@ object Codecs {
         inputs => inputs.bill ~ inputs.recipeList ~ inputs.options ~ inputs.mapOptions
       )
 
-  def countableCodec[A]( codec: Codec[A] ): Codec[Countable[Double, A]] =
-    (codec ~ floatAsDouble)
-      .xmap( Countable[Double, A]( _, _ ), ct => ct.item ~ ct.amount )
+  def countableCodec[N, A]( numCodec: Codec[N], codec: Codec[A] ): Codec[Countable[N, A]] =
+    (codec ~ numCodec)
+      .xmap( Countable[N, A]( _, _ ), ct => ct.item ~ ct.amount )
 
   def billCodec( model: Model ): Codec[Bill] =
-    vectorOfN( uint8, countableCodec( itemIndexCodec( model ) ) )
+    vectorOfN( uint8, countableCodec( floatAsDouble, itemIndexCodec( model ) ) )
       .xmap( Bill( _ ), _.items )
 
   def recipeListCodec( model: Model ): Codec[RecipeList] =
@@ -107,18 +107,18 @@ object Codecs {
   def manufacturingRecipeCodec( model: Model ): Codec[Recipe[Machine, Item]] =
     recipeCodec( model.manufacturingRecipes )
 
-  def factoryBlockCodec( recipeCodec: Codec[Recipe[Machine, Item]] ): Codec[FactoryBlock] =
-    (countableCodec( recipeCodec ) ~ floatAsDouble)
+  def clockedRecipeCodec( recipeCodec: Codec[Recipe[Machine, Item]] ): Codec[ClockedRecipe] =
+    (countableCodec( uint16, recipeCodec ) ~ floatAsDouble)
       .xmap(
-        FactoryBlock( _, _ ),
-        block => block.recipe ~ block.baseClock
+        ClockedRecipe.overclocked( _, _ ),
+        cr => cr.recipe ~ cr.clockSpeed
       )
 
   def factoryCodec( model: Model ): Codec[Factory] =
-    (vectorOfN( uint8, factoryBlockCodec( extractionRecipeCodec( model ) ) ) ~
-      vectorOfN( uint8, factoryBlockCodec( manufacturingRecipeCodec( model ) ) ) ~
-      vectorOfN( uint8, countableCodec( itemIndexCodec( model ) ) ) ~
-      vectorOfN( uint8, countableCodec( itemIndexCodec( model ) ) ))
+    (vectorOfN( uint8, clockedRecipeCodec( extractionRecipeCodec( model ) ) ) ~
+      vectorOfN( uint8, countableCodec( floatAsDouble, manufacturingRecipeCodec( model ) ) ) ~
+      vectorOfN( uint8, countableCodec( floatAsDouble, itemIndexCodec( model ) ) ) ~
+      vectorOfN( uint8, countableCodec( floatAsDouble, itemIndexCodec( model ) ) ))
       .xmap(
         Factory( _, _, _, _ ),
         factory => factory.extraction ~ factory.manufacturing ~ factory.extraInputs ~ factory.extraOutputs

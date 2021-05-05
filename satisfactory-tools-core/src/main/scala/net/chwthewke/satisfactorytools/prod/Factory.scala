@@ -14,10 +14,12 @@ import scala.collection.immutable.SortedSet
 import model.Bill
 import model.Countable
 import model.Item
+import model.Machine
+import model.Recipe
 
 final case class Factory(
-    extraction: Vector[FactoryBlock],
-    manufacturing: Vector[FactoryBlock],
+    extraction: Vector[ClockedRecipe],
+    manufacturing: Vector[Countable[Double, Recipe[Machine, Item]]],
     extraInputs: Vector[Countable[Double, Item]],
     extraOutputs: Vector[Countable[Double, Item]]
 ) {
@@ -25,10 +27,24 @@ final case class Factory(
   import FactoryTable.alignment
   import FactoryTable.headers
 
-  private def allRecipes = extraction ++ manufacturing
+  def allRecipes: Vector[ClockedRecipe] = extraction ++ manufacturing.map( ClockedRecipe.roundUp )
+
+  def tableColumns( clockedRecipe: ClockedRecipe ): Vector[String] = {
+    import clockedRecipe._
+
+    FactoryTable.columnsForBlock(
+      recipe.item.displayName,
+      productsPerMinute.head.amount,
+      productsPerMinute.head.amount / machineCount,
+      machine.displayName,
+      machineCount,
+      clockSpeedMillionth,
+      power
+    )
+  }
 
   def blocksTable: String = {
-    val tableRows = allRecipes.map( _.tableColumns )
+    val tableRows = allRecipes.map( tableColumns )
     val columnWidths: Vector[( Int, Alignment )] =
       tableRows
         .foldLeft( ZipVector( Vector.fill( alignment.size )( 0 ) ) )(
@@ -63,18 +79,14 @@ final case class Factory(
 
   def extractedResources: String =
     extraction
-      .foldMap {
-        case FactoryBlock( Countable( recipe, amount ), _ ) =>
-          val product = recipe.productsPerMinute.head
-          Map( ( product.item.displayName, product.amount * amount ) )
-      }
+      .foldMap( cr => Map( ( cr.products.head.item.displayName, cr.productsPerMinute.head.amount ) ) )
       .toVector
       .sortBy { case ( p, x ) => ( -x, p ) }
       .map { case ( p, x ) => f"${p.padTo( 24, ' ' )} $x%.3f" }
       .intercalate( "\n" )
 
-  def ingredientTree( item: Item, destinations: SortedSet[( FactoryBlock.Direction, String, Double )] ): String = {
-    def destinationLine( direction: FactoryBlock.Direction, dest: String, amount: Double ): String = {
+  def ingredientTree( item: Item, destinations: SortedSet[( Direction, String, Double )] ): String = {
+    def destinationLine( direction: Direction, dest: String, amount: Double ): String = {
       val amountText = f"$amount%4.3f".reverse.padTo( 8, ' ' ).reverse
       show"  $amountText ${direction.arrow} $dest"
     }
@@ -85,26 +97,44 @@ final case class Factory(
   }
 
   def ingredientsTree( bill: Bill ): String = {
-    val internalDestinations: SortedMap[Item, SortedSet[( FactoryBlock.Direction, String, Double )]] =
-      allRecipes.foldMap( _.inputsOutputs )
 
-    val billDestinations: SortedMap[Item, SortedSet[( FactoryBlock.Direction, String, Double )]] =
+    def inputsOutputs( cr: ClockedRecipe ): SortedMap[Item, SortedSet[( Direction, String, Double )]] = {
+      def line(
+          direction: Direction,
+          lineItem: Countable[Double, Item]
+      ): SortedSet[( Direction, String, Double )] =
+        SortedSet( ( direction, cr.recipe.item.displayName, lineItem.amount ) )
+
+      val ingredients =
+        cr.ingredientsPerMinute
+          .foldMap( ci => SortedMap( ( ci.item, line( Direction.In, ci ) ) ) )
+      val products =
+        cr.productsPerMinute
+          .foldMap( ci => SortedMap( ( ci.item, line( Direction.Out, ci ) ) ) )
+
+      ingredients ++ products
+    }
+
+    val internalDestinations: SortedMap[Item, SortedSet[( Direction, String, Double )]] =
+      allRecipes.foldMap( inputsOutputs )
+
+    val billDestinations: SortedMap[Item, SortedSet[( Direction, String, Double )]] =
       bill.items.foldMap {
         case billItem @ Countable( item, _ ) =>
           SortedMap(
-            item -> SortedSet[( FactoryBlock.Direction, String, Double )](
-              ( FactoryBlock.Direction.In, "STORAGE", billItem.amount )
+            item -> SortedSet[( Direction, String, Double )](
+              ( Direction.In, "STORAGE", billItem.amount )
             )
           )
       }
 
-    val extraOutputDestinations: SortedMap[Item, SortedSet[( FactoryBlock.Direction, String, Double )]] =
+    val extraOutputDestinations: SortedMap[Item, SortedSet[( Direction, String, Double )]] =
       extraOutputs
         .map {
           case Countable( item, amount ) =>
             (
               item,
-              SortedSet[( FactoryBlock.Direction, String, Double )]( ( FactoryBlock.Direction.In, "EXTRA", amount ) )
+              SortedSet[( Direction, String, Double )]( ( Direction.In, "EXTRA", amount ) )
             )
         }
         .to( SortedMap )

@@ -53,7 +53,8 @@ object View {
               rows := 10,
               stateBase64.orEmpty
             ),
-            stateBase64.map( b => a( "Bookmark", href := s"?state=$b" ) )
+            stateBase64.map( b => a( "Bookmark", href := s"?state=$b" ) ),
+            AllInputsView( model, state, stateBase64 )
           )
         ),
         form(
@@ -129,11 +130,12 @@ object View {
           )
       },
       1.to( 5 ).map { ix =>
+        val groupTab = OutputTab.CustomGroup( ix )
         input(
           `type` := "submit",
-          formaction := s"/output/group$ix",
+          formaction := s"/output/${groupTab.id}",
           value := ix,
-          Option.when( state.selectedOutputTab == OutputTab.CustomGroup( ix ) )( fontWeight := "bold" )
+          Option.when( state.selectedOutputTab == groupTab )( fontWeight := "bold" )
         )
 
       }

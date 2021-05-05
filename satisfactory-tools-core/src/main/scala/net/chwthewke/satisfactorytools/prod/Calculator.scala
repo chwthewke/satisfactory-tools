@@ -16,6 +16,8 @@ import model.ExtractionRecipe
 import model.Item
 import model.Model
 import model.SolverInputs
+import net.chwthewke.satisfactorytools.model.Machine
+import net.chwthewke.satisfactorytools.model.Recipe
 
 object Calculator {
   val Tolerance: Double = 1e-6
@@ -38,30 +40,33 @@ object Calculator {
   def renderExtractionRecipes(
       input: Countable[Double, Item],
       tieredRecipes: Vector[ExtractionRecipe]
-  ): Option[Vector[FactoryBlock]] =
-    ( Vector.empty[Option[FactoryBlock]], ( tieredRecipes, input.amount ) )
-      .tailRecM[Id, Option[Vector[FactoryBlock]]] {
+  ): Option[Vector[ClockedRecipe]] =
+    ( Vector.empty[Option[ClockedRecipe]], ( tieredRecipes, input.amount ) )
+      .tailRecM[Id, Option[Vector[ClockedRecipe]]] {
 
         case ( acc, ( tiers, target ) ) =>
           tiers.headOption
             .filter( _ => target.abs > Tolerance )
             .map {
-              case ExtractionRecipe( recipe, clockSpeed, countBound ) =>
+              case ExtractionRecipe( recipe, maxClockSpeed, countBound ) =>
                 val ( produced, producing ) =
                   recipe.productsPerMinute
                     .find( _.item == input.item )
-                    .cata[( Double, Option[FactoryBlock] )](
+                    .cata[( Double, Option[ClockedRecipe] )](
                       c =>
-                        if (target > c.amount * countBound * clockSpeed / 100d)
+                        if (target > c.amount * countBound * maxClockSpeed / 100d)
                           (
                             c.amount * countBound,
-                            FactoryBlock( Countable( recipe, countBound.toDouble ), clockSpeed ).some
+                            ClockedRecipe.overclocked( Countable( recipe, countBound ), maxClockSpeed ).some
                           )
-                        else
+                        else {
+                          val extractorCount   = (100d * target / (c.amount * maxClockSpeed)).ceil.toInt
+                          val actualClockSpeed = 100d * target / (c.amount * extractorCount)
                           (
                             target,
-                            FactoryBlock( Countable( recipe, 100d * target / (c.amount * clockSpeed) ), clockSpeed ).some
-                          ),
+                            ClockedRecipe.overclocked( Countable( recipe, extractorCount ), actualClockSpeed ).some
+                          )
+                        },
                       ( 0d, none )
                     )
 
@@ -86,7 +91,7 @@ object Calculator {
         .toVector
 
     val ( inputRecipes, extraInputs ): (
-        Vector[FactoryBlock],
+        Vector[ClockedRecipe],
         Vector[Countable[Double, Item]]
     ) =
       solution.inputs
@@ -102,27 +107,26 @@ object Calculator {
               )
         )
 
-    def reachable( block: FactoryBlock, fromItems: Set[Item] ): Boolean =
-      block.recipe.item.ingredients.forall { case Countable( item, _ ) => fromItems( item ) }
+    def reachable( block: Countable[Double, Recipe[Machine, Item]], fromItems: Set[Item] ): Boolean =
+      block.item.ingredients.forall { case Countable( item, _ ) => fromItems( item ) }
 
     val initialItems: Set[Item] =
-      (inputRecipes.foldMap( _.recipe.item.product.toList ).map( _.item ) ++ extraInputs.map( _.item )).to( Set )
+      (inputRecipes.foldMap( _.recipe.item.products.toList ).map( _.item ) ++ extraInputs.map( _.item )).to( Set )
 
-    val sortedBlocks: Vector[FactoryBlock] =
+    val sortedBlocks: Vector[Countable[Double, Recipe[Machine, Item]]] =
       (
-        Vector.empty[FactoryBlock],
+        Vector.empty[Countable[Double, Recipe[Machine, Item]]],
         initialItems,
         solution.recipes
           .filter( _.amount > Tolerance )
-          .map( FactoryBlock( _, 100d ) )
           .partition( reachable( _, initialItems ) )
-      ).tailRecM[Id, Vector[FactoryBlock]] {
+      ).tailRecM[Id, Vector[Countable[Double, Recipe[Machine, Item]]]] {
         case ( acc, seen, ( available, rest ) ) =>
           if (available.isEmpty)
             Right( acc ++ rest )
           else {
             val next     = acc ++ available
-            val nextSeen = seen.union( available.foldMap( _.recipe.item.product.map( _.item ).toList.to( Set ) ) )
+            val nextSeen = seen.union( available.foldMap( _.item.products.map( _.item ).toList.to( Set ) ) )
 
             Left( ( next, nextSeen, rest.partition( reachable( _, nextSeen ) ) ) )
           }

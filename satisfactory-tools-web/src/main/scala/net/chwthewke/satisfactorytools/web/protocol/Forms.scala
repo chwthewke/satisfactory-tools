@@ -43,7 +43,7 @@ object Forms {
   val optionsFrackingKey: String   = "options_prefer_fracking"
 
   def extractorItemPurityKey( extractorType: ExtractorType, item: Item, purity: ResourcePurity ): String =
-    s"distrib_${extractorType.entryName}_${item.className}_${purity.entryName}"
+    s"distrib_${extractorType.entryName}_${item.className.name}_${purity.entryName}"
 
   def outputGroup( model: Model, recipe: Recipe[Machine, Item] ): String =
     s"group_${model.manufacturingRecipes.indexOf( recipe )}"

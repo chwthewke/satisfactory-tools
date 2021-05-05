@@ -21,7 +21,7 @@ object BillView {
 
     val eligibleItems =
       model.items.values
-        .filter( item => eligibleRecipes.exists( recipe => recipe.product.exists( _.item == item ) ) )
+        .filter( item => eligibleRecipes.exists( recipe => recipe.products.exists( _.item == item ) ) )
         .toVector
 
     fieldset(

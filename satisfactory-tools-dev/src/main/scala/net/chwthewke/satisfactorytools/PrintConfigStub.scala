@@ -27,7 +27,7 @@ object PrintConfigStub extends IOApp {
     val w = recipes.map( _.className.name.length ).max
 
     recipes
-      .sortBy( r => ( r.product.head.item.displayName, r.isAlternate, r.displayName ) )
+      .sortBy( r => ( r.products.head.item.displayName, r.isAlternate, r.displayName ) )
       .map( recipeLine( _, w ) )
       .intercalate( "\n" )
   }
@@ -48,7 +48,7 @@ object PrintConfigStub extends IOApp {
 
     val eligibleItems =
       model.items.values
-        .filter( item => eligibleRecipes.exists( recipe => recipe.product.exists( _.item == item ) ) )
+        .filter( item => eligibleRecipes.exists( recipe => recipe.products.exists( _.item == item ) ) )
         .toVector
 
     s"""

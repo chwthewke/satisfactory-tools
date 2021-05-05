@@ -4,7 +4,6 @@ package web.view
 import cats.Order
 import cats.Order.catsKernelOrderingForOrder
 import cats.syntax.foldable._
-import cats.syntax.flatMap._
 import cats.syntax.order._
 import cats.syntax.semigroup._
 import cats.syntax.traverse._
@@ -20,14 +19,15 @@ import model.Item
 import model.Machine
 import model.Model
 import model.Recipe
+import prod.ClockedRecipe
 import prod.Factory
-import prod.FactoryBlock
 import web.protocol.Forms
+import web.state.CustomGroupSelection
 import web.state.PageState
 
 object FactoryView {
 
-  val customGroups: Int = 5
+  import CustomGroupSelection.customGroups
 
   object Resources {
     def apply( factory: Factory ): Text.TypedTag[String] =
@@ -38,9 +38,7 @@ object FactoryView {
 
     def extractedResources( factory: Factory ): Text.TypedTag[String] =
       table(
-        extractedResourcesView(
-          factory.extraction.map( _.recipe.flatMap( _.productsPerMinute.head ) ).gather
-        )
+        extractedResourcesView( factory.extraction.map( _.productsPerMinute.head ).gather )
       )
 
     def extractedResourcesView( res: Vector[Countable[Double, Item]] ): Vector[Text.TypedTag[String]] =
@@ -81,7 +79,7 @@ object FactoryView {
     def recipeRow(
         model: Model,
         state: PageState,
-        block: FactoryBlock,
+        block: ClockedRecipe,
         radios: CustomGroupsRadios
     ): Text.TypedTag[String] = {
       import block._
@@ -146,13 +144,13 @@ object FactoryView {
         ),
         tbody(
           factory.extraction.map( recipeRow( model, state, _, radios = radios.min( CustomGroupsRadios.Placeholder ) ) ),
-          factory.manufacturing.map( recipeRow( model, state, _, radios ) ),
+          factory.manufacturing.map( r => recipeRow( model, state, ClockedRecipe.roundUp( r ), radios ) ),
           tr(
             Option.when( radios >= CustomGroupsRadios.Placeholder )(
               td( colspan := (customGroups + 1) )
             ),
             td( colspan := 8, textAlign.right, "Total Power" ),
-            td( textAlign.right, f"${(factory.extraction ++ factory.manufacturing).foldMap( _.power )}%4.2f" ),
+            td( textAlign.right, f"${factory.allRecipes.foldMap( _.power )}%4.2f" ),
             td( textAlign.left, "MW" )
           )
         )
@@ -183,10 +181,10 @@ object FactoryView {
 
     private def extractSubFactory( model: Model, pageState: PageState, factory: Factory, group: Int ) = {
       val manufacturing = factory.manufacturing
-        .filter( b => pageState.customGroupSelection.customGroups.get( b.recipe.item ).contains( group ) )
+        .filter( b => pageState.customGroupSelection.customGroups.get( b.item ).contains( group ) )
 
       val external = manufacturing
-        .foldMap( _.recipe.flatTraverse( _.itemsPerMinute ) )
+        .foldMap( _.flatTraverse( _.itemsPerMinute ) )
         .gather
         .filter( _.amount.abs > 1e-6 )
 
@@ -234,22 +232,22 @@ object FactoryView {
         factory: Factory,
         extraKey: String
     ): SortedMap[Item, ( Map[String, Double], Map[String, Double] )] =
-      (factory.extraction ++ factory.manufacturing).foldMap(
+      (factory.allRecipes).foldMap(
         block =>
-          block.recipe.item.ingredientsPerMinute
+          block.ingredientsPerMinute
             .foldMap {
               case Countable( item, amount ) =>
                 SortedMap(
                   (
                     item,
                     (
-                      Map( block.recipe.item.displayName -> block.recipe.amount * amount ),
+                      Map( block.recipe.item.displayName -> amount ),
                       Map.empty[String, Double]
                     )
                   )
                 )
             } |+|
-            block.recipe.item.productsPerMinute
+            block.productsPerMinute
               .foldMap {
                 case Countable( item, amount ) =>
                   SortedMap(
@@ -257,7 +255,7 @@ object FactoryView {
                       item,
                       (
                         Map.empty[String, Double],
-                        Map( block.recipe.item.displayName -> block.recipe.amount * amount )
+                        Map( block.recipe.item.displayName -> amount )
                       )
                     )
                   )

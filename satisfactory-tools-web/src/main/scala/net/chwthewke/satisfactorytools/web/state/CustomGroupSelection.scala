@@ -9,4 +9,5 @@ case class CustomGroupSelection( customGroups: Map[Recipe[Machine, Item], Int] )
 
 object CustomGroupSelection {
   val empty: CustomGroupSelection = CustomGroupSelection( Map.empty )
+  val customGroups: Int           = 5
 }

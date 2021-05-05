@@ -59,7 +59,7 @@ object RecipeSelection {
       source: Recipe[Machine, Item],
       options: Options
   ): ExtractionRecipe = {
-    val clockSpeed = source.product.map {
+    val clockSpeed = source.products.map {
       case Countable( item, amount ) =>
         val maxAmountPerMinute: Int =
           if (item.form == Form.Solid) options.belt.itemsPerMinute else options.pipe.cubicMetersPerMinute

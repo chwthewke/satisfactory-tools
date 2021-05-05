@@ -12,18 +12,17 @@ import cats.syntax.show._
 import cats.syntax.traverse._
 import io.circe.Decoder
 import scala.concurrent.duration._
-//
 
 final case class Recipe[M, N](
     className: ClassName,
     displayName: String,
     ingredients: List[Countable[Double, N]], // TODO can be NEL?
-    product: NonEmptyList[Countable[Double, N]],
+    products: NonEmptyList[Countable[Double, N]],
     duration: FiniteDuration,
     producedIn: M
 ) {
   def ingredientsPerMinute: List[Countable[Double, N]]      = ingredients.map( perMinute )
-  def productsPerMinute: NonEmptyList[Countable[Double, N]] = product.map( perMinute )
+  def productsPerMinute: NonEmptyList[Countable[Double, N]] = products.map( perMinute )
 
   def itemsPerMinuteMap: Map[N, Double] =
     productsPerMinute.foldMap { case Countable( it, am )      => Map( it -> am ) } |+|
@@ -43,8 +42,8 @@ final case class Recipe[M, N](
   def traverseIngredientsAndProducts[F[_]: Applicative, P](
       f: Countable[Double, N] => F[Countable[Double, P]]
   ): F[Recipe[M, P]] =
-    ( ingredients.traverse( f ), product.traverse( f ) )
-      .mapN( ( ing, prd ) => copy[M, P]( ingredients = ing, product = prd ) )
+    ( ingredients.traverse( f ), products.traverse( f ) )
+      .mapN( ( ing, prd ) => copy[M, P]( ingredients = ing, products = prd ) )
 }
 
 object Recipe {

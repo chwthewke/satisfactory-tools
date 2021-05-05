@@ -96,7 +96,7 @@ final case class GameData(
       )
 
   def isSelfExtraction[M, N]( recipe: Recipe[M, N] ): Boolean =
-    recipe.ingredients == List( recipe.product.head )
+    recipe.ingredients == List( recipe.products.head )
 
   def getExtractionRecipes(
       machines: Map[ClassName, ( Extractor, Machine )],
@@ -121,7 +121,7 @@ final case class GameData(
   ): Vector[( Item, Extractor, Machine )] =
     for {
       selfExtractionRecipe <- selfExtraction
-      item = selfExtractionRecipe.product.head.item
+      item = selfExtractionRecipe.products.head.item
       ( extractor, machine ) <- converterExtractors
     } yield ( item, extractor, machine )
 

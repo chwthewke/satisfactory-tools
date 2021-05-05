@@ -8,16 +8,17 @@ import cats.Show
 import cats.Traverse
 import cats.syntax.show._
 import scala.annotation.tailrec
+import scala.collection.Factory
 
 final case class Countable[N, A]( item: A, amount: N )
 
 object Countable {
-  implicit class GatherOps[N, A]( private val self: Vector[Countable[N, A]] ) {
-    def gather( implicit N: Numeric[N] ): Vector[Countable[N, A]] =
+  implicit class GatherOps[F[x] <: Iterable[x], N, A]( private val self: F[Countable[N, A]] ) {
+    def gather( implicit N: Numeric[N], F: Factory[Countable[N, A], F[Countable[N, A]]] ): F[Countable[N, A]] =
       self
         .groupMap( _.item )( _.amount )
         .map { case ( item, amounts ) => Countable( item, amounts.sum ) }
-        .toVector
+        .to( F )
   }
 
   implicit def countableMonad[N](

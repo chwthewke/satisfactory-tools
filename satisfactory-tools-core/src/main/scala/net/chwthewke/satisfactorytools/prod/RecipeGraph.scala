@@ -31,11 +31,11 @@ object RecipeGraph {
     RecipeGraph(
       Graph.fromEdges(
         recipes
-          .sortBy( r => ( r.product.head.item.className.name, r.className.name ) )
+          .sortBy( r => ( r.products.head.item.className.name, r.className.name ) )
           .flatMap(
             rec =>
               rec.ingredients.map( ci => recipeNode( rec ) --> itemNode( ci.item ) ) ++
-                rec.product.toList.map( ci => itemNode( ci.item ) --> recipeNode( rec ) )
+                rec.products.toList.map( ci => itemNode( ci.item ) --> recipeNode( rec ) )
           )
       )
     )

@@ -74,7 +74,17 @@ val `satisfactory-production-calculator` = project
 
 val `satisfactory-tools-tests` = project
   .settings( compilerPlugins )
-  .settings( libraryDependencies ++= (scalatest ++ scalacheck ++ discipline ++ catsLaws).map( _ % "test" ) )
+  .settings(
+    libraryDependencies ++= (
+      autoDiff ++
+        autoDiffEnumeratum ++
+        autoDiffScalatest ++
+        scalatest ++
+        scalacheck ++
+        discipline ++
+        catsLaws
+    ).map( _ % "test" )
+  )
   .settings(
     initialCommands := Seq(
       "import cats._",

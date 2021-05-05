@@ -8,6 +8,7 @@ import cats.syntax.either._
 import cats.syntax.flatMap._
 import cats.syntax.foldable._
 import cats.syntax.functor._
+import cats.syntax.option._
 import cats.syntax.show._
 import cats.syntax.traverse._
 import org.http4s.FormDataDecoder
@@ -24,12 +25,17 @@ import org.http4s.syntax.literals._
 import org.typelevel.log4cats.SelfAwareStructuredLogger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 
+import model.Bill
+import model.MapOptions
 import model.Model
+import model.Options
+import model.RecipeList
 import model.SolverInputs
-import net.chwthewke.satisfactorytools.web.state.CustomGroupSelection
 import prod.Calculator
 import prod.ConstraintSolver
 import prod.Factory
+import web.protocol.Forms
+import web.state.CustomGroupSelection
 import web.state.InputTab
 import web.state.OutputTab
 import web.state.PageState
@@ -47,14 +53,11 @@ case class Pages[F[_]: Async]( model: Model, defaultInputs: SolverInputs ) {
   import FormDataDecoder.formEntityDecoder
 
   val routes: HttpRoutes[F] = HttpRoutes.of[F] {
-    case GET -> Root :? PageStateParam( state ) =>
-      state.fold( respondDefault )( respondWithState )
-    case req @ POST -> Root / "input" / InputTabSegment( dest ) =>
-      respondNavigateInputs( req, dest )
-    case req @ POST -> Root / "output" / OutputTabSegment( dest ) =>
-      respondNavigateOutputs( req, dest )
-    case req @ POST -> Root =>
-      respondComputeSolution( req )
+    case GET -> Root :? PageStateParam( state )                   => state.fold( respondDefault )( respondWithState )
+    case req @ POST -> Root / "input" / InputTabSegment( dest )   => respondNavigateInputs( req, dest )
+    case req @ POST -> Root / "output" / OutputTabSegment( dest ) => respondNavigateOutputs( req, dest )
+    case req @ POST -> Root                                       => respondComputeSolution( req )
+    case req @ POST -> Root / "upgrade"                           => upgrade( req )
   }
 
   def respondDefault: F[Response[F]] =
@@ -121,6 +124,56 @@ case class Pages[F[_]: Async]( model: Model, defaultInputs: SolverInputs ) {
         .leftMap( Error( _ ) )
         .liftTo[F]
         .flatMap( st => Found( Location( uri"/".withQueryParam( stateParam, st ) ) ) )
+
+  def upgrade( req: Request[F] ): F[Response[F]] = {
+    implicit val billDecoder: FormDataDecoder[Bill]             = Forms.bill( model )
+    implicit val recipeListDecoder: FormDataDecoder[RecipeList] = Forms.recipeList( model )
+    implicit val optionsDecoder: FormDataDecoder[Options]       = Forms.options
+    implicit val mapOptionsDecoder: FormDataDecoder[MapOptions] = Forms.mapOptions( model )
+
+    implicit val inputTabDecoder: FormDataDecoder[InputTab] =
+      FormDataDecoder
+        .field[String]( "input_tab" )
+        .mapValidated(
+          id =>
+            InputTab
+              .withNameOption( id )
+              .toValidNel( ParseFailure( "", s"Unknown input tab $id" ) )
+        )
+
+    implicit val outputTabDecoder: FormDataDecoder[OutputTab] =
+      FormDataDecoder
+        .field[String]( "output_tab" )
+        .mapValidated(
+          id =>
+            OutputTab
+              .withId( id )
+              .toValidNel( ParseFailure( "", s"Unknown output tab $id" ) )
+        )
+
+    implicit val customGroupsDecoder: FormDataDecoder[CustomGroupSelection] = Forms.customGroups( model )
+
+    (
+      req.as[Bill],
+      req.as[RecipeList],
+      req.as[Options],
+      req.as[MapOptions],
+      req.as[InputTab],
+      req.as[OutputTab],
+      req.as[CustomGroupSelection]
+    ).mapN { ( bill, recipes, options, mapOptions, inputTab, outputTab, customGroups ) =>
+        val inputs = SolverInputs( bill, recipes, options, mapOptions )
+        PageState(
+          inputs,
+          inputTab,
+          outputTab,
+          Some( solve( inputs ) ),
+          customGroups
+        )
+      }
+      .flatMap( redirect )
+
+  }
 
   def solve( inputs: SolverInputs ): Either[String, Factory] =
     Calculator.computeFactory( model, inputs, ConstraintSolver )
