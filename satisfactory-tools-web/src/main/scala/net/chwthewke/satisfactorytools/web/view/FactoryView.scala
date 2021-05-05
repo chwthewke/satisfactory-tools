@@ -62,15 +62,6 @@ object FactoryView {
         recipeTable( model, state, factory, CustomGroupsRadios.Full )
       )
 
-    val headers =
-      Vector(
-        ( 1, "Nb." ),
-        ( 2, "Recipe" ),
-        ( 2, "Machines" ),
-        ( 3, "Rate" ),
-        ( 2, "Power" )
-      )
-
     def groupRadio(
         model: Model,
         state: PageState,
@@ -78,6 +69,7 @@ object FactoryView {
         groupIndex: Int
     ): Text.TypedTag[String] =
       td(
+        textAlign.center,
         input(
           `type` := "radio",
           name := Forms.outputGroup( model, recipe ),
@@ -107,22 +99,32 @@ object FactoryView {
 
       tr(
         customGroupRadios,
-        td( f"$itemAmount%4.3f" ),
+        td( f"$itemAmount%4.3f", textAlign.right ),
         td(
           recipe.item.displayName.stripPrefix( altPrefix ),
           colspan := (if (isAlternate) 1 else 2),
-          title := RecipeListView.describeRecipe( recipe.item )
+          title := RecipeListView.describeRecipe( recipe.item ),
+          textAlign.left
         ),
-        Option.when( isAlternate )( td( "ALT" ) ),
-        td( f"$machineCount%3d" ),
-        td( machine.displayName ),
-        td( f"$itemAmountPerUnit%3.3f / unit" ),
-        td( " @ " ),
-        td( f"${clockSpeedMillionth / 10000}%3d.${clockSpeedMillionth % 10000}%04d %%" ),
-        td( f"$power%4.2f" ),
-        td( "MW" )
+        Option.when( isAlternate )( td( "ALT", textAlign.right ) ),
+        td( f"$machineCount%3d", textAlign.right ),
+        td( machine.displayName, textAlign.left ),
+        td( f"$itemAmountPerUnit%3.3f / unit", textAlign.right ),
+        td( " @ ", textAlign.center ),
+        td( f"${clockSpeedMillionth / 10000}%3d.${clockSpeedMillionth % 10000}%04d %%", textAlign.left ),
+        td( f"$power%4.2f", textAlign.right ),
+        td( "MW", textAlign.left )
       )
     }
+
+    val headers =
+      Vector(
+        ( 1, "Nb.", textAlign.right ),
+        ( 2, "Recipe", textAlign.left ),
+        ( 2, "Machines", textAlign.left ),
+        ( 3, "Rate", textAlign.left ),
+        ( 2, "Power", textAlign.left )
+      )
 
     def recipeTable(
         model: Model,
@@ -131,21 +133,6 @@ object FactoryView {
         radios: CustomGroupsRadios
     ): Text.TypedTag[String] =
       table(
-        Option.when( radios >= CustomGroupsRadios.Placeholder )(
-          colgroup( attr( "span" ) := (customGroups + 1), textAlign.center )
-        ),
-        colgroup(
-          col( textAlign.right ),
-          col( textAlign.left ),
-          col( textAlign.right ),
-          col( textAlign.right ),
-          col( textAlign.left ),
-          col( textAlign.right ),
-          col( textAlign.center ),
-          col( textAlign.left ),
-          col( textAlign.right ),
-          col( textAlign.left )
-        ),
         thead(
           tr(
             Option.when( radios >= CustomGroupsRadios.Placeholder )(
@@ -154,7 +141,7 @@ object FactoryView {
                 1.to( customGroups ).map( ix => td( ix.toString, textAlign.center ) )
               )
             ),
-            headers.map { case ( w, h ) => th( colspan := w, h ) }
+            headers.map { case ( w, h, al ) => th( colspan := w, h, al ) }
           )
         ),
         tbody(
@@ -165,8 +152,8 @@ object FactoryView {
               td( colspan := (customGroups + 1) )
             ),
             td( colspan := 8, textAlign.right, "Total Power" ),
-            td( f"${(factory.extraction ++ factory.manufacturing).foldMap( _.power )}%4.2f" ),
-            td( "MW" )
+            td( textAlign.right, f"${(factory.extraction ++ factory.manufacturing).foldMap( _.power )}%4.2f" ),
+            td( textAlign.left, "MW" )
           )
         )
       )

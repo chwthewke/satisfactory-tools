@@ -92,9 +92,11 @@ case class Pages[F[_]: Async]( model: Model, defaultInputs: SolverInputs ) {
     implicit val inputDataDecoder: FormDataDecoder[inputTab.Data] = inputTab.decoder( model )
 
     for {
-      newCustomGroups <- state.selectedOutputTab.customGroupsFormDataDecoder( model ).traverse { implicit dec =>
-                          req.as[CustomGroupSelection]
-                        }
+      newCustomGroups <- state.selectedOutputTab
+                          .customGroupsFormDataDecoder( model )
+                          .traverse { implicit dec =>
+                            req.as[CustomGroupSelection]
+                          }
       input <- req.as[inputTab.Data]
       newInputs = inputTab.stateLens.set( state.inputs )( input )
       response <- redirect(

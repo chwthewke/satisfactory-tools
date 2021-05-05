@@ -62,6 +62,11 @@ object PageState {
             |
             |FACTORY
             |${state.factory.fold( "Not computed" )( _.fold( identity, _.render( state.inputs.bill ) ) )}
+            |
+            |CUSTOM GROUPS
+            |${state.customGroupSelection.customGroups
+              .map { case ( recipe, n ) => s"$n: ${recipe.displayName}" }
+              .mkString( "\n" )}
             |""".stripMargin
   )
 
