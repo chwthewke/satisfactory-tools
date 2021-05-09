@@ -30,14 +30,16 @@ import scodec.bits.BitVector
 import data.Loader
 import model.Bill
 import model.Countable
+import model.ExtractorType
 import model.Item
 import model.Machine
-import model.MapOptions
+import model.ResourceOptions
 import model.Model
 import model.Options
 import model.Recipe
 import model.RecipeList
 import model.ResourceDistrib
+import model.ResourceWeights
 import model.SolverInputs
 import prod.ClockedRecipe
 import prod.Factory
@@ -103,14 +105,22 @@ class PageStateCodecSpec
   def genCountables[F[_]: Traverse, A]( things: Gen[F[A]] ): Gen[F[Countable[Double, A]]] =
     things.flatMap( _.traverse( thing => arbitrary[Float].map( am => Countable( thing, am.toDouble ) ) ) )
 
-  val genMapOptions: Gen[MapOptions] =
-    model.defaultMapOptions.resourceNodes
+  val genResourceNodes: Gen[Map[ExtractorType, Map[Item, ResourceDistrib]]] =
+    model.defaultResourceOptions.resourceNodes
       .traverse( _.traverse {
         case ResourceDistrib( impureNodes, normalNodes, pureNodes ) =>
           ( Gen.choose( 0, impureNodes ), Gen.choose( 0, normalNodes ), Gen.choose( 0, pureNodes ) )
             .mapN( ResourceDistrib( _, _, _ ) )
       } )
-      .map( MapOptions( _ ) )
+
+  val genResourceWeights: Gen[ResourceWeights] =
+    model.extractedItems
+      .traverse( it => Gen.choose( 0, 2 * ResourceWeights.range ).tupleLeft( it ) )
+      .map( v => ResourceWeights( v.filter( _._2 != ResourceWeights.range ).toMap ) )
+
+  val genResourceOptions: Gen[ResourceOptions] =
+    ( genResourceNodes, genResourceWeights )
+      .mapN( ResourceOptions( _, _ ) )
 
   val genOptions: Gen[Options] =
     (
@@ -132,7 +142,7 @@ class PageStateCodecSpec
       .map( Bill( _ ) )
 
   val genInputs: Gen[SolverInputs] =
-    ( genBill, genRecipeList, genOptions, genMapOptions )
+    ( genBill, genRecipeList, genOptions, genResourceOptions )
       .mapN( SolverInputs( _, _, _, _ ) )
 
   def genClockedRecipes( recipes: Vector[Recipe[Machine, Item]] ): Gen[Vector[ClockedRecipe]] =
@@ -188,7 +198,7 @@ class PageStateCodecSpec
   import diff._
 
   "the map options codec" should {
-    behave like roundTrip( Codecs.mapOptionsCodec( model ), genMapOptions )
+    behave like roundTrip( Codecs.resoucesOptionsCodec( model ), genResourceOptions )
   }
 
   "the options codec" should {

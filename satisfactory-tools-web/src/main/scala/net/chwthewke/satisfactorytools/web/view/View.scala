@@ -85,7 +85,7 @@ object View {
       Vector(
         ( "Requested", InputTab.BillTab ),
         ( "Recipes", InputTab.RecipesTab ),
-        ( "Resource nodes", InputTab.MapOptionsTab ),
+        ( "Resource nodes", InputTab.ResourceOptionsTab ),
         ( "Options", InputTab.OptionsTab )
       ).map {
         case ( text, tab ) =>

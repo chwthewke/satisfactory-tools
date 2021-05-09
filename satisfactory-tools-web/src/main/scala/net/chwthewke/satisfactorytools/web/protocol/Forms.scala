@@ -17,13 +17,14 @@ import model.Countable
 import model.ExtractorType
 import model.Item
 import model.Machine
-import model.MapOptions
+import model.ResourceOptions
 import model.Model
 import model.Options
 import model.Recipe
 import model.RecipeList
 import model.ResourceDistrib
 import model.ResourcePurity
+import model.ResourceWeights
 import web.state.CustomGroupSelection
 
 object Forms {
@@ -44,6 +45,9 @@ object Forms {
 
   def extractorItemPurityKey( extractorType: ExtractorType, item: Item, purity: ResourcePurity ): String =
     s"distrib_${extractorType.entryName}_${item.className.name}_${purity.entryName}"
+
+  def resourceWeightKey( item: Item ): String =
+    s"weight_${item.className.name}"
 
   def outputGroup( model: Model, recipe: Recipe[Machine, Item] ): String =
     s"group_${model.manufacturingRecipes.indexOf( recipe )}"
@@ -83,7 +87,7 @@ object Forms {
       Options( _, _, _, _, _, _ )
     )
 
-  def mapOptions( model: Model ): FormDataDecoder[MapOptions] =
+  def resourceNodes( model: Model ): FormDataDecoder[Map[ExtractorType, Map[Item, ResourceDistrib]]] =
     ( ExtractorType.values, model.extractedItems, ResourcePurity.values )
       .traverseN(
         ( exT, item, purity ) =>
@@ -93,26 +97,37 @@ object Forms {
       )
       .map(
         m =>
-          MapOptions(
-            m.foldMap(
-                _.foldMap { case ( exT, item, purity, n ) => Map( exT -> Map( item -> Map( purity -> n ) ) ) }
-              )
-              .map {
-                case ( exT, items ) =>
-                  ( exT, items.map {
-                    case ( item, purities ) =>
-                      (
-                        item,
-                        ResourceDistrib(
-                          purities.getOrElse( ResourcePurity.Impure, 0 ),
-                          purities.getOrElse( ResourcePurity.Normal, 0 ),
-                          purities.getOrElse( ResourcePurity.Pure, 0 )
-                        )
+          m.foldMap(
+              _.foldMap { case ( exT, item, purity, n ) => Map( exT -> Map( item -> Map( purity -> n ) ) ) }
+            )
+            .map {
+              case ( exT, items ) =>
+                ( exT, items.map {
+                  case ( item, purities ) =>
+                    (
+                      item,
+                      ResourceDistrib(
+                        purities.getOrElse( ResourcePurity.Impure, 0 ),
+                        purities.getOrElse( ResourcePurity.Normal, 0 ),
+                        purities.getOrElse( ResourcePurity.Pure, 0 )
                       )
-                  } )
-              }
-          )
+                    )
+                } )
+            }
       )
+
+  def resourceWeights( model: Model ): FormDataDecoder[ResourceWeights] =
+    model.extractedItems
+      .traverse(
+        item =>
+          FormDataDecoder
+            .fieldOptional[Int]( resourceWeightKey( item ) )
+            .map( o => ( item, o.getOrElse( ResourceWeights.range ) ) )
+      )
+      .map( v => ResourceWeights( v.toMap ) )
+
+  def resourceOptions( model: Model ): FormDataDecoder[ResourceOptions] =
+    ( resourceNodes( model ), resourceWeights( model ) ).mapN( ResourceOptions( _, _ ) )
 
   def customGroups( model: Model ): FormDataDecoder[CustomGroupSelection] =
     FormDataDecoder(

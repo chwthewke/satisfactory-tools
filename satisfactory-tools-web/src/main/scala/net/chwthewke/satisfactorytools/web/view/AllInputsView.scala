@@ -7,11 +7,12 @@ import scalatags.Text.all._
 
 import model.Bill
 import model.Countable
-import model.MapOptions
+import model.ResourceOptions
 import model.Model
 import model.Options
 import model.RecipeList
 import model.ResourcePurity
+import model.ResourceWeights
 import web.protocol.Forms
 import web.state.PageState
 
@@ -26,7 +27,7 @@ object AllInputsView {
       bill( state.inputs.bill ),
       recipeList( state.inputs.recipeList ),
       options( state.inputs.options ),
-      mapOptions( state.inputs.mapOptions ),
+      resourceOptions( model, state.inputs.resourceOptions ),
       inputTabs( state ),
       outputTabs( state ),
       customGroupRadios( model, state ),
@@ -62,17 +63,25 @@ object AllInputsView {
         .toSeq
     )
 
-  def mapOptions( mapOpt: MapOptions ): Text.TypedTag[String] =
+  def resourceOptions( model: Model, resourceOpts: ResourceOptions ): Text.TypedTag[String] =
     div(
       (for {
-        ( exT, byItem )   <- mapOpt.resourceNodes
+        ( exT, byItem )   <- resourceOpts.resourceNodes
         ( item, distrib ) <- byItem
         purity            <- ResourcePurity.values
       } yield input(
         `type` := "hidden",
         name := Forms.extractorItemPurityKey( exT, item, purity ),
         value := distrib.get( purity )
-      )).toSeq
+      )).toSeq,
+      model.extractedItems.map(
+        item =>
+          input(
+            `type` := "hidden",
+            name := Forms.resourceWeightKey( item ),
+            value := resourceOpts.resourceWeights.weights.getOrElse( item, ResourceWeights.range )
+          )
+      )
     )
 
   def inputTabs( state: PageState ): Text.TypedTag[String] =

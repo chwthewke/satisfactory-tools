@@ -13,7 +13,7 @@ import model.ExtractionRecipe
 import model.Form
 import model.Item
 import model.Machine
-import model.MapOptions
+import model.ResourceOptions
 import model.Model
 import model.Options
 import model.Recipe
@@ -32,7 +32,7 @@ case class RecipeSelection(
 object RecipeSelection {
   def tieredExtractionRecipes(
       options: Options,
-      map: MapOptions,
+      map: ResourceOptions,
       extractionRecipes: Vector[( Item, ResourcePurity, Recipe[Machine, Item] )]
   ): Map[Item, Vector[ExtractionRecipe]] =
     extractionRecipes
@@ -82,9 +82,14 @@ object RecipeSelection {
         } )
     }
 
-  def apply( model: Model, recipeList: RecipeList, options: Options, map: MapOptions ): RecipeSelection = {
+  def apply(
+      model: Model,
+      recipeList: RecipeList,
+      options: Options,
+      resourceOpts: ResourceOptions
+  ): RecipeSelection = {
     val recipesWithCost  = recipeList.recipes.fproduct( _.producedIn.powerConsumption / 10d )
-    val tieredExtraction = tieredExtractionRecipes( options, map, model.extractionRecipes )
+    val tieredExtraction = tieredExtractionRecipes( options, resourceOpts, model.extractionRecipes )
     val extraction       = tieredExtraction.keys.toVector
     val caps             = resourceCaps( tieredExtraction )
 
@@ -93,11 +98,11 @@ object RecipeSelection {
       extraction,
       tieredExtraction,
       caps,
-      caps.map { case ( item, cap ) => ( item, 1e6d / (cap * caps.size) ) }
+      resourceOpts.resourceWeights.costs( caps )
     )
   }
 
   def apply( model: Model, inputs: SolverInputs ): RecipeSelection =
-    apply( model, inputs.recipeList, inputs.options, inputs.mapOptions )
+    apply( model, inputs.recipeList, inputs.options, inputs.resourceOptions )
 
 }

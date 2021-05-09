@@ -12,7 +12,7 @@ case class Model(
     items: SortedMap[ClassName, Item],
     extractedItems: Vector[Item],
     extractionRecipes: Vector[( Item, ResourcePurity, Recipe[Machine, Item] )],
-    defaultMapOptions: MapOptions
+    defaultResourceOptions: ResourceOptions
 )
 
 object Model {
@@ -33,7 +33,7 @@ object Model {
           |${model.extractionRecipes.map( _._2 ).map( _.show ).intercalate( "\n" )}
           |
           |Resource nodes
-          |${model.defaultMapOptions.show.linesIterator.map( "  " + _ ).toSeq.mkString_( "\n" )}
+          |${model.defaultResourceOptions.show.linesIterator.map( "  " + _ ).toSeq.mkString_( "\n" )}
           |""".stripMargin
   }
 

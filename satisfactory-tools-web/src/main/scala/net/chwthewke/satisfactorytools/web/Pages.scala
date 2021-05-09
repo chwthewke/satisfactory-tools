@@ -26,7 +26,7 @@ import org.typelevel.log4cats.SelfAwareStructuredLogger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 
 import model.Bill
-import model.MapOptions
+import model.ResourceOptions
 import model.Model
 import model.Options
 import model.RecipeList
@@ -126,10 +126,10 @@ case class Pages[F[_]: Async]( model: Model, defaultInputs: SolverInputs ) {
         .flatMap( st => Found( Location( uri"/".withQueryParam( stateParam, st ) ) ) )
 
   def upgrade( req: Request[F] ): F[Response[F]] = {
-    implicit val billDecoder: FormDataDecoder[Bill]             = Forms.bill( model )
-    implicit val recipeListDecoder: FormDataDecoder[RecipeList] = Forms.recipeList( model )
-    implicit val optionsDecoder: FormDataDecoder[Options]       = Forms.options
-    implicit val mapOptionsDecoder: FormDataDecoder[MapOptions] = Forms.mapOptions( model )
+    implicit val billDecoder: FormDataDecoder[Bill]                       = Forms.bill( model )
+    implicit val recipeListDecoder: FormDataDecoder[RecipeList]           = Forms.recipeList( model )
+    implicit val optionsDecoder: FormDataDecoder[Options]                 = Forms.options
+    implicit val resourceOptionsDecoder: FormDataDecoder[ResourceOptions] = Forms.resourceOptions( model )
 
     implicit val inputTabDecoder: FormDataDecoder[InputTab] =
       FormDataDecoder
@@ -157,12 +157,12 @@ case class Pages[F[_]: Async]( model: Model, defaultInputs: SolverInputs ) {
       req.as[Bill],
       req.as[RecipeList],
       req.as[Options],
-      req.as[MapOptions],
+      req.as[ResourceOptions],
       req.as[InputTab],
       req.as[OutputTab],
       req.as[CustomGroupSelection]
-    ).mapN { ( bill, recipes, options, mapOptions, inputTab, outputTab, customGroups ) =>
-        val inputs = SolverInputs( bill, recipes, options, mapOptions )
+    ).mapN { ( bill, recipes, options, resourceOptions, inputTab, outputTab, customGroups ) =>
+        val inputs = SolverInputs( bill, recipes, options, resourceOptions )
         PageState(
           inputs,
           inputTab,

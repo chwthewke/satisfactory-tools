@@ -30,10 +30,10 @@ object Calculator {
       inputs: SolverInputs,
       solver: Solver
   ): Either[String, Factory] = {
-    val selection = RecipeSelection( model, inputs.recipeList, inputs.options, inputs.mapOptions )
+    val selection = RecipeSelection( model, inputs.recipeList, inputs.options, inputs.resourceOptions )
 
     solver
-      .solve( inputs.bill, RecipeSelection( model, inputs.recipeList, inputs.options, inputs.mapOptions ) )
+      .solve( inputs.bill, RecipeSelection( model, inputs.recipeList, inputs.options, inputs.resourceOptions ) )
       .map( solutionFactory( inputs.bill, selection, _ ) )
   }
 

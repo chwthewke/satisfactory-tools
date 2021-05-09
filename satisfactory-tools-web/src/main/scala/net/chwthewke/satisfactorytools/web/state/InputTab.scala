@@ -10,14 +10,14 @@ import shapeless.Lens
 import shapeless.lens
 
 import model.Bill
-import model.MapOptions
+import model.ResourceOptions
 import model.Model
 import model.Options
 import model.RecipeList
 import model.SolverInputs
 import web.protocol.Forms
 import web.view.BillView
-import web.view.MapOptionsView
+import web.view.ResourceOptionsView
 import web.view.OptionsView
 import web.view.RecipeListView
 
@@ -55,14 +55,15 @@ object InputTab extends Enum[InputTab] {
     override def stateLens: Lens[SolverInputs, RecipeList] = lens[SolverInputs].recipeList
   }
 
-  final case object MapOptionsTab extends InputTab( "map" ) {
-    type Data = MapOptions
+  final case object ResourceOptionsTab extends InputTab( "map" ) {
+    type Data = ResourceOptions
 
-    override def decoder( model: Model ): FormDataDecoder[MapOptions] = Forms.mapOptions( model )
+    override def decoder( model: Model ): FormDataDecoder[ResourceOptions] = Forms.resourceOptions( model )
 
-    override def view( model: Model, state: MapOptions ): Text.TypedTag[String] = MapOptionsView.view( model, state )
+    override def view( model: Model, state: ResourceOptions ): Text.TypedTag[String] =
+      ResourceOptionsView.view( model, state )
 
-    override def stateLens: Lens[SolverInputs, MapOptions] = lens[SolverInputs].mapOptions
+    override def stateLens: Lens[SolverInputs, ResourceOptions] = lens[SolverInputs].resourceOptions
   }
 
   final case object OptionsTab extends InputTab( "options" ) {

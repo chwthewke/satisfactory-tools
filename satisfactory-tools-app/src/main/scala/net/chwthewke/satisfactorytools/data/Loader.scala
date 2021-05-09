@@ -58,7 +58,7 @@ class Loader[F[_]]( implicit val syncInstance: Sync[F] ) {
       prodConfig <- loadProductionConfig( src )
       bill       <- Bill.init( model, prodConfig ).leftMap( Error( _ ) ).liftTo[F]
       recipeList <- RecipeList.init( model, prodConfig ).leftMap( Error( _ ) ).liftTo[F]
-    } yield SolverInputs( bill, recipeList, Options.default, model.defaultMapOptions )
+    } yield SolverInputs( bill, recipeList, Options.default, model.defaultResourceOptions )
 
 }
 

@@ -8,7 +8,7 @@ case class SolverInputs(
     bill: Bill,
     recipeList: RecipeList,
     options: Options,
-    mapOptions: MapOptions
+    resourceOptions: ResourceOptions
 )
 
 object SolverInputs {
@@ -25,7 +25,7 @@ object SolverInputs {
               |${inputs.options}
               |
               |MAP
-              |${inputs.mapOptions}
+              |${inputs.resourceOptions}
               |""".stripMargin
     )
 }

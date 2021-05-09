@@ -12,7 +12,6 @@ import model.Countable
 import model.ExtractorType
 import model.Item
 import model.Machine
-import model.MapOptions
 import model.Model
 import model.Options
 import model.Options.Belt
@@ -23,6 +22,8 @@ import model.Options.Pipe
 import model.Recipe
 import model.RecipeList
 import model.ResourceDistrib
+import model.ResourceOptions
+import model.ResourceWeights
 import model.SolverInputs
 import prod.ClockedRecipe
 import prod.Factory
@@ -33,10 +34,10 @@ object Codecs {
   val floatAsDouble: Codec[Double] = float.xmap[Double]( _.toDouble, _.toFloat )
 
   def inputsCodec( model: Model ): Codec[SolverInputs] =
-    (billCodec( model ) ~ recipeListCodec( model ) ~ optionsCodec ~ mapOptionsCodec( model ))
+    (billCodec( model ) ~ recipeListCodec( model ) ~ optionsCodec ~ resoucesOptionsCodec( model ))
       .xmap(
         SolverInputs( _, _, _, _ ),
-        inputs => inputs.bill ~ inputs.recipeList ~ inputs.options ~ inputs.mapOptions
+        inputs => inputs.bill ~ inputs.recipeList ~ inputs.options ~ inputs.resourceOptions
       )
 
   def countableCodec[N, A]( numCodec: Codec[N], codec: Codec[A] ): Codec[Countable[N, A]] =
@@ -74,12 +75,20 @@ object Codecs {
   def mapDataPointCodec( model: Model ): Codec[( ExtractorType, ( Item, ResourceDistrib ) )] =
     enumCodec[ExtractorType] ~~ (itemIndexCodec( model ) ~~ distribCodec)
 
-  def mapOptionsCodec( model: Model ): Codec[MapOptions] =
+  def resourceNodesCodec( model: Model ): Codec[Map[ExtractorType, Map[Item, ResourceDistrib]]] =
     vectorOfN( uint8, mapDataPointCodec( model ) )
       .xmap(
-        v => MapOptions( v.groupMap( _._1 )( _._2 ).map { case ( exT, items ) => ( exT, items.toMap ) } ),
-        _.resourceNodes.toVector.flatMap { case ( exT, items ) => items.toVector.tupleLeft( exT ) }
+        v => v.groupMap( _._1 )( _._2 ).map { case ( exT, items ) => ( exT, items.toMap ) },
+        _.toVector.flatMap { case ( exT, items ) => items.toVector.tupleLeft( exT ) }
       )
+
+  def resourceWeightsCodec( model: Model ): Codec[ResourceWeights] =
+    vectorOfN( uint4, itemIndexCodec( model ) ~ uint4 )
+      .xmap( v => ResourceWeights( v.toMap ), _.weights.toVector.filter( _._2 != ResourceWeights.range ) )
+
+  def resoucesOptionsCodec( model: Model ): Codec[ResourceOptions] =
+    (resourceNodesCodec( model ) ~ resourceWeightsCodec( model ))
+      .xmap( ResourceOptions( _, _ ), opts => ( opts.resourceNodes, opts.resourceWeights ) )
 
   val mapDataCodec: Codec[Vector[( Byte, Byte, Short, Short, Short )]] =
     vectorOfN( uint8, byte ~~ byte ~~ short16 ~~ short16 ~~ short16 )

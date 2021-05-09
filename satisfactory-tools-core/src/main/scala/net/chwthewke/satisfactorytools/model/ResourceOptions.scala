@@ -11,13 +11,16 @@ import cats.syntax.traverse._
 
 import data.MapConfig
 
-case class MapOptions( resourceNodes: Map[ExtractorType, Map[Item, ResourceDistrib]] ) {
+case class ResourceOptions(
+    resourceNodes: Map[ExtractorType, Map[Item, ResourceDistrib]],
+    resourceWeights: ResourceWeights
+) {
   def get( machine: Machine, item: Item ): ResourceDistrib =
     machine.machineType.extractorType.flatMap( resourceNodes.get ).flatMap( _.get( item ) ).orEmpty
 }
 
-object MapOptions {
-  def init( modelItems: Map[ClassName, Item], config: MapConfig ): Either[String, MapOptions] =
+object ResourceOptions {
+  def init( modelItems: Map[ClassName, Item], config: MapConfig ): Either[String, ResourceOptions] =
     config.resourceNodes
       .traverse(
         _.toVector
@@ -27,11 +30,11 @@ object MapOptions {
           }
           .map( _.toMap )
       )
-      .map( MapOptions( _ ) )
+      .map( ResourceOptions( _, ResourceWeights.default ) )
       .leftMap( _.mkString_( "Unknown items in resource nodes config: ", ", ", "" ) )
       .toEither
 
-  implicit val mapOptionsShow: Show[MapOptions] = {
+  implicit val resourceOptionsShow: Show[ResourceOptions] = {
     def showItem( item: Item, distrib: ResourceDistrib ): String =
       show"${item.displayName.padTo( 20, ' ' )} P ${f"${distrib.pureNodes}% 2d"} " +
         show"N ${f"${distrib.normalNodes}% 2d"} I ${f"${distrib.impureNodes}% 2d"}"
@@ -40,7 +43,15 @@ object MapOptions {
       items.toVector.map( (showItem _).tupled ).mkString_( show"${extractorType.description}\n  ", "\n  ", "" )
 
     Show.show(
-      opts => opts.resourceNodes.toVector.map( (showExtractorType _).tupled ).mkString_( "\n\n" )
+      opts =>
+        show"""NODES
+              |${opts.resourceNodes.toVector.map( (showExtractorType _).tupled ).mkString_( "\n\n" )}
+              |
+              |WEIGHTS
+              |${opts.resourceWeights.weights
+                .map { case ( item, weight ) => show"${item.displayName}: $weight" }
+                .mkString( "\n" )}
+              |""".stripMargin
     )
   }
 }

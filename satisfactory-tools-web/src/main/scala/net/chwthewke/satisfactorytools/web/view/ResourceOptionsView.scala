@@ -7,20 +7,22 @@ import scalatags.Text.all._
 
 import model.ExtractorType
 import model.Item
-import model.MapOptions
 import model.Model
 import model.ResourceDistrib
+import model.ResourceOptions
 import model.ResourcePurity
+import model.ResourceWeights
 import web.protocol.Forms
 
-object MapOptionsView {
+object ResourceOptionsView {
 
   private def zipMap[K, A, B, C]( as: Map[K, A], bs: Map[K, B] )( combine: ( A, B ) => C ): Map[K, C] =
     as.keySet.intersect( bs.keySet ).map( k => ( k, combine( as( k ), bs( k ) ) ) ).toMap
 
-  def view( model: Model, mapOptions: MapOptions ): Text.TypedTag[String] =
+  def view( model: Model, resourceOptions: ResourceOptions ): Text.TypedTag[String] =
     div(
-      zipMap( mapOptions.resourceNodes, model.defaultMapOptions.resourceNodes )(
+      viewResourceWeights( model, resourceOptions.resourceWeights ),
+      zipMap( resourceOptions.resourceNodes, model.defaultResourceOptions.resourceNodes )(
         ( byEx, defaultByEx ) => zipMap( byEx, defaultByEx )( ( _, _ ) )
       ).toVector
         .sortBy { case ( ex, _ ) => ExtractorType.indexOf( ex ) }
@@ -75,6 +77,39 @@ object MapOptionsView {
           nodes
             .sortBy { case ( it, _ ) => it.displayName }
             .map { case ( it, ( dist, default ) ) => viewNode( extractorType, it, dist, default ) }
+        )
+      )
+    )
+
+  def viewResourceWeights( model: Model, weights: ResourceWeights ): Text.TypedTag[String] =
+    fieldset(
+      legend( "Resource weight tweaks" ),
+      table(
+        thead(
+          tr(
+            th( textAlign.left, "Resource" ),
+            th( textAlign.left, "Use more" ),
+            th( textAlign.right, "Use less" )
+          )
+        ),
+        tbody(
+          model.extractedItems.map(
+            item =>
+              tr(
+                td( item.displayName ),
+                td(
+                  colspan := 2,
+                  input(
+                    `type` := "range",
+                    name := Forms.resourceWeightKey( item ),
+                    min := 0,
+                    max := (2 * ResourceWeights.range),
+                    step := 1,
+                    value := weights.weights.getOrElse( item, ResourceWeights.range )
+                  )
+                )
+              )
+          )
         )
       )
     )

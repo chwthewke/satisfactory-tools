@@ -30,7 +30,7 @@ import model.ItemType
 import model.Machine
 import model.MachineType
 import model.Manufacturer
-import model.MapOptions
+import model.ResourceOptions
 import model.Model
 import model.NativeClass
 import model.Recipe
@@ -55,11 +55,11 @@ final case class GameData(
     val manufacturing: ValidatedNel[String, Vector[Recipe[Machine, Item]]] =
       rawManufacturing.traverseFilter( validateManufacturingRecipe )
 
-    val defaultMapOptions: ValidatedNel[String, MapOptions] =
-      MapOptions.init( items, mapConfig ).toValidatedNel
+    val defaultResourceOptions: ValidatedNel[String, ResourceOptions] =
+      ResourceOptions.init( items, mapConfig ).toValidatedNel
 
-    ( extractionRecipes, manufacturing, defaultMapOptions )
-      .mapN( ( ex, mf, mo ) => Model( mf, items.to( SortedMap ), ex.map( _._1 ).distinct, ex, mo ) )
+    ( extractionRecipes, manufacturing, defaultResourceOptions )
+      .mapN( ( ex, mf, ro ) => Model( mf, items.to( SortedMap ), ex.map( _._1 ).distinct, ex, ro ) )
   }
 
   def validateItem( ccn: Countable[Double, ClassName] ): ValidatedNel[String, Countable[Double, Item]] =
