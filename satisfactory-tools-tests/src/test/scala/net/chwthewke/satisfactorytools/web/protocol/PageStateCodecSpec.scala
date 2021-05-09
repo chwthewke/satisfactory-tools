@@ -169,7 +169,7 @@ class PageStateCodecSpec
 
   val genCustomGroupSelection: Gen[CustomGroupSelection] =
     pick[Vector]( model.manufacturingRecipes )
-      .flatMap( _.traverse( r => Gen.choose( 0, 5 ).tupleLeft( r ) ) )
+      .flatMap( _.traverse( r => Gen.choose( 0, CustomGroupSelection.customGroups ).tupleLeft( r ) ) )
       .map( v => CustomGroupSelection( v.toMap ) )
 
   val genState: Gen[PageState] =
@@ -178,7 +178,7 @@ class PageStateCodecSpec
       inputTab <- Gen.oneOf( InputTab.values )
       outputTab <- Gen.oneOf(
                     Vector( OutputTab.BlocksTab, OutputTab.ResourcesTab, OutputTab.ResourcesTab ) ++ 1
-                      .to( 5 )
+                      .to( CustomGroupSelection.customGroups )
                       .map( CustomGroup( _ ) )
                   )
       factory      <- Gen.option( Gen.oneOf( Gen.alphaNumStr.map( Left( _ ) ), genFactory.map( Right( _ ) ) ) )

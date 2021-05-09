@@ -8,6 +8,7 @@ import scalatags.Text.tags2.details
 import scalatags.Text.tags2.summary
 
 import model.Model
+import net.chwthewke.satisfactorytools.web.state.CustomGroupSelection
 import web.protocol.Forms
 import web.state.InputTab
 import web.state.OutputTab
@@ -129,7 +130,7 @@ object View {
             Option.when( tab == state.selectedOutputTab )( fontWeight := "bold" )
           )
       },
-      1.to( 5 ).map { ix =>
+      1.to( CustomGroupSelection.customGroups ).map { ix =>
         val groupTab = OutputTab.CustomGroup( ix )
         input(
           `type` := "submit",
