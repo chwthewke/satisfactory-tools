@@ -105,12 +105,16 @@ case class Pages[F[_]: Async]( model: Model, defaultInputs: SolverInputs ) {
                           }
       input <- req.as[inputTab.Data]
       newInputs = inputTab.stateLens.set( state.inputs )( input )
+      newFactory = if (setCompute || (newInputs != state.inputs && state.factory.isDefined))
+        Some( solve( newInputs ) )
+      else
+        state.factory
       response <- redirect(
                    PageState(
                      newInputs,
                      newInputTab.getOrElse( state.selectedInputTab ),
                      newOutputTab.getOrElse( state.selectedOutputTab ),
-                     state.factory.void.orElse( Option.when( setCompute )( () ) ).as( solve( newInputs ) ),
+                     newFactory,
                      newCustomGroups.getOrElse( state.customGroupSelection )
                    )
                  )
