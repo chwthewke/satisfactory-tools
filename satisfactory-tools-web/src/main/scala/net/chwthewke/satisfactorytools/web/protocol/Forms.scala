@@ -52,6 +52,9 @@ object Forms {
   def outputGroup( model: Model, recipe: Recipe[Machine, Item] ): String =
     s"group_${model.manufacturingRecipes.indexOf( recipe )}"
 
+  val compareBefore: String = "cmp_before"
+  val compareAfter: String  = "cmp_after"
+
   ////////////////////
   // DECODERS
 

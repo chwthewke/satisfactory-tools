@@ -76,6 +76,22 @@ object FactoryView {
         )
       )
 
+    def recipeCell2Cols( recipe: Recipe[Machine, Item] ): Frag = {
+      val recipeName  = recipe.displayName
+      val altPrefix   = "Alternate: "
+      val isAlternate = recipeName.startsWith( altPrefix )
+
+      Seq[Frag](
+        td(
+          recipe.displayName.stripPrefix( altPrefix ),
+          colspan := (if (isAlternate) 1 else 2),
+          title := RecipeListView.describeRecipe( recipe ),
+          textAlign.left
+        ),
+        Option.when( isAlternate )( td( "ALT", textAlign.right ) )
+      )
+    }
+
     def recipeRow(
         model: Model,
         state: PageState,
@@ -83,10 +99,6 @@ object FactoryView {
         radios: CustomGroupsRadios
     ): Text.TypedTag[String] = {
       import block._
-
-      val recipeName  = recipe.item.displayName
-      val altPrefix   = "Alternate: "
-      val isAlternate = recipeName.startsWith( altPrefix )
 
       def customGroupRadios: Frag = radios match {
         case CustomGroupsRadios.Empty       => None
@@ -98,13 +110,7 @@ object FactoryView {
       tr(
         customGroupRadios,
         td( f"$itemAmount%4.3f", textAlign.right ),
-        td(
-          recipe.item.displayName.stripPrefix( altPrefix ),
-          colspan := (if (isAlternate) 1 else 2),
-          title := RecipeListView.describeRecipe( recipe.item ),
-          textAlign.left
-        ),
-        Option.when( isAlternate )( td( "ALT", textAlign.right ) ),
+        recipeCell2Cols( recipe.item ),
         td( f"$machineCount%3d", textAlign.right ),
         td( machine.displayName, textAlign.left ),
         td( f"$itemAmountPerUnit%3.3f / unit", textAlign.right ),
@@ -232,7 +238,7 @@ object FactoryView {
         factory: Factory,
         extraKey: String
     ): SortedMap[Item, ( Map[String, Double], Map[String, Double] )] =
-      (factory.allRecipes).foldMap(
+      factory.allRecipes.foldMap(
         block =>
           block.ingredientsPerMinute
             .foldMap {

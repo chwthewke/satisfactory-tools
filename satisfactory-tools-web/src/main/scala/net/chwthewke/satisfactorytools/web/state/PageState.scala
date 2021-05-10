@@ -2,8 +2,10 @@ package net.chwthewke.satisfactorytools
 package web.state
 
 import cats.Show
+import cats.data.ValidatedNel
 import cats.syntax.either._
 import cats.syntax.show._
+import cats.syntax.traverse._
 import org.http4s.FormDataDecoder
 import org.http4s.ParseFailure
 import scodec.Codec
@@ -16,7 +18,6 @@ import model.SolverInputs
 import prod.Factory
 import web.protocol
 import web.protocol.Codecs
-import web.protocol.Forms
 
 case class PageState(
     inputs: SolverInputs,
@@ -44,12 +45,18 @@ object PageState {
           state.inputs ~ state.selectedInputTab ~ state.selectedOutputTab ~ state.factory ~ state.customGroupSelection
       )
 
-  def formDataDecoder( model: Model ): FormDataDecoder[PageState] =
+  def validate( model: Model, str: String ): ValidatedNel[ParseFailure, PageState] =
+    PageState.fromBase64( model, str ).leftMap( msg => ParseFailure( "", msg ) ).toValidatedNel
+
+  def formDataDecoder( model: Model, fieldName: String ): FormDataDecoder[PageState] =
     FormDataDecoder
-      .field[String]( Forms.state )
-      .mapValidated(
-        str => PageState.fromBase64( model, str ).leftMap( msg => ParseFailure( "", msg ) ).toValidatedNel
-      )
+      .field[String]( fieldName )
+      .mapValidated( validate( model, _ ) )
+
+  def formDataDecoderOpt( model: Model, fieldName: String ): FormDataDecoder[Option[PageState]] =
+    FormDataDecoder
+      .fieldOptional[String]( fieldName )
+      .mapValidated( _.traverse( validate( model, _ ) ) )
 
   implicit val pageStateShow: Show[PageState] = Show.show(
     state => //

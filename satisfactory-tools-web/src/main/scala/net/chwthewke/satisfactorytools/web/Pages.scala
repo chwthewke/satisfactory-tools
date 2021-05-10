@@ -26,10 +26,10 @@ import org.typelevel.log4cats.SelfAwareStructuredLogger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 
 import model.Bill
-import model.ResourceOptions
 import model.Model
 import model.Options
 import model.RecipeList
+import model.ResourceOptions
 import model.SolverInputs
 import prod.Calculator
 import prod.ConstraintSolver
@@ -39,6 +39,7 @@ import web.state.CustomGroupSelection
 import web.state.InputTab
 import web.state.OutputTab
 import web.state.PageState
+import web.view.CompareView
 import web.view.View
 
 case class Pages[F[_]: Async]( model: Model, defaultInputs: SolverInputs ) {
@@ -49,7 +50,7 @@ case class Pages[F[_]: Async]( model: Model, defaultInputs: SolverInputs ) {
   val dsl: Http4sDsl[F] = new Http4sDsl[F] {}
   import dsl._
 
-  implicit val stateDataDecoder: FormDataDecoder[PageState] = PageState.formDataDecoder( model )
+  implicit val stateDataDecoder: FormDataDecoder[PageState] = PageState.formDataDecoder( model, Forms.state )
   import FormDataDecoder.formEntityDecoder
 
   val routes: HttpRoutes[F] = HttpRoutes.of[F] {
@@ -58,6 +59,8 @@ case class Pages[F[_]: Async]( model: Model, defaultInputs: SolverInputs ) {
     case req @ POST -> Root / "output" / OutputTabSegment( dest ) => respondNavigateOutputs( req, dest )
     case req @ POST -> Root                                       => respondComputeSolution( req )
     case req @ POST -> Root / "upgrade"                           => upgrade( req )
+    case req @ GET -> Root / "compare"                            => newCompare
+    case req @ POST -> Root / "compare"                           => compare( req )
   }
 
   def respondDefault: F[Response[F]] =
@@ -125,6 +128,23 @@ case class Pages[F[_]: Async]( model: Model, defaultInputs: SolverInputs ) {
         .liftTo[F]
         .flatMap( st => Found( Location( uri"/".withQueryParam( stateParam, st ) ) ) )
 
+  val newCompare: F[Response[F]] =
+    Ok( CompareView( model, None, None ) )
+
+  def compare( req: Request[F] ): F[Response[F]] = {
+    implicit val dualStateDecoder: FormDataDecoder[( Option[PageState], Option[PageState] )] =
+      (
+        PageState.formDataDecoderOpt( model, Forms.compareBefore ),
+        PageState.formDataDecoderOpt( model, Forms.compareAfter )
+      ).tupled
+
+    Ok(
+      req
+        .as[( Option[PageState], Option[PageState] )]
+        .map { case ( before, after ) => CompareView( model, before, after ) }
+    )
+  }
+
   def upgrade( req: Request[F] ): F[Response[F]] = {
     implicit val billDecoder: FormDataDecoder[Bill]                       = Forms.bill( model )
     implicit val recipeListDecoder: FormDataDecoder[RecipeList]           = Forms.recipeList( model )
@@ -180,10 +200,7 @@ case class Pages[F[_]: Async]( model: Model, defaultInputs: SolverInputs ) {
 
   implicit object PageStateQueryParamDecoder extends QueryParamDecoder[PageState] {
     override def decode( value: QueryParameterValue ): ValidatedNel[ParseFailure, PageState] =
-      PageState
-        .fromBase64( model, value.value )
-        .leftMap( err => ParseFailure( s"Bad state", err ) )
-        .toValidatedNel
+      PageState.validate( model, value.value )
   }
 
   object PageStateParam extends OptionalValidatingQueryParamDecoderMatcher[PageState]( stateParam )

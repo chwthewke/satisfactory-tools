@@ -8,8 +8,8 @@ import scalatags.Text.tags2.details
 import scalatags.Text.tags2.summary
 
 import model.Model
-import net.chwthewke.satisfactorytools.web.state.CustomGroupSelection
 import web.protocol.Forms
+import web.state.CustomGroupSelection
 import web.state.InputTab
 import web.state.OutputTab
 import web.state.PageState
