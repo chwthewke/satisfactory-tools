@@ -30,6 +30,7 @@ object AllInputsView {
       resourceOptions( model, state.inputs.resourceOptions ),
       inputTabs( state ),
       outputTabs( state ),
+      input( `type` := "hidden", name := Forms.outputGroupCount, value := state.customGroupSelection.count ),
       customGroupRadios( model, state ),
       input( `type` := "hidden", name := Forms.state, stateBase64.map( value := _ ) )
     )

@@ -3,6 +3,7 @@ package web
 
 import cats.data.ValidatedNel
 import cats.effect.Async
+import cats.syntax.applicative._
 import cats.syntax.apply._
 import cats.syntax.either._
 import cats.syntax.flatMap._
@@ -10,7 +11,6 @@ import cats.syntax.foldable._
 import cats.syntax.functor._
 import cats.syntax.option._
 import cats.syntax.show._
-import cats.syntax.traverse._
 import org.http4s.FormDataDecoder
 import org.http4s.HttpRoutes
 import org.http4s.ParseFailure
@@ -58,8 +58,10 @@ case class Pages[F[_]: Async]( model: Model, defaultInputs: SolverInputs ) {
     case req @ POST -> Root / "input" / InputTabSegment( dest )   => respondNavigateInputs( req, dest )
     case req @ POST -> Root / "output" / OutputTabSegment( dest ) => respondNavigateOutputs( req, dest )
     case req @ POST -> Root                                       => respondComputeSolution( req )
+    case req @ POST -> Root / "group_dec"                         => respondRemoveCustomGroup( req )
+    case req @ POST -> Root / "group_inc"                         => respondAddCustomGroup( req )
     case req @ POST -> Root / "upgrade"                           => upgrade( req )
-    case req @ GET -> Root / "compare"                            => newCompare
+    case GET -> Root / "compare"                                  => newCompare
     case req @ POST -> Root / "compare"                           => compare( req )
   }
 
@@ -87,22 +89,33 @@ case class Pages[F[_]: Async]( model: Model, defaultInputs: SolverInputs ) {
       .as[PageState]
       .flatMap( respondUpdateInputs( req, _, newOutputTab = Some( dest ) ) )
 
+  def respondAddCustomGroup( req: Request[F] ): F[Response[F]] =
+    req
+      .as[PageState]
+      .flatMap( respondUpdateInputs( req, _, customGroupsAdj = 1 ) )
+
+  def respondRemoveCustomGroup( req: Request[F] ): F[Response[F]] =
+    req
+      .as[PageState]
+      .flatMap( respondUpdateInputs( req, _, customGroupsAdj = -1 ) )
+
   private def respondUpdateInputs(
       req: Request[F],
       state: PageState,
       newInputTab: Option[InputTab] = None,
       newOutputTab: Option[OutputTab] = None,
+      customGroupsAdj: Int = 0,
       setCompute: Boolean = false
   ): F[Response[F]] = {
     val inputTab                                                  = state.selectedInputTab
     implicit val inputDataDecoder: FormDataDecoder[inputTab.Data] = inputTab.decoder( model )
 
     for {
-      newCustomGroups <- state.selectedOutputTab
-                          .customGroupsFormDataDecoder( model )
-                          .traverse { implicit dec =>
-                            req.as[CustomGroupSelection]
-                          }
+      selectedCustomGroups <- state.selectedOutputTab
+                               .customGroupsFormDataDecoder( model )
+                               .fold( state.customGroupSelection.pure[F] ) { implicit dec =>
+                                 req.as[CustomGroupSelection]
+                               }
       input <- req.as[inputTab.Data]
       newInputs = inputTab.stateLens.set( state.inputs )( input )
       newFactory = if (setCompute || (newInputs != state.inputs && state.factory.isDefined))
@@ -115,7 +128,7 @@ case class Pages[F[_]: Async]( model: Model, defaultInputs: SolverInputs ) {
                      newInputTab.getOrElse( state.selectedInputTab ),
                      newOutputTab.getOrElse( state.selectedOutputTab ),
                      newFactory,
-                     newCustomGroups.getOrElse( state.customGroupSelection )
+                     selectedCustomGroups.copy( count = selectedCustomGroups.count + customGroupsAdj )
                    )
                  )
     } yield response

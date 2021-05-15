@@ -52,6 +52,8 @@ object Forms {
   def outputGroup( model: Model, recipe: Recipe[Machine, Item] ): String =
     s"group_${model.manufacturingRecipes.indexOf( recipe )}"
 
+  val outputGroupCount: String = "group_count"
+
   val compareBefore: String = "cmp_before"
   val compareAfter: String  = "cmp_after"
 
@@ -133,21 +135,26 @@ object Forms {
     ( resourceNodes( model ), resourceWeights( model ) ).mapN( ResourceOptions( _, _ ) )
 
   def customGroups( model: Model ): FormDataDecoder[CustomGroupSelection] =
-    FormDataDecoder(
-      fd =>
-        Valid(
-          fd.toVector.foldMap {
-            case ( k, Chain( v, _* ) ) =>
-              (
-                Option
-                  .when( k.startsWith( "group_" ) )( Numeric[Int].parseString( k.stripPrefix( "group_" ) ) )
-                  .flatten
-                  .flatMap( model.manufacturingRecipes.lift( _ ) ),
-                Numeric[Int].parseString( v )
-              ).tupled.toVector
-            case _ => Vector.empty
-          }.toMap
-        )
-    ).map( CustomGroupSelection( _ ) )
+    (
+      FormDataDecoder
+        .fieldOptional[Int]( outputGroupCount )
+        .map( _.getOrElse( CustomGroupSelection.defaultCustomGroups ) ),
+      FormDataDecoder(
+        fd =>
+          Valid(
+            fd.toVector.foldMap {
+              case ( k, Chain( v, _* ) ) =>
+                (
+                  Option
+                    .when( k.startsWith( "group_" ) )( Numeric[Int].parseString( k.stripPrefix( "group_" ) ) )
+                    .flatten
+                    .flatMap( model.manufacturingRecipes.lift( _ ) ),
+                  Numeric[Int].parseString( v )
+                ).tupled.toVector
+              case _ => Vector.empty
+            }.toMap
+          )
+      )
+    ).mapN( CustomGroupSelection( _, _ ) )
 
 }

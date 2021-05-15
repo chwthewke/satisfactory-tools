@@ -22,12 +22,9 @@ import model.Recipe
 import prod.ClockedRecipe
 import prod.Factory
 import web.protocol.Forms
-import web.state.CustomGroupSelection
 import web.state.PageState
 
 object FactoryView {
-
-  import CustomGroupSelection.customGroups
 
   object Resources {
     def apply( factory: Factory ): Text.TypedTag[String] =
@@ -102,9 +99,9 @@ object FactoryView {
 
       def customGroupRadios: Frag = radios match {
         case CustomGroupsRadios.Empty       => None
-        case CustomGroupsRadios.Placeholder => Some( td( colspan := (customGroups + 1) ) )
+        case CustomGroupsRadios.Placeholder => Some( td( colspan := (state.customGroupSelection.count + 1) ) )
         case CustomGroupsRadios.Full =>
-          Some( 0.to( customGroups ).map( groupRadio( model, state, block.recipe.item, _ ) ) )
+          Some( 0.to( state.customGroupSelection.count ).map( groupRadio( model, state, block.recipe.item, _ ) ) )
       }
 
       tr(
@@ -142,7 +139,7 @@ object FactoryView {
             Option.when( radios >= CustomGroupsRadios.Placeholder )(
               Seq[Frag](
                 td( "-", textAlign.center ),
-                1.to( customGroups ).map( ix => td( ix.toString, textAlign.center ) )
+                1.to( state.customGroupSelection.count ).map( ix => td( ix.toString, textAlign.center ) )
               )
             ),
             headers.map { case ( w, h, al ) => th( colspan := w, h, al ) }
@@ -153,7 +150,7 @@ object FactoryView {
           factory.manufacturing.map( r => recipeRow( model, state, ClockedRecipe.roundUp( r ), radios ) ),
           tr(
             Option.when( radios >= CustomGroupsRadios.Placeholder )(
-              td( colspan := (customGroups + 1) )
+              td( colspan := (1 + state.customGroupSelection.count) )
             ),
             td( colspan := 8, textAlign.right, "Total Power" ),
             td( textAlign.right, f"${factory.allRecipes.foldMap( _.power )}%4.2f" ),

@@ -177,22 +177,24 @@ class PageStateCodecSpec
       itemsOutCountable   <- genCountables( itemsOut )
     } yield Factory( extractionBlocks, manufacturingBlocks, itemsInCountable, itemsOutCountable )
 
-  val genCustomGroupSelection: Gen[CustomGroupSelection] =
-    pick[Vector]( model.manufacturingRecipes )
-      .flatMap( _.traverse( r => Gen.choose( 0, CustomGroupSelection.customGroups ).tupleLeft( r ) ) )
-      .map( v => CustomGroupSelection( v.toMap ) )
+  val genCustomGroupSelection: Gen[CustomGroupSelection] = for {
+    groupCount <- Gen.choose( 0, 15 )
+    selection  <- pick[Vector]( model.manufacturingRecipes )
+    groups     <- selection.traverse( r => Gen.choose( 0, groupCount ).tupleLeft( r ) )
+  } yield CustomGroupSelection( groupCount, groups.toMap.filter { case ( _, v ) => v != 0 } )
+
+  private val outputTabStatic: Gen[OutputTab] =
+    Gen.oneOf( Vector( OutputTab.BlocksTab, OutputTab.ResourcesTab, OutputTab.ResourcesTab ) )
+  private def outputTabGroup( count: Int ): Gen[OutputTab] = Gen.choose( 1, count ).map( CustomGroup( _ ) )
 
   val genState: Gen[PageState] =
     for {
-      inputs   <- genInputs
-      inputTab <- Gen.oneOf( InputTab.values )
-      outputTab <- Gen.oneOf(
-                    Vector( OutputTab.BlocksTab, OutputTab.ResourcesTab, OutputTab.ResourcesTab ) ++ 1
-                      .to( CustomGroupSelection.customGroups )
-                      .map( CustomGroup( _ ) )
-                  )
-      factory      <- Gen.option( Gen.oneOf( Gen.alphaNumStr.map( Left( _ ) ), genFactory.map( Right( _ ) ) ) )
+      inputs       <- genInputs
+      inputTab     <- Gen.oneOf( InputTab.values )
       customGroups <- genCustomGroupSelection
+      outputTab <- if (customGroups.count > 0) Gen.oneOf( outputTabStatic, outputTabGroup( customGroups.count ) )
+                  else outputTabStatic
+      factory <- Gen.option( Gen.oneOf( Gen.alphaNumStr.map( Left( _ ) ), genFactory.map( Right( _ ) ) ) )
     } yield PageState( inputs, inputTab, outputTab, factory, customGroups )
 
   import diff._

@@ -5,9 +5,17 @@ import model.Item
 import model.Machine
 import model.Recipe
 
-case class CustomGroupSelection( customGroups: Map[Recipe[Machine, Item], Int] )
+case class CustomGroupSelection( count: Int, customGroups: Map[Recipe[Machine, Item], Int] ) {
+
+  def canAdd: Boolean    = count < CustomGroupSelection.maxCustomGroups
+  def canRemove: Boolean = count > 0 && customGroups.values.forall( _ < count )
+
+}
 
 object CustomGroupSelection {
-  val empty: CustomGroupSelection = CustomGroupSelection( Map.empty )
-  val customGroups: Int           = 8
+
+  val defaultCustomGroups: Int = 8
+  val maxCustomGroups: Int     = 15
+
+  val empty: CustomGroupSelection = CustomGroupSelection( defaultCustomGroups, Map.empty )
 }

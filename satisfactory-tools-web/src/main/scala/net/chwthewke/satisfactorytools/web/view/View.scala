@@ -9,7 +9,6 @@ import scalatags.Text.tags2.summary
 
 import model.Model
 import web.protocol.Forms
-import web.state.CustomGroupSelection
 import web.state.InputTab
 import web.state.OutputTab
 import web.state.PageState
@@ -130,7 +129,7 @@ object View {
             Option.when( tab == state.selectedOutputTab )( fontWeight := "bold" )
           )
       },
-      1.to( CustomGroupSelection.customGroups ).map { ix =>
+      1.to( state.customGroupSelection.count ).map { ix =>
         val groupTab = OutputTab.CustomGroup( ix )
         input(
           `type` := "submit",
@@ -138,8 +137,20 @@ object View {
           value := ix,
           Option.when( state.selectedOutputTab == groupTab )( fontWeight := "bold" )
         )
-
-      }
+      },
+      input(
+        `type` := "submit",
+        formaction := "/group_dec",
+        value := "-",
+        Option.when( !state.customGroupSelection.canRemove )( disabled )
+      ),
+      input(
+        `type` := "submit",
+        formaction := "/group_inc",
+        value := "+",
+        Option.when( !state.customGroupSelection.canAdd )( disabled )
+      ),
+      input( `type` := "hidden", name := Forms.outputGroupCount, value := state.customGroupSelection.count )
     )
 
 }

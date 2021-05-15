@@ -134,10 +134,10 @@ object Codecs {
       )
 
   def customGroupsCodec( model: Model ): Codec[CustomGroupSelection] =
-    vectorOfN( uint8, recipeCodec( model.manufacturingRecipes ) ~ uint4 )
+    (uint4 ~ vectorOfN( uint8, recipeCodec( model.manufacturingRecipes ) ~ uint4 ))
       .xmap(
-        v => CustomGroupSelection( v.filter { case ( _, n ) => n != 0 }.toMap ),
-        _.customGroups.filter { case ( _, n ) => n != 0 }.toVector
+        { case ( n, v ) => CustomGroupSelection( n, v.filter { case ( _, n ) => n != 0 }.toMap ) },
+        cgs => ( cgs.count, cgs.customGroups.filter { case ( _, n ) => n != 0 }.toVector )
       )
 
 }
