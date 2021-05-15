@@ -23,13 +23,13 @@ object PrintConfigStub extends IOApp {
     s"""  ${recipeKey.padTo( w + 2, ' ' )}    # ${recipe.displayName}"""
   }
 
-  def recipeLines( recipes: Vector[Recipe[_, Item]] ): String = {
+  def recipeLines( recipes: Vector[Recipe[_, Item]] ): Vector[String] = {
     val w = recipes.map( _.className.name.length ).max
 
     recipes
       .sortBy( r => ( r.products.head.item.displayName, r.isAlternate, r.displayName ) )
       .map( recipeLine( _, w ) )
-      .intercalate( "\n" )
+
   }
 
   def itemLine( item: Item, w: Int, defaultValue: String ): String = {
@@ -57,7 +57,11 @@ object PrintConfigStub extends IOApp {
        |}
        |
        |recipes = [
-       |${recipeLines( eligibleRecipes )}
+       |${recipeLines( eligibleRecipes ).intercalate( "\n" )}
+       |]
+       |
+       |forbidden = [
+       |${recipeLines( eligibleRecipes ).map( line => s"// $line" ).intercalate( "\n" )}
        |]
        |""".stripMargin
   }
