@@ -64,7 +64,7 @@ class Loader[F[_]]( implicit val syncInstance: Sync[F] ) {
 
 object Loader {
 
-  val mapConf: ConfigSource = ConfigSource.resources( "map.conf" )
+  val mapConf: ConfigSource = ConfigSource.resources( "map.conf" ).withFallback( ConfigSource.empty )
 
   def apply[F[_]: Sync]: Loader[F] = new Loader[F]
 

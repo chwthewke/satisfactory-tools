@@ -30,11 +30,11 @@ import model.ItemType
 import model.Machine
 import model.MachineType
 import model.Manufacturer
-import model.ResourceOptions
 import model.Model
 import model.NativeClass
 import model.Recipe
-import net.chwthewke.satisfactorytools.model.ResourcePurity
+import model.ResourceOptions
+import model.ResourcePurity
 
 final case class GameData(
     items: Map[ClassName, Item],
@@ -199,7 +199,7 @@ object GameData {
         decodeMap( Item.itemDecoder( ItemType.Biomass ) )( _.className ).map( GameData.items )
       case NativeClass.`resourceDescClass` =>
         decodeMap( Item.itemDecoder( ItemType.Resource ) )( _.className ).map( GameData.items )
-      case NativeClass.`manufacturerDescClass` =>
+      case NativeClass.`manufacturerClass` | NativeClass.`colliderClass` =>
         decodeMap( Decoder[Manufacturer] )( _.className ).map( GameData.manufacturers )
       case NativeClass.`resourceExtractorClass` | NativeClass.`waterPumpClass` | NativeClass.`frackingExtractorClass` =>
         decodeMap( Decoder[Extractor] )( _.className ).map( GameData.extractors )
