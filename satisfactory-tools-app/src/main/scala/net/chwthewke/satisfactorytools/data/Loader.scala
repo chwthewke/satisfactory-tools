@@ -45,7 +45,7 @@ class Loader[F[_]]( implicit val syncInstance: Sync[F] ) {
 
   def loadModel: F[Model] =
     ( loadResource[GameData], loadMapConfig ).tupled
-      .flatMap { case ( data, map ) => data.toModel( map ).leftMap( Error( _ ) ).liftTo[F] }
+      .flatMap { case ( data, map ) => Model.init( data, map ).leftMap( Error( _ ) ).liftTo[F] }
 
   def loadProductionConfig( src: ConfigSource ): F[ProductionConfig] =
     src.loadF[F, ProductionConfig]()
