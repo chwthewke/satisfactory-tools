@@ -52,7 +52,16 @@ object Model {
       ResourceOptions.init( data.items, mapConfig ).toValidatedNel
 
     ( extractionRecipes, manufacturing, defaultResourceOptions )
-      .mapN( ( ex, mf, ro ) => Model( mf, data.items.to( SortedMap ), ex.map( _._1 ).distinct, ex, ro ) )
+      .mapN(
+        ( ex, mf, ro ) =>
+          Model(
+            mf,
+            data.items.to( SortedMap ),
+            ex.map( _._1 ).distinct,
+            ex,
+            ro
+          )
+      )
   }
 
   def isSelfExtraction[M, N]( recipe: GameRecipe ): Boolean =
@@ -196,7 +205,7 @@ object Model {
           |Extracted Items ${model.extractedItems.map( _.displayName ).intercalate( ", " )}
           |
           |Extraction Recipes
-          |${model.extractionRecipes.map( _._2 ).map( _.show ).intercalate( "\n" )}
+          |${model.extractionRecipes.map( _._3 ).map( _.show ).intercalate( "\n" )}
           |
           |Resource nodes
           |${model.defaultResourceOptions.show.linesIterator.map( "  " + _ ).toSeq.mkString_( "\n" )}

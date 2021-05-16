@@ -33,7 +33,7 @@ object ConstraintSolver extends Solver {
 
     def inputVar( item: Item ): Variable = {
       val setUpper  = (v: Variable) => recipes.resourceCaps.get( item ).fold( v )( v.upper )
-      val setWeight = (v: Variable) => recipes.resourceWeights.get( item ).fold( v )( v.weight )
+      val setWeight = (v: Variable) => v.weight( recipes.resourceWeights.getOrElse( item, 1d ) )
 
       model.addVariable( varName( item ) ).lower( 0d ) |> setUpper |> setWeight
     }
