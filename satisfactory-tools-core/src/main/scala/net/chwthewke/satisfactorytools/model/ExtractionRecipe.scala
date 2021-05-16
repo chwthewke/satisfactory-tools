@@ -1,6 +1,4 @@
 package net.chwthewke.satisfactorytools
 package model
 
-import data.Item
-
-case class ExtractionRecipe( recipe: Recipe[Machine, Item], maxClockSpeed: Double, limit: Int )
+case class ExtractionRecipe( recipe: Recipe, maxClockSpeed: Double, limit: Int )

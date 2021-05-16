@@ -12,14 +12,13 @@ import org.ojalgo.optimisation.Variable
 import data.Countable
 import data.Item
 import model.Bill
-import model.Machine
 import model.Recipe
 
 object ConstraintSolver extends Solver {
 
-  private def varName( item: Item ): String                    = show"I__${item.className}"
-  private def varName( recipe: Recipe[Machine, Item] ): String = show"R__${recipe.className}"
-  private def exprName( item: Item ): String                   = show"X__${item.className}"
+  private def varName( item: Item ): String     = show"I__${item.className}"
+  private def varName( recipe: Recipe ): String = show"R__${recipe.className}"
+  private def exprName( item: Item ): String    = show"X__${item.className}"
 
   override def solve( bill: Bill, recipes: RecipeSelection ): Either[String, Solution] = {
 
@@ -27,7 +26,7 @@ object ConstraintSolver extends Solver {
 
     val model = new ExpressionsBasedModel
 
-    val recipeVars: Map[Recipe[Machine, Item], Variable] =
+    val recipeVars: Map[Recipe, Variable] =
       recipes.allowedRecipes.map {
         case ( recipe, weight ) => ( recipe, model.addVariable( varName( recipe ) ).weight( weight ).lower( 0d ) )
       }.toMap

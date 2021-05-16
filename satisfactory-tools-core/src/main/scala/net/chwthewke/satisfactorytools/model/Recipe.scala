@@ -1,97 +1,59 @@
 package net.chwthewke.satisfactorytools
 package model
 
-import cats.Applicative
 import cats.Show
 import cats.data.NonEmptyList
-import cats.syntax.apply._
 import cats.syntax.foldable._
-import cats.syntax.option._
 import cats.syntax.semigroup._
 import cats.syntax.show._
-import cats.syntax.traverse._
-import io.circe.Decoder
 import scala.concurrent.duration._
 
 import data.ClassName
 import data.Countable
+import data.Item
 
-final case class Recipe[M, N](
+final case class Recipe(
     className: ClassName,
     displayName: String,
-    ingredients: List[Countable[Double, N]], // TODO can be NEL?
-    products: NonEmptyList[Countable[Double, N]],
+    ingredients: List[Countable[Double, Item]],
+    products: NonEmptyList[Countable[Double, Item]],
     duration: FiniteDuration,
-    producedIn: M
+    producedIn: Machine,
+    power: Power
 ) {
-  def ingredientsPerMinute: List[Countable[Double, N]]      = ingredients.map( perMinute )
-  def productsPerMinute: NonEmptyList[Countable[Double, N]] = products.map( perMinute )
+  def ingredientsPerMinute: List[Countable[Double, Item]]      = ingredients.map( perMinute )
+  def productsPerMinute: NonEmptyList[Countable[Double, Item]] = products.map( perMinute )
 
-  def itemsPerMinuteMap: Map[N, Double] =
+  def itemsPerMinuteMap: Map[Item, Double] =
     productsPerMinute.foldMap { case Countable( it, am )      => Map( it -> am ) } |+|
       ingredientsPerMinute.foldMap { case Countable( it, am ) => Map( it -> -am ) }
 
-  def itemsPerMinute: Vector[Countable[Double, N]] =
+  def itemsPerMinute: Vector[Countable[Double, Item]] =
     itemsPerMinuteMap.map { case ( item, amount ) => Countable( item, amount ) }.toVector
 
-  def isExtraction( implicit ev: M =:= Machine ): Boolean =
+  def isExtraction: Boolean =
     producedIn.machineType.isExtractor
 
-  private def perMinute( ct: Countable[Double, N] ): Countable[Double, N] =
+  private def perMinute( ct: Countable[Double, Item] ): Countable[Double, Item] =
     Countable( ct.item, ct.amount * 60000 / duration.toMillis )
 
   def isAlternate: Boolean = displayName.toLowerCase.startsWith( "alternate" )
 
-  def traverseIngredientsAndProducts[F[_]: Applicative, P](
-      f: Countable[Double, N] => F[Countable[Double, P]]
-  ): F[Recipe[M, P]] =
-    ( ingredients.traverse( f ), products.traverse( f ) )
-      .mapN( ( ing, prd ) => copy[M, P]( ingredients = ing, products = prd ) )
 }
 
 object Recipe {
 
-  implicit val recipeDecoder: Decoder[Recipe[List[ClassName], ClassName]] = {
-
-    import data.Parsers.ParserOps
-
-    Decoder.forProduct6(
-      "ClassName",
-      "mDisplayName",
-      "mIngredients",
-      "mProduct",
-      "mManufactoringDuration",
-      "mProducedIn"
-    )(
-      (
-          cn: ClassName,
-          dn: String,
-          in: List[Countable[Double, ClassName]],
-          out: NonEmptyList[Countable[Double, ClassName]],
-          dur: FiniteDuration,
-          mch: List[ClassName]
-      ) => Recipe( cn, dn, in, out, dur, mch )
-    )(
-      Decoder[ClassName],
-      Decoder[String],
-      data.Parsers.countableList.decoder.map( _.toList ),
-      data.Parsers.countableList.decoder,
-      data.Decoders.doubleStringDecoder.map( _.seconds ),
-      Decoder.decodeOption( data.Parsers.buildablesList.decoder ).map( _.orEmpty )
-    )
-  }
-
-  implicit def recipeShow[M: Show, N: Show]: Show[Recipe[M, N]] =
+  implicit def recipeShow( implicit showItem: Show[Item], showMachine: Show[Machine] ): Show[Recipe] =
     Show.show {
-      case Recipe( className, displayName, ingredients, products, duration, producers ) =>
+      case Recipe( className, displayName, ingredients, products, duration, producer, power ) =>
         show"""  $displayName # $className
-              |  Ingredients: 
+              |  Ingredients:
               |    ${ingredients.map( _.show ).intercalate( "\n    " )}
               |  Products:
               |    ${products.map( _.show ).intercalate( "\n    " )}
               |  Duration $duration
-              |  Producers:
-              |    $producers
+              |  Producer:
+              |    $producer
               |""".stripMargin
     }
 

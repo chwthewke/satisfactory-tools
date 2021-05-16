@@ -18,8 +18,9 @@ case class Machine(
 object Machine {
 
   implicit val machineShow: Show[Machine] = Show.show {
-    case Machine( className, displayName, _, powerConsumption ) =>
+    case Machine( className, displayName, machineType, powerConsumption ) =>
       show"""$displayName # $className
+            |$machineType
             |Power: ${f"$powerConsumption%.0f MW"}""".stripMargin
   }
 
@@ -41,7 +42,7 @@ object Machine {
     Machine(
       manufacturer.className,
       manufacturer.displayName,
-      MachineType.Manufacturer,
+      if (manufacturer.powerConsumption == 0d) MachineType.VariableManufacturer else MachineType.Manufacturer,
       manufacturer.powerConsumption
     )
 

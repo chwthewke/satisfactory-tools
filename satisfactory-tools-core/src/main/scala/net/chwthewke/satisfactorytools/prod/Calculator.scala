@@ -14,7 +14,6 @@ import data.Countable
 import data.Item
 import model.Bill
 import model.ExtractionRecipe
-import model.Machine
 import model.Model
 import model.Recipe
 import text.FactoryTable
@@ -107,20 +106,20 @@ object Calculator {
               )
         )
 
-    def reachable( block: Countable[Double, Recipe[Machine, Item]], fromItems: Set[Item] ): Boolean =
+    def reachable( block: Countable[Double, Recipe], fromItems: Set[Item] ): Boolean =
       block.item.ingredients.forall { case Countable( item, _ ) => fromItems( item ) }
 
     val initialItems: Set[Item] =
       (inputRecipes.foldMap( _.recipe.item.products.toList ).map( _.item ) ++ extraInputs.map( _.item )).to( Set )
 
-    val sortedBlocks: Vector[Countable[Double, Recipe[Machine, Item]]] =
+    val sortedBlocks: Vector[Countable[Double, Recipe]] =
       (
-        Vector.empty[Countable[Double, Recipe[Machine, Item]]],
+        Vector.empty[Countable[Double, Recipe]],
         initialItems,
         solution.recipes
           .filter( _.amount > Tolerance )
           .partition( reachable( _, initialItems ) )
-      ).tailRecM[Id, Vector[Countable[Double, Recipe[Machine, Item]]]] {
+      ).tailRecM[Id, Vector[Countable[Double, Recipe]]] {
         case ( acc, seen, ( available, rest ) ) =>
           if (available.isEmpty)
             Right( acc ++ rest )

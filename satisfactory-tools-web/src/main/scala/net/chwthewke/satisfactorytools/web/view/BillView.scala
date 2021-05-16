@@ -5,11 +5,10 @@ import cats.Order.catsKernelOrderingForOrder
 import cats.syntax.show._
 import scalatags.Text
 
+import data.Countable
 import data.Item
 import model.Bill
-import model.MachineType
 import model.Model
-import net.chwthewke.satisfactorytools.data.Countable
 import web.protocol.Forms
 
 object BillView {
@@ -17,7 +16,7 @@ object BillView {
 
   def view( model: Model, bill: Bill ): Tag = {
     val eligibleRecipes =
-      model.manufacturingRecipes.filter( _.producedIn.machineType == MachineType.Manufacturer )
+      model.manufacturingRecipes
 
     val eligibleItems =
       model.items.values

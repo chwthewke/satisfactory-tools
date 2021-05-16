@@ -6,6 +6,7 @@ import alleycats.std.map._
 import cats.Id
 import cats.Order.catsKernelOrderingForOrder
 import cats.Show
+import cats.Traverse
 import cats.data.NonEmptyList
 import cats.data.ValidatedNel
 import cats.syntax.apply._
@@ -23,13 +24,14 @@ import data.ClassName
 import data.Countable
 import data.Extractor
 import data.GameData
+import data.GameRecipe
 import data.Item
 
 case class Model(
-    manufacturingRecipes: Vector[Recipe[Machine, Item]],
+    manufacturingRecipes: Vector[Recipe],
     items: SortedMap[ClassName, Item],
     extractedItems: Vector[Item],
-    extractionRecipes: Vector[( Item, ResourcePurity, Recipe[Machine, Item] )],
+    extractionRecipes: Vector[( Item, ResourcePurity, Recipe )],
     defaultResourceOptions: ResourceOptions
 )
 
@@ -40,11 +42,10 @@ object Model {
 
     val extractorMachines = data.extractors.traverse( ex => Machine.extractor( ex ).toValidatedNel.tupleLeft( ex ) )
 
-    val extractionRecipes: ValidatedNel[String, Vector[( Item, ResourcePurity, Recipe[Machine, Item] )]] =
-      ( extractorMachines, rawSelfExtraction.traverse( validateRecipeItems( data, _ ) ) )
-        .mapN( getExtractionRecipes( data, _, _ ) )
+    val extractionRecipes: ValidatedNel[String, Vector[( Item, ResourcePurity, Recipe )]] =
+      extractorMachines.andThen( extractors => getExtractionRecipes( data, extractors, rawSelfExtraction ) )
 
-    val manufacturing: ValidatedNel[String, Vector[Recipe[Machine, Item]]] =
+    val manufacturing: ValidatedNel[String, Vector[Recipe]] =
       rawManufacturing.traverseFilter( validateManufacturingRecipe( data, _ ) )
 
     val defaultResourceOptions: ValidatedNel[String, ResourceOptions] =
@@ -54,7 +55,7 @@ object Model {
       .mapN( ( ex, mf, ro ) => Model( mf, data.items.to( SortedMap ), ex.map( _._1 ).distinct, ex, ro ) )
   }
 
-  def isSelfExtraction[M, N]( recipe: Recipe[M, N] ): Boolean =
+  def isSelfExtraction[M, N]( recipe: GameRecipe ): Boolean =
     recipe.ingredients == List( recipe.products.head )
 
   def validateItem( data: GameData, ccn: Countable[Double, ClassName] ): ValidatedNel[String, Countable[Double, Item]] =
@@ -63,38 +64,45 @@ object Model {
       .toValidNel( show"Unknown item class ${ccn.item}" )
       .map( it => Countable( it, ccn.amount / it.form.simpleAmountFactor ) )
 
-  def validateRecipeItems[A]( data: GameData, recipe: Recipe[A, ClassName] ): ValidatedNel[String, Recipe[A, Item]] =
-    recipe
-      .traverseIngredientsAndProducts( validateItem( data, _ ) )
-      .leftMap( errs => NonEmptyList.of( show"In ${recipe.displayName}\n  ${errs.intercalate( "\n  " )}" ) )
+  def validateRecipeItems[F[_]: Traverse](
+      data: GameData,
+      items: F[Countable[Double, ClassName]]
+  ): ValidatedNel[String, F[Countable[Double, Item]]] =
+    items.traverse( validateItem( data, _ ) )
 
   def getExtractionRecipes(
       data: GameData,
       machines: Map[ClassName, ( Extractor, Machine )],
-      selfExtraction: Vector[Recipe[List[ClassName], Item]]
-  ): Vector[( Item, ResourcePurity, Recipe[Machine, Item] )] = {
+      selfExtraction: Vector[GameRecipe]
+  ): ValidatedNel[String, Vector[( Item, ResourcePurity, Recipe )]] = {
     val ( miners, otherExtractors ) =
       machines.values.toVector.partition( _._2.machineType == MachineType.Extractor( ExtractorType.Miner ) )
 
-    (
-      getConverterRecipes( miners, selfExtraction ) ++
-        getOtherExtractionRecipes( data, otherExtractors )
-    ).flatMap {
-      case ( item, extractor, machine ) =>
-        ResourcePurity.values
-          .map( purity => ( item, purity, extractionRecipe( item, extractor, purity, machine ) ) )
-    }
+    getConverterRecipes( data, miners, selfExtraction ).map(
+      converterRecipes =>
+        (converterRecipes ++ getOtherExtractionRecipes( data, otherExtractors ))
+          .flatMap {
+            case ( item, extractor, machine ) =>
+              ResourcePurity.values
+                .map( purity => ( item, purity, extractionRecipe( item, extractor, purity, machine ) ) )
+          }
+    )
   }
 
   def getConverterRecipes(
+      data: GameData,
       converterExtractors: Vector[( Extractor, Machine )],
-      selfExtraction: Vector[Recipe[List[ClassName], Item]]
-  ): Vector[( Item, Extractor, Machine )] =
-    for {
-      selfExtractionRecipe <- selfExtraction
-      item = selfExtractionRecipe.products.head.item
-      ( extractor, machine ) <- converterExtractors
-    } yield ( item, extractor, machine )
+      selfExtraction: Vector[GameRecipe]
+  ): ValidatedNel[String, Vector[( Item, Extractor, Machine )]] = {
+    selfExtraction
+      .traverse( r => validateRecipeItems[Id]( data, r.products.head ) )
+      .map(
+        selfExtractionItems =>
+          converterExtractors.flatMap {
+            case ( extractor, machine ) => selfExtractionItems.map( item => ( item.item, extractor, machine ) )
+          }
+      )
+  }
 
   def getOtherExtractionRecipes(
       data: GameData,
@@ -121,17 +129,18 @@ object Model {
       extractor: Extractor,
       purity: ResourcePurity,
       machine: Machine
-  ): Recipe[Machine, Item] =
+  ): Recipe =
     Recipe(
       ClassName( show"${item.className}_${extractor.className}" ),
       show"${item.displayName} ($purity, ${extractor.displayName})",
       Nil,
-      NonEmptyList.of( Countable( item, extractor.itemsPerCycle.toDouble / item.form.simpleAmountFactor ) ),
+      NonEmptyList.of(
+        Countable( item, extractor.itemsPerCycle.toDouble / item.form.simpleAmountFactor * purity.multiplier )
+      ),
       extractor.cycleTime,
-      machine
-    ).traverseIngredientsAndProducts[Id, Item] {
-      case Countable( item, amount ) => Countable( item, amount * purity.multiplier )
-    }
+      machine,
+      Power.Fixed( extractor.powerConsumption )
+    )
 
   def validateManufacturer( data: GameData, className: ClassName ): ValidatedNel[String, Machine] =
     data.manufacturers
@@ -139,10 +148,16 @@ object Model {
       .map( Machine.manufacturer )
       .toValidNel( show"Unknown machine class $className" )
 
+  def recipePower( recipe: GameRecipe, manufacturer: Machine ): Power =
+    if (manufacturer.machineType == MachineType.VariableManufacturer)
+      Power.Variable( recipe.variablePowerMin, recipe.variablePowerMin + recipe.variablePowerRange )
+    else
+      Power.Fixed( manufacturer.powerConsumption )
+
   def validateManufacturingRecipe(
       data: GameData,
-      recipe: Recipe[List[ClassName], ClassName]
-  ): ValidatedNel[String, Option[Recipe[Machine, Item]]] =
+      recipe: GameRecipe
+  ): ValidatedNel[String, Option[Recipe]] =
     NonEmptyList
       .fromList( recipe.producedIn.filter( data.manufacturers.keySet ) )
       .traverse(
@@ -152,8 +167,20 @@ object Model {
               .when( ms.size == 1 )( ms.head )
               .toValidNel( show"Recipe ${recipe.displayName} is produced in multiple manufacturers" )
               .andThen( validateManufacturer( data, _ ) ),
-            validateRecipeItems( data, recipe )
-          ).mapN( ( producer, itemRecipe ) => itemRecipe.copy( producedIn = producer ) )
+            validateRecipeItems( data, recipe.ingredients ),
+            validateRecipeItems( data, recipe.products )
+          ).mapN(
+            ( producer, ingredients, products ) =>
+              Recipe(
+                recipe.className,
+                recipe.displayName,
+                ingredients,
+                products,
+                recipe.duration,
+                producer,
+                recipePower( recipe, producer )
+              )
+          )
       )
 
   implicit val modelShow: Show[Model] = Show.show { model =>

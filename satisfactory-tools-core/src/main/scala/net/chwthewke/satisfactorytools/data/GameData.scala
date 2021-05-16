@@ -8,13 +8,11 @@ import cats.syntax.foldable._
 import cats.syntax.show._
 import io.circe.Decoder
 
-import model.Recipe
-
 final case class GameData(
     items: Map[ClassName, Item],
     extractors: Map[ClassName, Extractor],
     manufacturers: Map[ClassName, Manufacturer],
-    recipes: Vector[Recipe[List[ClassName], ClassName]]
+    recipes: Vector[GameRecipe]
 )
 
 object GameData {
@@ -25,7 +23,7 @@ object GameData {
     GameData( Map.empty, extractors, Map.empty, Vector.empty )
   def manufacturers( manufacturers: Map[ClassName, Manufacturer] ): GameData =
     GameData( Map.empty, Map.empty, manufacturers, Vector.empty )
-  def recipes( recipes: Vector[Recipe[List[ClassName], ClassName]] ): GameData =
+  def recipes( recipes: Vector[GameRecipe] ): GameData =
     GameData( Map.empty, Map.empty, Map.empty, recipes )
 
   implicit val modelMonoid: Monoid[GameData] = new Monoid[GameData] {
@@ -53,7 +51,7 @@ object GameData {
       case NativeClass.`resourceExtractorClass` | NativeClass.`waterPumpClass` | NativeClass.`frackingExtractorClass` =>
         decodeMap( Decoder[Extractor] )( _.className ).map( GameData.extractors )
       case NativeClass.`recipeClass` =>
-        Decoder[Vector[Recipe[List[ClassName], ClassName]]].map( GameData.recipes )
+        Decoder[Vector[GameRecipe]].map( GameData.recipes )
       case _ => Decoder.const( GameData.empty )
     }
 

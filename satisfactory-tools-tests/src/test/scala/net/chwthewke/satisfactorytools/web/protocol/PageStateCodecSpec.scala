@@ -32,7 +32,6 @@ import data.Item
 import loader.Loader
 import model.Bill
 import model.ExtractorType
-import model.Machine
 import model.Model
 import model.Options
 import model.Recipe
@@ -145,7 +144,7 @@ class PageStateCodecSpec
     ( genBill, genRecipeList, genOptions, genResourceOptions )
       .mapN( SolverInputs( _, _, _, _ ) )
 
-  def genClockedRecipes( recipes: Vector[Recipe[Machine, Item]] ): Gen[Vector[ClockedRecipe]] =
+  def genClockedRecipes( recipes: Vector[Recipe] ): Gen[Vector[ClockedRecipe]] =
     pick[Vector]( recipes )
       .flatMap(
         _.traverse(
@@ -156,8 +155,8 @@ class PageStateCodecSpec
       )
 
   def genManufacturingRecipes(
-      recipes: Vector[Recipe[Machine, Item]]
-  ): Gen[Vector[Countable[Double, Recipe[Machine, Item]]]] =
+      recipes: Vector[Recipe]
+  ): Gen[Vector[Countable[Double, Recipe]]] =
     pick[Vector]( recipes )
       .flatMap(
         _.traverse(
@@ -235,10 +234,10 @@ class PageStateCodecSpec
     implicit val customGroupSelectionDiff: Diff[CustomGroupSelection] = {
       import derived.auto._
 
-      implicit val mapDiff: Diff[Map[Recipe[Machine, Item], Int]] =
+      implicit val mapDiff: Diff[Map[Recipe, Int]] =
         (Diff
-          .mapDiff[Recipe[Machine, Item], Int]: @nowarn( "cat=lint-byname-implicit" ))
-          .contramap[Map[Recipe[Machine, Item], Int]]( _.filter { case ( _, v ) => v != 0 } )
+          .mapDiff[Recipe, Int]: @nowarn( "cat=lint-byname-implicit" ))
+          .contramap[Map[Recipe, Int]]( _.filter { case ( _, v ) => v != 0 } )
 
       derived.semi.diff[CustomGroupSelection]: @nowarn( "cat=lint-byname-implicit" )
     }

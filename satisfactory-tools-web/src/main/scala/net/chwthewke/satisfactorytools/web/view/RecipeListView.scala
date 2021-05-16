@@ -8,11 +8,11 @@ import cats.syntax.functor._
 import cats.syntax.show._
 import scalatags.Text
 
+import data.Countable
 import data.Item
 import model.Model
 import model.Recipe
 import model.RecipeList
-import net.chwthewke.satisfactorytools.data.Countable
 import web.protocol.Forms
 
 object RecipeListView {
@@ -24,24 +24,24 @@ object RecipeListView {
       recipeFieldSets( model.manufacturingRecipes, recipes.recipes.toSet )
     )
 
-  def recipeFieldSets[M]( recipes: Vector[Recipe[M, Item]], selected: Set[Recipe[M, Item]] ): Frag =
+  def recipeFieldSets( recipes: Vector[Recipe], selected: Set[Recipe] ): Frag =
     recipes
       .groupBy( _.products.head.item )
       .toVector
       .sortBy( _._1 )
       .map { case ( item, recipes ) => recipeFieldSet( item, recipes, selected ) }
 
-  def recipeFieldSet[M](
+  def recipeFieldSet(
       item: Item,
-      recipes: Vector[Recipe[M, Item]],
-      selected: Set[Recipe[M, Item]]
+      recipes: Vector[Recipe],
+      selected: Set[Recipe]
   ): Tag =
     fieldset(
       legend( item.displayName ),
       recipes.map( r => recipeField( r, selected( r ) ) )
     )
 
-  def recipeField[M]( recipe: Recipe[M, Item], selected: Boolean ): Tag = {
+  def recipeField( recipe: Recipe, selected: Boolean ): Tag = {
     val elId = recipe.className.name
     div(
       input(
@@ -59,7 +59,7 @@ object RecipeListView {
     )
   }
 
-  def describeRecipe[M]( recipe: Recipe[M, Item] ): String = {
+  def describeRecipe( recipe: Recipe ): String = {
     def showAmount( d: Double ): String =
       if (d.isValidInt) f"${d.toInt}%d"
       else if (d > 1) f"$d%.1f"

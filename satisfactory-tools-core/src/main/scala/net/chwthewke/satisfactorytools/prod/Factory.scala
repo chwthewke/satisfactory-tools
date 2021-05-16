@@ -3,12 +3,11 @@ package prod
 
 import data.Countable
 import data.Item
-import model.Machine
 import model.Recipe
 
 final case class Factory(
     extraction: Vector[ClockedRecipe],
-    manufacturing: Vector[Countable[Double, Recipe[Machine, Item]]],
+    manufacturing: Vector[Countable[Double, Recipe]],
     extraInputs: Vector[Countable[Double, Item]],
     extraOutputs: Vector[Countable[Double, Item]]
 ) {

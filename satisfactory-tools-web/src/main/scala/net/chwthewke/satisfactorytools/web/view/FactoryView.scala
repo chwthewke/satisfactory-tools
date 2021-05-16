@@ -6,18 +6,18 @@ import cats.Order.catsKernelOrderingForOrder
 import cats.syntax.foldable._
 import cats.syntax.order._
 import cats.syntax.semigroup._
+import cats.syntax.show._
 import cats.syntax.traverse._
 import enumeratum.Enum
 import enumeratum.EnumEntry
 import scala.collection.immutable.SortedMap
 import scalatags.Text
 
+import data.Countable
 import data.Item
 import model.Bill
-import model.Machine
 import model.Model
 import model.Recipe
-import net.chwthewke.satisfactorytools.data.Countable
 import prod.ClockedRecipe
 import prod.Factory
 import web.protocol.Forms
@@ -61,7 +61,7 @@ object FactoryView {
     def groupRadio(
         model: Model,
         state: PageState,
-        recipe: Recipe[Machine, Item],
+        recipe: Recipe,
         groupIndex: Int
     ): Tag =
       td(
@@ -74,7 +74,7 @@ object FactoryView {
         )
       )
 
-    def recipeCell2Cols( recipe: Recipe[Machine, Item] ): Frag = {
+    def recipeCell2Cols( recipe: Recipe ): Frag = {
       val recipeName  = recipe.displayName
       val altPrefix   = "Alternate: "
       val isAlternate = recipeName.startsWith( altPrefix )
@@ -114,7 +114,7 @@ object FactoryView {
         td( f"$itemAmountPerUnit%3.3f / unit", textAlign.right ),
         td( " @ ", textAlign.center ),
         td( f"${clockSpeedMillionth / 10000}%3d.${clockSpeedMillionth % 10000}%04d %%", textAlign.left ),
-        td( f"$power%4.2f", textAlign.right ),
+        td( power.show, textAlign.right ),
         td( "MW", textAlign.left )
       )
     }
@@ -154,7 +154,7 @@ object FactoryView {
               td( colspan := (1 + state.customGroupSelection.count) )
             ),
             td( colspan := 8, textAlign.right, "Total Power" ),
-            td( textAlign.right, f"${factory.allRecipes.foldMap( _.power )}%4.2f" ),
+            td( textAlign.right, factory.allRecipes.foldMap( _.power ).show ),
             td( textAlign.left, "MW" )
           )
         )

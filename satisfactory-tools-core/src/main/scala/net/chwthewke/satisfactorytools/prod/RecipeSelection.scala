@@ -12,7 +12,6 @@ import data.Countable
 import data.Form
 import data.Item
 import model.ExtractionRecipe
-import model.Machine
 import model.Model
 import model.Options
 import model.Recipe
@@ -21,7 +20,7 @@ import model.ResourceOptions
 import model.ResourcePurity
 
 case class RecipeSelection(
-    allowedRecipes: Vector[( Recipe[Machine, Item], Double )],
+    allowedRecipes: Vector[( Recipe, Double )],
     extractedItems: Vector[Item],
     tieredExtractionRecipes: Map[Item, Vector[ExtractionRecipe]],
     resourceCaps: Map[Item, Double],
@@ -32,7 +31,7 @@ object RecipeSelection {
   def tieredExtractionRecipes(
       options: Options,
       map: ResourceOptions,
-      extractionRecipes: Vector[( Item, ResourcePurity, Recipe[Machine, Item] )]
+      extractionRecipes: Vector[( Item, ResourcePurity, Recipe )]
   ): Map[Item, Vector[ExtractionRecipe]] =
     extractionRecipes
       .foldMap {
@@ -55,7 +54,7 @@ object RecipeSelection {
 
   def extractionRecipe(
       limit: Int,
-      source: Recipe[Machine, Item],
+      source: Recipe,
       options: Options
   ): ExtractionRecipe = {
     val clockSpeed = source.products.map {
@@ -87,7 +86,7 @@ object RecipeSelection {
       options: Options,
       resourceOpts: ResourceOptions
   ): RecipeSelection = {
-    val recipesWithCost  = recipeList.recipes.fproduct( _.producedIn.powerConsumption / 10d )
+    val recipesWithCost  = recipeList.recipes.fproduct( _.power.average )
     val tieredExtraction = tieredExtractionRecipes( options, resourceOpts, model.extractionRecipes )
     val extraction       = tieredExtraction.keys.toVector
     val caps             = resourceCaps( tieredExtraction )

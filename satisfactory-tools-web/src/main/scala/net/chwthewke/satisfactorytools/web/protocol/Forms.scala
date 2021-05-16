@@ -12,19 +12,18 @@ import cats.syntax.show._
 import cats.syntax.traverse._
 import org.http4s.FormDataDecoder
 
+import data.Countable
 import data.Item
 import model.Bill
 import model.ExtractorType
-import model.Machine
-import model.ResourceOptions
 import model.Model
 import model.Options
 import model.Recipe
 import model.RecipeList
 import model.ResourceDistrib
+import model.ResourceOptions
 import model.ResourcePurity
 import model.ResourceWeights
-import net.chwthewke.satisfactorytools.data.Countable
 import web.state.CustomGroupSelection
 
 object Forms {
@@ -49,7 +48,7 @@ object Forms {
   def resourceWeightKey( item: Item ): String =
     s"weight_${item.className.name}"
 
-  def outputGroup( model: Model, recipe: Recipe[Machine, Item] ): String =
+  def outputGroup( model: Model, recipe: Recipe ): String =
     s"group_${model.manufacturingRecipes.indexOf( recipe )}"
 
   val outputGroupCount: String = "group_count"

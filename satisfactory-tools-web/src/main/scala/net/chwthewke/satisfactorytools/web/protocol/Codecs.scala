@@ -11,7 +11,6 @@ import data.Countable
 import data.Item
 import model.Bill
 import model.ExtractorType
-import model.Machine
 import model.Model
 import model.Options
 import model.Options.Belt
@@ -99,7 +98,7 @@ object Codecs {
     uint8.xmap( modelItems( _ ), modelItems.indexOf )
   }
 
-  private def recipeCodec( recipes: Vector[Recipe[Machine, Item]] ): Codec[Recipe[Machine, Item]] =
+  private def recipeCodec( recipes: Vector[Recipe] ): Codec[Recipe] =
     uint8
       .exmap(
         ix => Attempt.fromOption( recipes.lift( ix ), Err.General( s"recipe index OOB $ix", Nil ) ),
@@ -110,13 +109,13 @@ object Codecs {
           )
       )
 
-  def extractionRecipeCodec( model: Model ): Codec[Recipe[Machine, Item]] =
+  def extractionRecipeCodec( model: Model ): Codec[Recipe] =
     recipeCodec( model.extractionRecipes.map( _._3 ) )
 
-  def manufacturingRecipeCodec( model: Model ): Codec[Recipe[Machine, Item]] =
+  def manufacturingRecipeCodec( model: Model ): Codec[Recipe] =
     recipeCodec( model.manufacturingRecipes )
 
-  def clockedRecipeCodec( recipeCodec: Codec[Recipe[Machine, Item]] ): Codec[ClockedRecipe] =
+  def clockedRecipeCodec( recipeCodec: Codec[Recipe] ): Codec[ClockedRecipe] =
     (countableCodec( uint16, recipeCodec ) ~ floatAsDouble)
       .xmap(
         ClockedRecipe.overclocked( _, _ ),

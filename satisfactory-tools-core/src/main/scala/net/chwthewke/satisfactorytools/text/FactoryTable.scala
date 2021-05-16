@@ -15,6 +15,7 @@ import scala.collection.immutable.SortedSet
 import data.Countable
 import data.Item
 import model.Bill
+import model.Power
 import prod.ClockedRecipe
 import prod.Direction
 import prod.Factory
@@ -32,7 +33,7 @@ object FactoryTable {
       machineName: String,
       machineCount: Int,
       clockSpeed10: Int,
-      power: Double
+      power: Power
   ): Vector[String] =
     Vector(
       f"$totalAmount%4.3f",
@@ -47,7 +48,7 @@ object FactoryTable {
       sep,
       f"$amountPerUnit%3.3f / unit @ ${clockSpeed10 / 10000}%3d.${clockSpeed10 % 10000}%04d %%",
       sep,
-      f"$power%4.2f",
+      power.show,
       f" MW"
     )
 
@@ -132,7 +133,7 @@ object FactoryTable {
 
     val powerLine: String =
       formatLine(
-        ("TOTAL POWER" +: Vector.fill( 11 )( "" )) ++ Vector( f"${factory.allRecipes.foldMap( _.power )}%6.2f", " MW" )
+        ("TOTAL POWER" +: Vector.fill( 11 )( "" )) ++ Vector( factory.allRecipes.foldMap( _.power ).show, " MW" )
       )
 
     val headersLine: String =

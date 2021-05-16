@@ -1,11 +1,9 @@
 package net.chwthewke.satisfactorytools
 package web.state
 
-import data.Item
-import model.Machine
 import model.Recipe
 
-case class CustomGroupSelection( count: Int, customGroups: Map[Recipe[Machine, Item], Int] ) {
+case class CustomGroupSelection( count: Int, customGroups: Map[Recipe, Int] ) {
 
   def canAdd: Boolean    = count < CustomGroupSelection.maxCustomGroups
   def canRemove: Boolean = count > 0 && customGroups.values.forall( _ < count )

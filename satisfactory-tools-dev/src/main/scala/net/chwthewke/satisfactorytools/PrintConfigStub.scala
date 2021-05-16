@@ -7,7 +7,6 @@ import cats.syntax.foldable._
 
 import data.Item
 import loader.Loader
-import model.MachineType
 import model.Model
 import model.Recipe
 
@@ -18,12 +17,12 @@ object PrintConfigStub extends IOApp {
       .flatMap( model => IO.println( configStub( model ) ) )
       .as( ExitCode.Success )
 
-  def recipeLine( recipe: Recipe[_, Item], w: Int ): String = {
+  def recipeLine( recipe: Recipe, w: Int ): String = {
     val recipeKey = "\"" + recipe.className.name + "\""
     s"""  ${recipeKey.padTo( w + 2, ' ' )}    # ${recipe.displayName}"""
   }
 
-  def recipeLines( recipes: Vector[Recipe[_, Item]] ): Vector[String] = {
+  def recipeLines( recipes: Vector[Recipe] ): Vector[String] = {
     val w = recipes.map( _.className.name.length ).max
 
     recipes
@@ -43,12 +42,9 @@ object PrintConfigStub extends IOApp {
   }
 
   def configStub( model: Model ): String = {
-    val eligibleRecipes =
-      model.manufacturingRecipes.filter( _.producedIn.machineType == MachineType.Manufacturer )
-
     val eligibleItems =
       model.items.values
-        .filter( item => eligibleRecipes.exists( recipe => recipe.products.exists( _.item == item ) ) )
+        .filter( item => model.manufacturingRecipes.exists( recipe => recipe.products.exists( _.item == item ) ) )
         .toVector
 
     s"""
@@ -57,11 +53,11 @@ object PrintConfigStub extends IOApp {
        |}
        |
        |recipes = [
-       |${recipeLines( eligibleRecipes ).intercalate( "\n" )}
+       |${recipeLines( model.manufacturingRecipes ).intercalate( "\n" )}
        |]
        |
        |forbidden = [
-       |${recipeLines( eligibleRecipes ).map( line => s"// $line" ).intercalate( "\n" )}
+       |${recipeLines( model.manufacturingRecipes ).map( line => s"// $line" ).intercalate( "\n" )}
        |]
        |""".stripMargin
   }

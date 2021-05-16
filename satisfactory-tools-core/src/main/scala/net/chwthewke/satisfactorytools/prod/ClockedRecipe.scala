@@ -8,6 +8,7 @@ import cats.syntax.functor._
 import data.Countable
 import data.Item
 import model.Machine
+import model.Power
 import model.Recipe
 
 /**
@@ -22,7 +23,7 @@ import model.Recipe
   * @param clockSpeed the clock speed of the machines
   */
 case class ClockedRecipe(
-    recipe: Countable[Int, Recipe[Machine, Item]],
+    recipe: Countable[Int, Recipe],
     clockSpeed: Double,
     fractionalAmount: Double
 ) {
@@ -31,7 +32,8 @@ case class ClockedRecipe(
   val clockSpeedMillionth: Int = (clockSpeed * 10000d).ceil.toInt
 
   val machine: Machine = recipe.item.producedIn
-  val power: Double    = machineCount * machine.powerConsumption * math.pow( clockSpeedMillionth / 1e6d, 1.6d )
+
+  def power: Power = recipe.item.power.map( _ * machineCount * math.pow( clockSpeedMillionth / 1e6d, 1.6d ) )
 
   val itemAmount: Double        = recipe.amount * recipe.item.productsPerMinute.head.amount * clockSpeed / 100d
   val itemAmountPerUnit: Double = itemAmount / machineCount
@@ -47,13 +49,13 @@ case class ClockedRecipe(
 }
 
 object ClockedRecipe {
-  def roundUp( recipe: Countable[Double, Recipe[Machine, Item]] ): ClockedRecipe = {
+  def roundUp( recipe: Countable[Double, Recipe] ): ClockedRecipe = {
     val machineCount: Int  = recipe.amount.ceil.toInt
     val clockSpeed: Double = recipe.amount / machineCount * 100d
 
     ClockedRecipe( Countable( recipe.item, machineCount ), clockSpeed, recipe.amount )
   }
 
-  def overclocked( recipe: Countable[Int, Recipe[Machine, Item]], clockSpeed: Double ): ClockedRecipe =
+  def overclocked( recipe: Countable[Int, Recipe], clockSpeed: Double ): ClockedRecipe =
     ClockedRecipe( recipe, clockSpeed, recipe.amount.toDouble * clockSpeed / 100d )
 }

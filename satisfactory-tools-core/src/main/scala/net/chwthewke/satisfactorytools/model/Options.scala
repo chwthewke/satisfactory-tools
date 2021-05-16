@@ -8,7 +8,6 @@ import enumeratum.EnumEntry
 
 import data.ClassName
 import data.Extractor
-import data.Item
 
 case class Options(
     belt: Options.Belt,
@@ -20,7 +19,7 @@ case class Options(
 ) {
 
   // None: not allowed, Int: priority for resource
-  def scoreExtractionRecipe( recipe: Recipe[Machine, Item] ): Option[Int] =
+  def scoreExtractionRecipe( recipe: Recipe ): Option[Int] =
     Option.when( extractors.exists( _.allow( recipe.producedIn, miner ) ) ) {
       if (Options.Extractors.WellExtractor.allow( recipe.producedIn, miner ))
         0
@@ -71,7 +70,7 @@ object Options {
     def allows( machine: Machine ): Boolean =
       allowsClass( machine.className )
 
-    def allows( recipe: Recipe[Machine, Item] ): Boolean =
+    def allows( recipe: Recipe ): Boolean =
       allowsClass( recipe.producedIn.className )
   }
 

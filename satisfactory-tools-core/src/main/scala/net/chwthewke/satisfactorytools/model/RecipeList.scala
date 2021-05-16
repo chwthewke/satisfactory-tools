@@ -3,9 +3,7 @@ package model
 
 import cats.Show
 
-import data.Item
-
-case class RecipeList( recipes: Vector[Recipe[Machine, Item]] )
+case class RecipeList( recipes: Vector[Recipe] )
 
 object RecipeList {
   implicit val recipeListShow: Show[RecipeList] =
