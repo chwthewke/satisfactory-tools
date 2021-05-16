@@ -1,8 +1,13 @@
 package net.chwthewke.satisfactorytools
-package model
+package prod
 
 import cats.Show
 import cats.syntax.show._
+
+import model.Bill
+import model.Options
+import model.RecipeList
+import model.ResourceOptions
 
 case class SolverInputs(
     bill: Bill,

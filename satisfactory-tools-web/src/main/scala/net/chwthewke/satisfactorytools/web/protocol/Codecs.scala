@@ -7,10 +7,10 @@ import scodec.Codec
 import scodec.Err
 import scodec.codecs._
 
+import data.Countable
+import data.Item
 import model.Bill
-import model.Countable
 import model.ExtractorType
-import model.Item
 import model.Machine
 import model.Model
 import model.Options
@@ -24,9 +24,9 @@ import model.RecipeList
 import model.ResourceDistrib
 import model.ResourceOptions
 import model.ResourceWeights
-import model.SolverInputs
 import prod.ClockedRecipe
 import prod.Factory
+import prod.SolverInputs
 import web.state.CustomGroupSelection
 
 object Codecs {

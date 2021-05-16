@@ -3,9 +3,6 @@ package web.view
 
 import cats.syntax.option._
 import scalatags.Text
-import scalatags.Text.all._
-import scalatags.Text.tags2.details
-import scalatags.Text.tags2.summary
 
 import model.Model
 import web.protocol.Forms
@@ -14,7 +11,11 @@ import web.state.OutputTab
 import web.state.PageState
 
 object View {
-  val pageStyle: Text.TypedTag[String] = Text.tags2.style(
+  import Text.all._
+  import Text.tags2.details
+  import Text.tags2.summary
+
+  val pageStyle: Tag = Text.tags2.style(
     // language=CSS
     """#main {
       |  display: flex;
@@ -35,7 +36,7 @@ object View {
   def tabbed(
       model: Model,
       state: PageState
-  ): Text.TypedTag[String] = {
+  ): Tag = {
     val stateBase64 = PageState.toBase64( model, state ).toOption
 
     html(
@@ -72,14 +73,14 @@ object View {
     )
   }
 
-  def inputForm( model: Model, state: PageState ): Text.TypedTag[String] =
+  def inputForm( model: Model, state: PageState ): Tag =
     div(
       id := "input",
       inputTabs( state.selectedInputTab ),
       state.selectedInputTab.view( model, state.selectedInputTab.stateLens.get( state.inputs ) )
     )
 
-  def inputTabs( selectedTab: InputTab ): Text.TypedTag[String] =
+  def inputTabs( selectedTab: InputTab ): Tag =
     div(
       Vector(
         ( "Requested", InputTab.BillTab ),
@@ -97,7 +98,7 @@ object View {
       }
     )
 
-  def outputForm( model: Model, state: PageState ): Text.TypedTag[String] =
+  def outputForm( model: Model, state: PageState ): Tag =
     div(
       id := "output",
       outputTabs( state ),
@@ -109,7 +110,7 @@ object View {
       )
     )
 
-  def outputTabs( state: PageState ): Text.TypedTag[String] =
+  def outputTabs( state: PageState ): Tag =
     div(
       input(
         `type` := "submit",

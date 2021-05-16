@@ -11,14 +11,13 @@ import enumeratum.Enum
 import enumeratum.EnumEntry
 import scala.collection.immutable.SortedMap
 import scalatags.Text
-import scalatags.Text.all._
 
+import data.Item
 import model.Bill
-import model.Countable
-import model.Item
 import model.Machine
 import model.Model
 import model.Recipe
+import net.chwthewke.satisfactorytools.data.Countable
 import prod.ClockedRecipe
 import prod.Factory
 import web.protocol.Forms
@@ -26,19 +25,21 @@ import web.state.PageState
 
 object FactoryView {
 
+  import Text.all._
+
   object Resources {
-    def apply( factory: Factory ): Text.TypedTag[String] =
+    def apply( factory: Factory ): Tag =
       fieldset(
         legend( "Raw resources" ),
         extractedResources( factory )
       )
 
-    def extractedResources( factory: Factory ): Text.TypedTag[String] =
+    def extractedResources( factory: Factory ): Tag =
       table(
         extractedResourcesView( factory.extraction.map( _.productsPerMinute.head ).gather )
       )
 
-    def extractedResourcesView( res: Vector[Countable[Double, Item]] ): Vector[Text.TypedTag[String]] =
+    def extractedResourcesView( res: Vector[Countable[Double, Item]] ): Vector[Tag] =
       res
         .sortBy { case Countable( p, x ) => ( -x, p ) }
         .map {
@@ -51,7 +52,7 @@ object FactoryView {
   }
 
   object Blocks {
-    def apply( model: Model, state: PageState, factory: Factory ): Text.TypedTag[String] =
+    def apply( model: Model, state: PageState, factory: Factory ): Tag =
       fieldset(
         legend( "Manufacturing steps" ),
         recipeTable( model, state, factory, CustomGroupsRadios.Full )
@@ -62,7 +63,7 @@ object FactoryView {
         state: PageState,
         recipe: Recipe[Machine, Item],
         groupIndex: Int
-    ): Text.TypedTag[String] =
+    ): Tag =
       td(
         textAlign.center,
         input(
@@ -94,7 +95,7 @@ object FactoryView {
         state: PageState,
         block: ClockedRecipe,
         radios: CustomGroupsRadios
-    ): Text.TypedTag[String] = {
+    ): Tag = {
       import block._
 
       def customGroupRadios: Frag = radios match {
@@ -132,7 +133,7 @@ object FactoryView {
         state: PageState,
         factory: Factory,
         radios: CustomGroupsRadios
-    ): Text.TypedTag[String] =
+    ): Tag =
       table(
         thead(
           tr(
@@ -161,7 +162,7 @@ object FactoryView {
   }
 
   object CustomGroup {
-    def apply( model: Model, state: PageState, factory: Factory, group: Int ): Text.TypedTag[String] = {
+    def apply( model: Model, state: PageState, factory: Factory, group: Int ): Tag = {
       val subFactory = extractSubFactory( model, state, factory, group )
 
       fieldset(
@@ -203,13 +204,13 @@ object FactoryView {
   }
 
   object Items {
-    def apply( state: PageState, factory: Factory ): Text.TypedTag[String] =
+    def apply( state: PageState, factory: Factory ): Tag =
       fieldset(
         legend( "Items I/O" ),
         itemsInOutView( state.inputs.bill, factory, "EXTRA" )
       )
 
-    def itemInOutHalf( dir: String, rows: Map[String, Double] ): Vector[Text.TypedTag[String]] =
+    def itemInOutHalf( dir: String, rows: Map[String, Double] ): Vector[Tag] =
       rows.toVector.zipWithIndex.map {
         case ( ( dest, amount ), ix ) =>
           tr(
@@ -219,7 +220,7 @@ object FactoryView {
           )
       }
 
-    def itemInOut( item: Item, to: Map[String, Double], from: Map[String, Double] ): Text.TypedTag[String] =
+    def itemInOut( item: Item, to: Map[String, Double], from: Map[String, Double] ): Tag =
       fieldset(
         legend( item.displayName ),
         table(
@@ -292,7 +293,7 @@ object FactoryView {
             )
         }
 
-    def itemsInOutView( bill: Bill, factory: Factory, extraKey: String ): Text.TypedTag[String] =
+    def itemsInOutView( bill: Bill, factory: Factory, extraKey: String ): Tag =
       div(
         itemsInOut( bill, factory, extraKey ).toVector.map {
           case ( item, ( to, from ) ) => itemInOut( item, to, from )

@@ -19,8 +19,11 @@ import cats.syntax.traverseFilter._
 import mouse.option._
 import scala.collection.immutable.SortedMap
 
+import data.ClassName
+import data.Countable
+import data.Extractor
 import data.GameData
-import data.MapConfig
+import data.Item
 
 case class Model(
     manufacturingRecipes: Vector[Recipe[Machine, Item]],

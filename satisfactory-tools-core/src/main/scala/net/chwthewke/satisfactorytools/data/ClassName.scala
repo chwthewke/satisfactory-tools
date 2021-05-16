@@ -1,5 +1,5 @@
 package net.chwthewke.satisfactorytools
-package model
+package data
 
 import cats.Order
 import cats.Show

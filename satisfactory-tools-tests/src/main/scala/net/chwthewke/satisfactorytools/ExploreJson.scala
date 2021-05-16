@@ -14,8 +14,8 @@ import net.chwthewke.vendor.io.circe.fs2.byteArrayParser
 import scala.collection.immutable.SortedMap
 import scala.collection.immutable.SortedSet
 
-import data.Loader
-import model.NativeClass
+import data.NativeClass
+import loader.Loader
 
 object ExploreJson extends IOApp {
 

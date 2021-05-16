@@ -1,5 +1,5 @@
 package net.chwthewke.satisfactorytools
-package model
+package data
 
 import io.circe.Decoder
 import scala.util.Try

@@ -6,6 +6,10 @@ import cats.derived.semiauto
 import enumeratum.Enum
 import enumeratum.EnumEntry
 
+import data.ClassName
+import data.Extractor
+import data.Item
+
 case class Options(
     belt: Options.Belt,
     pipe: Options.Pipe,

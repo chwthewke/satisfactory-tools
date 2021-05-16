@@ -19,12 +19,14 @@ import org.http4s.dsl.Http4sDsl
 import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.server.middleware.AutoSlash
 import org.http4s.syntax.kleisli._
-import pureconfig.ConfigSource
 import scala.concurrent.ExecutionContext
 
-import data.Loader
+import loader.Loader
+import model.Bill
 import model.Model
-import model.SolverInputs
+import model.Options
+import model.RecipeList
+import prod.SolverInputs
 
 object WebApp {
 
@@ -63,9 +65,15 @@ object WebApp {
   }
 
   def loadAll[F[_]: Sync]: F[( Model, SolverInputs )] =
-    for {
-      model  <- Loader[F].loadModel
-      inputs <- Loader[F].loadSolverInputs( model, ConfigSource.default )
-    } yield ( model, inputs )
+    Loader[F].loadModel
+      .fproduct(
+        model =>
+          SolverInputs(
+            Bill.empty,
+            RecipeList( model.manufacturingRecipes ),
+            Options.default,
+            model.defaultResourceOptions
+          )
+      )
 
 }

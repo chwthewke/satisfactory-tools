@@ -1,8 +1,8 @@
 package net.chwthewke.satisfactorytools
 package prod
 
-import model.Countable
-import model.Item
+import data.Countable
+import data.Item
 import model.Machine
 import model.Recipe
 

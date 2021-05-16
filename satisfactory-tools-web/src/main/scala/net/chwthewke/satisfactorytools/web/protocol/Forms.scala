@@ -12,10 +12,9 @@ import cats.syntax.show._
 import cats.syntax.traverse._
 import org.http4s.FormDataDecoder
 
+import data.Item
 import model.Bill
-import model.Countable
 import model.ExtractorType
-import model.Item
 import model.Machine
 import model.ResourceOptions
 import model.Model
@@ -25,6 +24,7 @@ import model.RecipeList
 import model.ResourceDistrib
 import model.ResourcePurity
 import model.ResourceWeights
+import net.chwthewke.satisfactorytools.data.Countable
 import web.state.CustomGroupSelection
 
 object Forms {

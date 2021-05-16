@@ -15,6 +15,8 @@ import org.scalatest.prop.Configuration
 import org.scalatest.wordspec.AnyWordSpec
 import org.typelevel.discipline.scalatest.WordSpecDiscipline
 
+import data.Countable
+
 class CountableSpec extends AnyWordSpec with WordSpecDiscipline with Configuration {
   override implicit val generatorDrivenConfig: PropertyCheckConfiguration =
     PropertyCheckConfiguration( minSuccessful = 100 )

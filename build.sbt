@@ -29,8 +29,6 @@ val `satisfactory-tools-core` = project
         circe ++
         enumeratum ++
         enumeratumCirce ++
-        asciiGraphs ++
-        graphs ++
         ojAlgo ++
         pureconfig
   )

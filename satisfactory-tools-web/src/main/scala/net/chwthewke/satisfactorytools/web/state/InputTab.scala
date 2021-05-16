@@ -5,21 +5,21 @@ import cats.Show
 import enumeratum.Enum
 import enumeratum.EnumEntry
 import org.http4s.FormDataDecoder
-import scalatags.Text
+import scalatags.Text.Tag
 import shapeless.Lens
 import shapeless.lens
 
 import model.Bill
-import model.ResourceOptions
 import model.Model
 import model.Options
 import model.RecipeList
-import model.SolverInputs
+import model.ResourceOptions
+import prod.SolverInputs
 import web.protocol.Forms
 import web.view.BillView
-import web.view.ResourceOptionsView
 import web.view.OptionsView
 import web.view.RecipeListView
+import web.view.ResourceOptionsView
 
 sealed abstract class InputTab( val id: String ) extends EnumEntry with Product {
   type Data
@@ -28,7 +28,7 @@ sealed abstract class InputTab( val id: String ) extends EnumEntry with Product 
 
   def decoder( model: Model ): FormDataDecoder[Data]
 
-  def view( model: Model, state: Data ): Text.TypedTag[String]
+  def view( model: Model, state: Data ): Tag
 
   def stateLens: Lens[SolverInputs, Data]
 }
@@ -40,7 +40,7 @@ object InputTab extends Enum[InputTab] {
 
     override def decoder( model: Model ): FormDataDecoder[Bill] = Forms.bill( model )
 
-    override def view( model: Model, state: Bill ): Text.TypedTag[String] = BillView.view( model, state )
+    override def view( model: Model, state: Bill ): Tag = BillView.view( model, state )
 
     override def stateLens: Lens[SolverInputs, Bill] = lens[SolverInputs].bill
   }
@@ -50,7 +50,7 @@ object InputTab extends Enum[InputTab] {
 
     override def decoder( model: Model ): FormDataDecoder[RecipeList] = Forms.recipeList( model )
 
-    override def view( model: Model, state: RecipeList ): Text.TypedTag[String] = RecipeListView.view( model, state )
+    override def view( model: Model, state: RecipeList ): Tag = RecipeListView.view( model, state )
 
     override def stateLens: Lens[SolverInputs, RecipeList] = lens[SolverInputs].recipeList
   }
@@ -60,7 +60,7 @@ object InputTab extends Enum[InputTab] {
 
     override def decoder( model: Model ): FormDataDecoder[ResourceOptions] = Forms.resourceOptions( model )
 
-    override def view( model: Model, state: ResourceOptions ): Text.TypedTag[String] =
+    override def view( model: Model, state: ResourceOptions ): Tag =
       ResourceOptionsView.view( model, state )
 
     override def stateLens: Lens[SolverInputs, ResourceOptions] = lens[SolverInputs].resourceOptions
@@ -71,7 +71,7 @@ object InputTab extends Enum[InputTab] {
 
     override def decoder( model: Model ): FormDataDecoder[Options] = Forms.options
 
-    override def view( model: Model, state: Options ): Text.TypedTag[String] = OptionsView.view( state )
+    override def view( model: Model, state: Options ): Tag = OptionsView.view( state )
 
     val stateLens: Lens[SolverInputs, Options] = lens[SolverInputs].options
   }

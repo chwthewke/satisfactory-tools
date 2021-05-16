@@ -8,18 +8,17 @@ import cats.syntax.functor._
 import cats.syntax.option._
 import cats.syntax.reducible._
 
-import model.Countable
+import data.Countable
+import data.Form
+import data.Item
 import model.ExtractionRecipe
-import model.Form
-import model.Item
 import model.Machine
-import model.ResourceOptions
 import model.Model
 import model.Options
 import model.Recipe
 import model.RecipeList
+import model.ResourceOptions
 import model.ResourcePurity
-import model.SolverInputs
 
 case class RecipeSelection(
     allowedRecipes: Vector[( Recipe[Machine, Item], Double )],

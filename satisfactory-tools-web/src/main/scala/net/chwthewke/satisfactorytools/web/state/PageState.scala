@@ -14,8 +14,9 @@ import shapeless.Lens
 import shapeless.lens
 
 import model.Model
-import model.SolverInputs
 import prod.Factory
+import prod.SolverInputs
+import text.FactoryTable
 import web.protocol
 import web.protocol.Codecs
 
@@ -68,7 +69,7 @@ object PageState {
             |OUTPUT TAB ${state.selectedOutputTab.id}
             |
             |FACTORY
-            |${state.factory.fold( "Not computed" )( _.fold( identity, _.render( state.inputs.bill ) ) )}
+            |${state.factory.fold( "Not computed" )( _.fold( identity, FactoryTable.render( state.inputs.bill, _ ) ) )}
             |
             |CUSTOM GROUPS
             |${state.customGroupSelection.customGroups

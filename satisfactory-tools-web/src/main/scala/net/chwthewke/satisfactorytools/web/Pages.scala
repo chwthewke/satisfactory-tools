@@ -30,10 +30,10 @@ import model.Model
 import model.Options
 import model.RecipeList
 import model.ResourceOptions
-import model.SolverInputs
 import prod.Calculator
 import prod.ConstraintSolver
 import prod.Factory
+import prod.SolverInputs
 import web.protocol.Forms
 import web.state.CustomGroupSelection
 import web.state.InputTab

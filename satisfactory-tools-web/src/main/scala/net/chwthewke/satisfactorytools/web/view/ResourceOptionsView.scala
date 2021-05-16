@@ -3,10 +3,9 @@ package web.view
 
 import cats.syntax.show._
 import scalatags.Text
-import scalatags.Text.all._
 
+import data.Item
 import model.ExtractorType
-import model.Item
 import model.Model
 import model.ResourceDistrib
 import model.ResourceOptions
@@ -15,11 +14,12 @@ import model.ResourceWeights
 import web.protocol.Forms
 
 object ResourceOptionsView {
+  import Text.all._
 
   private def zipMap[K, A, B, C]( as: Map[K, A], bs: Map[K, B] )( combine: ( A, B ) => C ): Map[K, C] =
     as.keySet.intersect( bs.keySet ).map( k => ( k, combine( as( k ), bs( k ) ) ) ).toMap
 
-  def view( model: Model, resourceOptions: ResourceOptions ): Text.TypedTag[String] =
+  def view( model: Model, resourceOptions: ResourceOptions ): Tag =
     div(
       viewResourceWeights( model, resourceOptions.resourceWeights ),
       zipMap( resourceOptions.resourceNodes, model.defaultResourceOptions.resourceNodes )(
@@ -35,7 +35,7 @@ object ResourceOptionsView {
       item: Item,
       resourceDistrib: ResourceDistrib,
       default: ResourceDistrib
-  ): Text.TypedTag[String] =
+  ): Tag =
     tr(
       td( item.displayName ),
       ResourcePurity.values
@@ -48,7 +48,7 @@ object ResourceOptionsView {
       purity: ResourcePurity,
       resourceDistrib: ResourceDistrib,
       default: ResourceDistrib
-  ): Text.TypedTag[String] =
+  ): Tag =
     input(
       `type` := "number",
       name := Forms.extractorItemPurityKey( extractorType, item, purity ),
@@ -66,7 +66,7 @@ object ResourceOptionsView {
   def viewNodes(
       extractorType: ExtractorType,
       nodes: Vector[( Item, ( ResourceDistrib, ResourceDistrib ) )]
-  ): Text.TypedTag[String] =
+  ): Tag =
     fieldset(
       legend( extractorTypeSectionHeader( extractorType ) ),
       table(
@@ -81,7 +81,7 @@ object ResourceOptionsView {
       )
     )
 
-  def viewResourceWeights( model: Model, weights: ResourceWeights ): Text.TypedTag[String] =
+  def viewResourceWeights( model: Model, weights: ResourceWeights ): Tag =
     fieldset(
       legend( "Resource weight tweaks" ),
       table(

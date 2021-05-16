@@ -1,5 +1,5 @@
 package net.chwthewke.satisfactorytools
-package data
+package model
 
 import cats.syntax.apply._
 import cats.syntax.functor._
@@ -9,9 +9,8 @@ import pureconfig.error.CannotConvert
 import pureconfig.generic.semiauto
 import scala.annotation.nowarn
 
-import model.ClassName
-import model.ExtractorType
-import model.ResourceDistrib
+import data.ClassName
+import data.classNameMapReader
 
 case class MapConfig( resourceNodes: Map[ExtractorType, Map[ClassName, ResourceDistrib]] )
 

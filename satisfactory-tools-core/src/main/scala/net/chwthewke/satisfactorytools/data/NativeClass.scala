@@ -1,5 +1,5 @@
 package net.chwthewke.satisfactorytools
-package model
+package data
 
 import cats.Show
 import cats.syntax.contravariant._

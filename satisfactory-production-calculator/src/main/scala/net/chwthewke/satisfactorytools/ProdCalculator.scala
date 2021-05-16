@@ -3,13 +3,16 @@ package net.chwthewke.satisfactorytools
 import buildinfo.Satisfactorytools
 import cats.effect.ExitCode
 import cats.effect.IO
+import cats.syntax.either._
 import com.monovore.decline.Opts
 import com.monovore.decline.effect.CommandIOApp
+import pureconfig.module.catseffect.syntax._
 
-import data.Loader
+import loader.Loader
 import model.Options
 import prod.Calculator
 import prod.ConstraintSolver
+import prod.SolverInputs
 
 object ProdCalculator
     extends CommandIOApp(
@@ -22,9 +25,17 @@ object ProdCalculator
     Program.configOpt.map(
       cfg =>
         for {
-          model  <- Loader.io.loadModel
-          inputs <- Loader.io.loadSolverInputs( model, cfg )
-          _      <- IO.println( Calculator( model, inputs.copy( options = myOptions ), ConstraintSolver ) )
+          model      <- Loader.io.loadModel
+          prodConfig <- cfg.loadF[IO, ProductionConfig]()
+          bill       <- prodConfig.mkBill( model ).leftMap( Error( _ ) ).liftTo[IO]
+          recipeList <- prodConfig.mkRecipeList( model ).leftMap( Error( _ ) ).liftTo[IO]
+          _ <- IO.println(
+                Calculator(
+                  model,
+                  SolverInputs( bill, recipeList, myOptions, model.defaultResourceOptions ),
+                  ConstraintSolver
+                )
+              )
         } yield ExitCode.Success
     )
 

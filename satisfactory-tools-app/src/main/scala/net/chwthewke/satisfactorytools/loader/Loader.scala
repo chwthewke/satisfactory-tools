@@ -1,13 +1,11 @@
 package net.chwthewke.satisfactorytools
-package data
+package loader
 
 import cats.Monoid
 import cats.effect.IO
 import cats.effect.Sync
 import cats.syntax.apply._
-import cats.syntax.either._
 import cats.syntax.flatMap._
-import cats.syntax.functor._
 import cats.syntax.validated._
 import fs2.Stream
 import io.circe.Decoder
@@ -17,11 +15,9 @@ import net.chwthewke.vendor.io.circe.fs2.decoder
 import pureconfig.ConfigSource
 import pureconfig.module.catseffect.syntax._
 
-import model.Bill
+import data.GameData
+import model.MapConfig
 import model.Model
-import model.Options
-import model.RecipeList
-import model.SolverInputs
 
 class Loader[F[_]]( implicit val syncInstance: Sync[F] ) {
 
@@ -47,18 +43,8 @@ class Loader[F[_]]( implicit val syncInstance: Sync[F] ) {
     ( loadResource[GameData], loadMapConfig ).tupled
       .flatMap { case ( data, map ) => Model.init( data, map ).leftMap( Error( _ ) ).liftTo[F] }
 
-  def loadProductionConfig( src: ConfigSource ): F[ProductionConfig] =
-    src.loadF[F, ProductionConfig]()
-
   def loadMapConfig: F[MapConfig] =
     Loader.mapConf.loadF[F, MapConfig]()
-
-  def loadSolverInputs( model: Model, src: ConfigSource ): F[SolverInputs] =
-    for {
-      prodConfig <- loadProductionConfig( src )
-      bill       <- Bill.init( model, prodConfig ).leftMap( Error( _ ) ).liftTo[F]
-      recipeList <- RecipeList.init( model, prodConfig ).leftMap( Error( _ ) ).liftTo[F]
-    } yield SolverInputs( bill, recipeList, Options.default, model.defaultResourceOptions )
 
 }
 

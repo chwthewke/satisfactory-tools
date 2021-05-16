@@ -1,8 +1,8 @@
 package net.chwthewke.satisfactorytools
-package model
+package data
 
+import atto.Atto._
 import atto._
-import Atto._
 import cats.data.NonEmptyList
 import cats.syntax.either._
 import cats.syntax.functor._

@@ -1,7 +1,7 @@
 package net.chwthewke.satisfactorytools
 package web.state
 
-import model.Item
+import data.Item
 import model.Machine
 import model.Recipe
 

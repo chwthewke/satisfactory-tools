@@ -3,22 +3,22 @@ package web.view
 
 import cats.syntax.foldable._
 import scalatags.Text
-import scalatags.Text.all._
 
 import model.Bill
-import model.Countable
 import model.ResourceOptions
 import model.Model
 import model.Options
 import model.RecipeList
 import model.ResourcePurity
 import model.ResourceWeights
+import net.chwthewke.satisfactorytools.data.Countable
 import web.protocol.Forms
 import web.state.PageState
 
 object AllInputsView {
+  import Text.all._
 
-  def apply( model: Model, state: PageState, stateBase64: Option[String] ): Text.TypedTag[String] =
+  def apply( model: Model, state: PageState, stateBase64: Option[String] ): Tag =
     form(
       action := "/upgrade",
       method := "POST",
@@ -35,20 +35,20 @@ object AllInputsView {
       input( `type` := "hidden", name := Forms.state, stateBase64.map( value := _ ) )
     )
 
-  def bill( bill: Bill ): Text.TypedTag[String] =
+  def bill( bill: Bill ): Tag =
     div( bill.items.map {
       case Countable( item, amount ) =>
         input( `type` := "hidden", name := Forms.billItem( item ), value := amount )
     } )
 
-  def recipeList( recipes: RecipeList ): Text.TypedTag[String] =
+  def recipeList( recipes: RecipeList ): Tag =
     div(
       recipes.recipes.map(
         recipe => input( `type` := "hidden", name := Forms.recipes, value := recipe.className.name )
       )
     )
 
-  def options( opt: Options ): Text.TypedTag[String] =
+  def options( opt: Options ): Tag =
     div(
       input( `type` := "hidden", name := Forms.optionsBeltKey, value := opt.belt.entryName ),
       input( `type` := "hidden", name := Forms.optionsPipeKey, value := opt.pipe.entryName ),
@@ -64,7 +64,7 @@ object AllInputsView {
         .toSeq
     )
 
-  def resourceOptions( model: Model, resourceOpts: ResourceOptions ): Text.TypedTag[String] =
+  def resourceOptions( model: Model, resourceOpts: ResourceOptions ): Tag =
     div(
       (for {
         ( exT, byItem )   <- resourceOpts.resourceNodes
@@ -85,13 +85,13 @@ object AllInputsView {
       )
     )
 
-  def inputTabs( state: PageState ): Text.TypedTag[String] =
+  def inputTabs( state: PageState ): Tag =
     input( `type` := "hidden", name := "input_tab", value := state.selectedInputTab.id )
 
-  def outputTabs( state: PageState ): Text.TypedTag[String] =
+  def outputTabs( state: PageState ): Tag =
     input( `type` := "hidden", name := "output_tab", value := state.selectedOutputTab.id )
 
-  def customGroupRadios( model: Model, state: PageState ): Text.TypedTag[String] =
+  def customGroupRadios( model: Model, state: PageState ): Tag =
     div(
       state.factory.foldMap(
         _.foldMap(

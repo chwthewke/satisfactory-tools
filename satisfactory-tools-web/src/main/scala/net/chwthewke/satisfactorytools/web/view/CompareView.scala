@@ -7,18 +7,20 @@ import cats.syntax.foldable._
 import cats.syntax.option._
 import cats.syntax.traverse._
 import scala.collection.immutable.SortedMap
-import scalatags.Text.all._
-import scalatags.Text.tags2.details
-import scalatags.Text.tags2.summary
+import scalatags.Text
 
-import model.Countable
-import model.Item
+import data.Item
 import model.Model
+import net.chwthewke.satisfactorytools.data.Countable
 import prod.Factory
 import web.protocol.Forms
 import web.state.PageState
 
 object CompareView {
+  import Text.all._
+  import Text.tags2.details
+  import Text.tags2.summary
+
   val Tolerance: Double = 0.0005d
 
   def apply( model: Model, before: Option[PageState], after: Option[PageState] ): Tag =

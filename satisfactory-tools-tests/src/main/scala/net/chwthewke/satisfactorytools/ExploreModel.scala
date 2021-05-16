@@ -6,13 +6,13 @@ import cats.effect.IOApp
 import cats.syntax.foldable._
 import cats.syntax.show._
 
-import data.Loader
+import loader.Loader
 import model.Model
 
 object ExploreModel extends IOApp {
   override def run( args: List[String] ): IO[ExitCode] =
     Loader.io.loadModel
-      .flatMap( printManufacturers )
+      .flatMap( model => IO.println( model ) )
       .as( ExitCode.Success )
 
   def printManufacturers( model: Model ): IO[Unit] = {

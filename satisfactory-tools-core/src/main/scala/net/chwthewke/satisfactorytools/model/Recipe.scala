@@ -13,6 +13,9 @@ import cats.syntax.traverse._
 import io.circe.Decoder
 import scala.concurrent.duration._
 
+import data.ClassName
+import data.Countable
+
 final case class Recipe[M, N](
     className: ClassName,
     displayName: String,
@@ -49,7 +52,8 @@ final case class Recipe[M, N](
 object Recipe {
 
   implicit val recipeDecoder: Decoder[Recipe[List[ClassName], ClassName]] = {
-    import Parsers._
+
+    import data.Parsers.ParserOps
 
     Decoder.forProduct6(
       "ClassName",
@@ -70,10 +74,10 @@ object Recipe {
     )(
       Decoder[ClassName],
       Decoder[String],
-      countableList.decoder.map( _.toList ),
-      countableList.decoder,
-      Decoders.doubleStringDecoder.map( _.seconds ),
-      Decoder.decodeOption( buildablesList.decoder ).map( _.orEmpty )
+      data.Parsers.countableList.decoder.map( _.toList ),
+      data.Parsers.countableList.decoder,
+      data.Decoders.doubleStringDecoder.map( _.seconds ),
+      Decoder.decodeOption( data.Parsers.buildablesList.decoder ).map( _.orEmpty )
     )
   }
 

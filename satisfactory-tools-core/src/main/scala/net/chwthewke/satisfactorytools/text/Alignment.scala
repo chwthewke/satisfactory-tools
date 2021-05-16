@@ -1,5 +1,5 @@
 package net.chwthewke.satisfactorytools
-package prod
+package text
 
 import enumeratum.Enum
 import enumeratum.EnumEntry

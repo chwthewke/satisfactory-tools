@@ -1,6 +1,8 @@
 package net.chwthewke.satisfactorytools
 package model
 
+import data.Item
+
 case class ResourceWeights( weights: Map[Item, Int] /* int coded btw `0` and `2 * range` inclusive */ ) {
   import ResourceWeights._
 

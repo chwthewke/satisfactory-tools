@@ -9,7 +9,8 @@ import cats.syntax.option._
 import cats.syntax.show._
 import cats.syntax.traverse._
 
-import data.MapConfig
+import data.ClassName
+import data.Item
 
 case class ResourceOptions(
     resourceNodes: Map[ExtractorType, Map[Item, ResourceDistrib]],

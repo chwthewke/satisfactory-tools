@@ -4,18 +4,18 @@ package web.view
 import cats.Order.catsKernelOrderingForOrder
 import cats.syntax.show._
 import scalatags.Text
-import scalatags.Text.all._
 
+import data.Item
 import model.Bill
-import model.Countable
-import model.Item
 import model.MachineType
 import model.Model
+import net.chwthewke.satisfactorytools.data.Countable
 import web.protocol.Forms
 
 object BillView {
+  import Text.all._
 
-  def view( model: Model, bill: Bill ): Text.TypedTag[String] = {
+  def view( model: Model, bill: Bill ): Tag = {
     val eligibleRecipes =
       model.manufacturingRecipes.filter( _.producedIn.machineType == MachineType.Manufacturer )
 
@@ -37,7 +37,7 @@ object BillView {
     )
   }
 
-  def itemField( item: Countable[Double, Item] ): Text.TypedTag[String] = {
+  def itemField( item: Countable[Double, Item] ): Tag = {
     val inputName = Forms.billItem( item.item )
     val elId      = show"input_$inputName"
 

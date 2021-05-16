@@ -2,24 +2,12 @@ package net.chwthewke.satisfactorytools
 package model
 
 import cats.Show
-import cats.syntax.foldable._
-import cats.syntax.option._
-import cats.syntax.show._
-import cats.syntax.traverse._
 
-import data.ProductionConfig
+import data.Item
 
 case class RecipeList( recipes: Vector[Recipe[Machine, Item]] )
 
 object RecipeList {
-  def init( model: Model, config: ProductionConfig ): Either[String, RecipeList] =
-    config.allowedRecipes
-      .traverse( cn => model.manufacturingRecipes.find( _.className == cn ).toValidNel( cn.show ) )
-      .leftMap( missing => show"Unknown recipe(s) in config: ${missing.mkString_( ", " )}" )
-      .toEither
-      .map( RecipeList( _ ) )
-
   implicit val recipeListShow: Show[RecipeList] =
     Show.show( _.recipes.map( _.displayName ).mkString( "\n" ) )
-
 }

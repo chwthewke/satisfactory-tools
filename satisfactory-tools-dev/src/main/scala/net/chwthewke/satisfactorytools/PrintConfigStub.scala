@@ -5,8 +5,8 @@ import cats.effect.IO
 import cats.effect.IOApp
 import cats.syntax.foldable._
 
-import data.Loader
-import model.Item
+import data.Item
+import loader.Loader
 import model.MachineType
 import model.Model
 import model.Recipe

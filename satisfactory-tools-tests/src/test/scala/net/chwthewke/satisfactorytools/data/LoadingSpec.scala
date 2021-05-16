@@ -7,6 +7,9 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import pureconfig.ConfigSource
 
+import loader.Loader
+import model.MapConfig
+
 class LoadingSpec extends AnyWordSpec with Matchers {
 
   "The prod configuration" should {
@@ -37,18 +40,6 @@ class LoadingSpec extends AnyWordSpec with Matchers {
           model.manufacturingRecipes.size shouldBe <=( 256 )
           model.extractionRecipes.size shouldBe <=( 256 )
       }
-
-    }
-  }
-
-  "The whole solver inputs" should {
-    "be loadable from resources" in {
-      Inside.inside(
-        Loader.io.loadModel
-          .flatMap( Loader.io.loadSolverInputs( _, ConfigSource.defaultReference ) )
-          .attempt
-          .unsafeRunSync()
-      ) { case Right( _ ) => succeed }
 
     }
   }

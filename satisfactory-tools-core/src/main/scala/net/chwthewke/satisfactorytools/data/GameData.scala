@@ -8,12 +8,6 @@ import cats.syntax.foldable._
 import cats.syntax.show._
 import io.circe.Decoder
 
-import model.ClassName
-import model.Extractor
-import model.Item
-import model.ItemType
-import model.Manufacturer
-import model.NativeClass
 import model.Recipe
 
 final case class GameData(
@@ -51,14 +45,9 @@ object GameData {
 
   def modelClassDecoder( nativeClass: NativeClass ): Decoder[GameData] =
     nativeClass match {
-      case NativeClass.`partDescClass` | NativeClass.`consumableDescClass` | NativeClass.`nuclearFuelDescClass` =>
-        decodeMap( Item.itemDecoder( ItemType.Part ) )( _.className ).map( GameData.items )
-      case NativeClass.`equipmentDescClass` =>
-        decodeMap( Item.itemDecoder( ItemType.Equipment ) )( _.className ).map( GameData.items )
-      case NativeClass.`biomassDescClass` =>
-        decodeMap( Item.itemDecoder( ItemType.Biomass ) )( _.className ).map( GameData.items )
-      case NativeClass.`resourceDescClass` =>
-        decodeMap( Item.itemDecoder( ItemType.Resource ) )( _.className ).map( GameData.items )
+      case NativeClass.`partDescClass` | NativeClass.`consumableDescClass` | NativeClass.`nuclearFuelDescClass` |
+          NativeClass.`equipmentDescClass` | NativeClass.`biomassDescClass` | NativeClass.`resourceDescClass` =>
+        decodeMap( Decoder[Item] )( _.className ).map( GameData.items )
       case NativeClass.`manufacturerClass` | NativeClass.`colliderClass` =>
         decodeMap( Decoder[Manufacturer] )( _.className ).map( GameData.manufacturers )
       case NativeClass.`resourceExtractorClass` | NativeClass.`waterPumpClass` | NativeClass.`frackingExtractorClass` =>

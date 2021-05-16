@@ -4,6 +4,10 @@ package model
 import cats.Show
 import cats.syntax.show._
 
+import data.ClassName
+import data.Extractor
+import data.Manufacturer
+
 case class Machine(
     className: ClassName,
     displayName: String,

@@ -7,18 +7,18 @@ import cats.syntax.foldable._
 import cats.syntax.functor._
 import cats.syntax.show._
 import scalatags.Text
-import scalatags.Text.all._
 
-import model.Countable
-import model.Item
+import data.Item
 import model.Model
 import model.Recipe
 import model.RecipeList
+import net.chwthewke.satisfactorytools.data.Countable
 import web.protocol.Forms
 
 object RecipeListView {
+  import Text.all._
 
-  def view( model: Model, recipes: RecipeList ): Text.TypedTag[String] =
+  def view( model: Model, recipes: RecipeList ): Tag =
     fieldset(
       legend( "Allowed recipes" ),
       recipeFieldSets( model.manufacturingRecipes, recipes.recipes.toSet )
@@ -35,13 +35,13 @@ object RecipeListView {
       item: Item,
       recipes: Vector[Recipe[M, Item]],
       selected: Set[Recipe[M, Item]]
-  ): Text.TypedTag[String] =
+  ): Tag =
     fieldset(
       legend( item.displayName ),
       recipes.map( r => recipeField( r, selected( r ) ) )
     )
 
-  def recipeField[M]( recipe: Recipe[M, Item], selected: Boolean ): Text.TypedTag[String] = {
+  def recipeField[M]( recipe: Recipe[M, Item], selected: Boolean ): Tag = {
     val elId = recipe.className.name
     div(
       input(

@@ -1,5 +1,5 @@
 package net.chwthewke.satisfactorytools
-package model
+package data
 
 import cats.Order
 import cats.Show
@@ -7,7 +7,6 @@ import cats.syntax.show._
 import io.circe.Decoder
 
 final case class Item(
-    itemType: ItemType,
     className: ClassName,
     displayName: String,
     form: Form,
@@ -20,14 +19,14 @@ final case class Item(
 }
 
 object Item {
-  def itemDecoder( itemType: ItemType ): Decoder[Item] =
+  implicit val itemDecoder: Decoder[Item] =
     Decoder.forProduct5(
       "ClassName",
       "mDisplayName",
       "mForm",
       "mEnergyValue",
       "mResourceSinkPoints"
-    )( ( cn: ClassName, dn: String, fm: Form, ev: Double, pts: Int ) => Item( itemType, cn, dn, fm, ev, pts ) )(
+    )( ( cn: ClassName, dn: String, fm: Form, ev: Double, pts: Int ) => Item( cn, dn, fm, ev, pts ) )(
       Decoder[ClassName],
       Decoder[String],
       Decoder[Form],
@@ -36,7 +35,6 @@ object Item {
     )
 
   implicit val showItem: Show[Item] = Show.show( item => show"""${item.displayName} # ${item.className}
-                                                               |Type: ${item.itemType}
                                                                |Form: ${item.form}
                                                                |Energy: ${item.energyValue} MJ
                                                                |Sink: ${item.sinkPoints} points

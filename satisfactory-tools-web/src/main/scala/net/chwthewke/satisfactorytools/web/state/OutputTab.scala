@@ -3,7 +3,7 @@ package web.state
 
 import cats.Show
 import org.http4s.FormDataDecoder
-import scalatags.Text
+import scalatags.Text.Tag
 import scodec.Codec
 import scodec.codecs
 
@@ -13,7 +13,7 @@ import web.protocol.Forms
 import web.view.FactoryView
 
 abstract class OutputTab( val id: String, private val index: Int ) extends Product {
-  def view( model: Model, state: PageState, solution: Factory ): Text.TypedTag[String]
+  def view( model: Model, state: PageState, solution: Factory ): Tag
 
   def customGroupsFormDataDecoder( model: Model ): Option[FormDataDecoder[CustomGroupSelection]] = None
 }
@@ -21,7 +21,7 @@ abstract class OutputTab( val id: String, private val index: Int ) extends Produ
 object OutputTab {
 
   final case object BlocksTab extends OutputTab( "steps", 253 ) {
-    override def view( model: Model, state: PageState, solution: Factory ): Text.TypedTag[String] =
+    override def view( model: Model, state: PageState, solution: Factory ): Tag =
       FactoryView.Blocks( model, state, solution )
 
     override def customGroupsFormDataDecoder( model: Model ): Option[FormDataDecoder[CustomGroupSelection]] =
@@ -29,17 +29,17 @@ object OutputTab {
   }
 
   final case object ResourcesTab extends OutputTab( "resources", 254 ) {
-    override def view( model: Model, state: PageState, solution: Factory ): Text.TypedTag[String] =
+    override def view( model: Model, state: PageState, solution: Factory ): Tag =
       FactoryView.Resources( solution )
   }
 
   final case object ItemsTab extends OutputTab( "items", 255 ) {
-    override def view( model: Model, state: PageState, solution: Factory ): Text.TypedTag[String] =
+    override def view( model: Model, state: PageState, solution: Factory ): Tag =
       FactoryView.Items( state, solution )
   }
 
   final case class CustomGroup( ix: Int ) extends OutputTab( s"group$ix", ix ) {
-    override def view( model: Model, state: PageState, solution: Factory ): Text.TypedTag[String] =
+    override def view( model: Model, state: PageState, solution: Factory ): Tag =
       FactoryView.CustomGroup( model, state, solution, ix )
   }
 

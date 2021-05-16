@@ -6,7 +6,7 @@ import cats.effect.IOApp
 import cats.syntax.show._
 
 import data.GameData
-import data.Loader
+import loader.Loader
 
 object ExploreGameData extends IOApp {
   override def run( args: List[String] ): IO[ExitCode] =

@@ -7,6 +7,8 @@ import cats.derived.semiauto
 import cats.syntax.foldable._
 import cats.syntax.show._
 
+import data.Item
+
 case class ResourceDistrib( impureNodes: Int, normalNodes: Int, pureNodes: Int ) {
   def value( extractorRecipe: Recipe[Machine, Item], clockSpeed: Options.ClockSpeed, belt: Options.Belt ): Double =
     Vector( ( impureNodes, 0.5d ), ( normalNodes, 1.0d ), ( pureNodes, 2.0d ) )

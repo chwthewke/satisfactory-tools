@@ -7,8 +7,8 @@ import cats.syntax.show._
 import io.circe.Decoder
 import io.circe.DecodingFailure
 import io.circe.Json
-//
-import model.NativeClass
+
+import data.NativeClass
 
 case class JsonForest( schemas: Vector[JsonSchema] )
 object JsonForest {

@@ -10,20 +10,20 @@ import cats.syntax.semigroup._
 import cats.syntax.traverse._
 import mouse.option._
 
+import data.Countable
+import data.Item
 import model.Bill
-import model.Countable
 import model.ExtractionRecipe
-import model.Item
+import model.Machine
 import model.Model
-import model.SolverInputs
-import net.chwthewke.satisfactorytools.model.Machine
-import net.chwthewke.satisfactorytools.model.Recipe
+import model.Recipe
+import text.FactoryTable
 
 object Calculator {
   val Tolerance: Double = 1e-6
 
   def apply( model: Model, inputs: SolverInputs, solver: Solver ): String =
-    computeFactory( model, inputs, solver ).map( _.render( inputs.bill ) ).merge
+    computeFactory( model, inputs, solver ).map( FactoryTable.render( inputs.bill, _ ) ).merge
 
   def computeFactory(
       model: Model,

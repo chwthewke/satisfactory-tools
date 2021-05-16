@@ -5,7 +5,6 @@ import cats.syntax.show._
 import enumeratum.Enum
 import enumeratum.EnumEntry
 import scalatags.Text
-import scalatags.Text.all._
 
 import model.Options
 import model.Options.Belt
@@ -16,8 +15,9 @@ import model.Options.Pipe
 import web.protocol.Forms
 
 object OptionsView {
+  import Text.all._
 
-  def view( options: Options ): Text.TypedTag[String] =
+  def view( options: Options ): Tag =
     fieldset(
       legend( "Options" ),
       div(
@@ -92,7 +92,7 @@ object OptionsView {
   }
 
   def enumRadios[A <: EnumEntry]( key: String, describe: A => String, current: A )( implicit E: Enum[A] ): Frag = {
-    def itemOption( item: A, selected: Boolean ): Text.TypedTag[String] = {
+    def itemOption( item: A, selected: Boolean ): Tag = {
       val elId = show"${key}_${item.entryName}"
 
       div(
@@ -118,7 +118,7 @@ object OptionsView {
   )(
       implicit E: Enum[A]
   ): Frag = {
-    def itemOption( item: A, selected: Boolean ): Text.TypedTag[String] = {
+    def itemOption( item: A, selected: Boolean ): Tag = {
       val elId = show"${key}_${item.entryName}"
 
       div(

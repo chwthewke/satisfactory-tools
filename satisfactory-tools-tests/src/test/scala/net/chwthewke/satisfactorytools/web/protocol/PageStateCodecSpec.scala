@@ -27,22 +27,22 @@ import scodec.Codec
 import scodec.DecodeResult
 import scodec.bits.BitVector
 
-import data.Loader
+import data.Countable
+import data.Item
+import loader.Loader
 import model.Bill
-import model.Countable
 import model.ExtractorType
-import model.Item
 import model.Machine
-import model.ResourceOptions
 import model.Model
 import model.Options
 import model.Recipe
 import model.RecipeList
 import model.ResourceDistrib
+import model.ResourceOptions
 import model.ResourceWeights
-import model.SolverInputs
 import prod.ClockedRecipe
 import prod.Factory
+import prod.SolverInputs
 import web.state.CustomGroupSelection
 import web.state.InputTab
 import web.state.OutputTab

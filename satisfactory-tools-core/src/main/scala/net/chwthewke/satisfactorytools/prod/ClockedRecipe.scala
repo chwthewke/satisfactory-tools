@@ -5,8 +5,8 @@ import cats.Functor
 import cats.data.NonEmptyList
 import cats.syntax.functor._
 
-import model.Countable
-import model.Item
+import data.Countable
+import data.Item
 import model.Machine
 import model.Recipe
 
