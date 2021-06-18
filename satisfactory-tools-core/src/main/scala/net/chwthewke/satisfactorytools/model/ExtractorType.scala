@@ -1,6 +1,8 @@
 package net.chwthewke.satisfactorytools
 package model
 
+import cats.Eq
+import cats.Show
 import enumeratum.Enum
 import enumeratum.EnumEntry
 
@@ -28,5 +30,8 @@ object ExtractorType extends Enum[ExtractorType] {
 
   def fromExtractor( extractor: Extractor ): Option[ExtractorType] =
     ExtractorType.values.find( _.dataKey.fold( _ == extractor.extractorTypeName, _ == extractor.className ) )
+
+  implicit val extractorTypeShow: Show[ExtractorType] = Show( _.entryName )
+  implicit val extractorTypeEq: Eq[ExtractorType]     = Eq.fromUniversalEquals
 
 }

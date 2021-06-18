@@ -2,24 +2,33 @@ package net.chwthewke.satisfactorytools
 package model
 
 import cats.Show
+import cats.syntax.show._
+import enumeratum.Enum
+import enumeratum.EnumEntry
 
-sealed abstract class MachineType( val name: String, val extractorType: Option[ExtractorType] ) {
-  def isExtractor: Boolean = extractorType.isDefined
+final case class MachineType( machineType: Either[ExtractorType, ManufacturerType] ) extends EnumEntry {
+  def is( manufacturerType: ManufacturerType ): Boolean =
+    machineType == Right( manufacturerType )
+
+  def is( extractorType: ExtractorType ): Boolean =
+    machineType == Left( extractorType )
+
+  def isExtractor: Boolean = machineType.isLeft
+
+  def extractorType: Option[ExtractorType] = machineType.left.toOption
+
+  override def entryName: String = machineType.fold( _.entryName, _.entryName )
 }
 
-object MachineType {
+object MachineType extends Enum[MachineType] {
 
-  final case object Manufacturer         extends MachineType( "Manufacturer", None )
-  final case object VariableManufacturer extends MachineType( "Manufacturer (variable power)", None )
+  def apply( extractorType: ExtractorType ): MachineType = MachineType( Left( extractorType ) )
 
-  final case class Extractor( override val name: String, override val extractorType: Option[ExtractorType] )
-      extends MachineType( name, extractorType )
+  def apply( manufacturerType: ManufacturerType ): MachineType = MachineType( Right( manufacturerType ) )
 
-  object Extractor {
-    def apply( extractorType: ExtractorType ): Extractor = Extractor( extractorType.entryName, Some( extractorType ) )
-  }
+  override val values: Vector[MachineType] =
+    ExtractorType.values.map( MachineType( _ ) ) ++
+      ManufacturerType.values.map( MachineType( _ ) )
 
-  val values: Vector[MachineType] = Manufacturer +: ExtractorType.values.map( Extractor( _ ) )
-
-  implicit val machineTypeShow: Show[MachineType] = Show.show( _.name )
+  implicit val machineTypeShow: Show[MachineType] = Show.show( _.machineType.fold( _.show, _.show ) )
 }

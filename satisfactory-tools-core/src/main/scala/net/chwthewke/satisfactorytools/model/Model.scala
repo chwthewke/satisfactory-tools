@@ -85,7 +85,7 @@ object Model {
       selfExtraction: Vector[GameRecipe]
   ): ValidatedNel[String, Vector[( Item, ResourcePurity, Recipe )]] = {
     val ( miners, otherExtractors ) =
-      machines.values.toVector.partition( _._2.machineType == MachineType.Extractor( ExtractorType.Miner ) )
+      machines.values.toVector.partition( _._2.machineType.is( ExtractorType.Miner ) )
 
     getConverterRecipes( data, miners, selfExtraction ).map(
       converterRecipes =>
@@ -158,7 +158,7 @@ object Model {
       .toValidNel( show"Unknown machine class $className" )
 
   def recipePower( recipe: GameRecipe, manufacturer: Machine ): Power =
-    if (manufacturer.machineType == MachineType.VariableManufacturer)
+    if (manufacturer.machineType.is( ManufacturerType.VariableManufacturer ))
       Power.Variable( recipe.variablePowerMin, recipe.variablePowerMin + recipe.variablePowerRange )
     else
       Power.Fixed( manufacturer.powerConsumption )

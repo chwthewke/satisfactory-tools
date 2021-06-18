@@ -33,7 +33,7 @@ object Machine {
           Machine(
             extractor.className,
             extractor.displayName,
-            MachineType.Extractor( exType ),
+            MachineType( exType ),
             extractor.powerConsumption
           )
       )
@@ -42,7 +42,10 @@ object Machine {
     Machine(
       manufacturer.className,
       manufacturer.displayName,
-      if (manufacturer.powerConsumption == 0d) MachineType.VariableManufacturer else MachineType.Manufacturer,
+      MachineType(
+        if (manufacturer.powerConsumption == 0d) ManufacturerType.VariableManufacturer
+        else ManufacturerType.Manufacturer
+      ),
       manufacturer.powerConsumption
     )
 
