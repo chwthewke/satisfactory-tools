@@ -6,7 +6,7 @@ import sbtbuildinfo.BuildInfoKeys._
 object SbtBuildInfo extends AutoPlugin {
   override def requires: Plugins = super.requires && BuildInfoPlugin
 
-  val shortVersion = SettingKey[String]( "short-version" )
+  val shortVersion = SettingKey[String]( "short-version" ).withRank( KeyRanks.Invisible )
 
   override def projectSettings: Seq[Def.Setting[_]] =
     Seq(

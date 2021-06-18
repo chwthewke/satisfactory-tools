@@ -15,8 +15,8 @@ import cats.syntax.semigroupk._
 import fs2.concurrent.SignallingRef
 import org.http4s.HttpApp
 import org.http4s.HttpRoutes
+import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.dsl.Http4sDsl
-import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.server.middleware.AutoSlash
 import org.http4s.syntax.kleisli._
 import scala.concurrent.ExecutionContext

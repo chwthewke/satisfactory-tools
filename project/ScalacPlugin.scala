@@ -9,6 +9,8 @@ object ScalacPlugin extends AutoPlugin {
     "-feature",
     "-language:higherKinds",
     "-unchecked",
+    "-Vimplicits",
+    "-Vtype-diffs",
     "-Xfatal-warnings",
     "-Xlint",
     "-Ywarn-macros:after",

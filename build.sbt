@@ -5,7 +5,7 @@ import sbt.Keys._
 
 ThisBuild / organization       := "net.chwthewke"
 ThisBuild / scalaOrganization  := "org.scala-lang"
-ThisBuild / scalaVersion       := "2.13.5"
+ThisBuild / scalaVersion       := "2.13.6"
 // TODO when I can make sense of lm-coursier
 ThisBuild / conflictManager                         := ConflictManager.strict
 ThisBuild / updateSbtClassifiers / conflictManager  := ConflictManager.default
@@ -13,9 +13,10 @@ ThisBuild / updateSbtClassifiers / conflictManager  := ConflictManager.default
 
 enablePlugins( FormatPlugin, DependenciesPlugin )
 
-ThisBuild / SettingKey[Seq[String]]( "ide-base-packages" ) := Seq( "net.chwthewke.satisfactorytools" )
+ThisBuild / SettingKey[Seq[String]]( "ide-base-packages" )
+  .withRank( KeyRanks.Invisible ) := Seq( "net.chwthewke.satisfactorytools" )
 
-val compilerPlugins = libraryDependencies ++= kindProjector ++ splain ++ betterMonadicFor
+val compilerPlugins = libraryDependencies ++= kindProjector ++ betterMonadicFor
 
 val `satisfactory-tools-core` = project
   .settings( compilerPlugins )
@@ -65,7 +66,7 @@ val `satisfactory-tools-dev` = project
 
 val `satisfactory-production-calculator` = project
   .settings( compilerPlugins )
-  .settings( mainClass := Some( "net.chwthewke.satisfactory.ProdCalculator" ) )
+  .settings( mainClass.withRank( KeyRanks.Invisible ) := Some( "net.chwthewke.satisfactory.ProdCalculator" ) )
   .settings( libraryDependencies ++= decline )
   .dependsOn( `satisfactory-tools-app` )
   .enablePlugins( ScalacPlugin )
