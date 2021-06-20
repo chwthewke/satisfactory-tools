@@ -140,7 +140,7 @@ object Model {
       machine: Machine
   ): Recipe =
     Recipe(
-      ClassName( show"${item.className}_${extractor.className}" ),
+      ClassName( show"${item.className}_${purity.entryName.capitalize}_${extractor.className}" ),
       show"${item.displayName} ($purity, ${extractor.displayName})",
       Nil,
       NonEmptyList.of(
