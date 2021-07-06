@@ -6,10 +6,10 @@ import enumeratum.Enum
 import enumeratum.EnumEntry
 import scalatags.Text
 
+import model.ExtractorType
 import model.Options
 import model.Options.Belt
 import model.Options.ClockSpeed
-import model.Options.Extractors
 import model.Options.Miner
 import model.Options.Pipe
 import web.protocol.Forms
@@ -38,7 +38,7 @@ object OptionsView {
       ),
       div(
         "Available extractors",
-        enumSetCheckboxes[Extractors]( Forms.optionsExtractorsKey, extractorsOptionLabel, options.extractors )
+        enumSetCheckboxes[ExtractorType]( Forms.optionsExtractorsKey, extractorsOptionLabel, options.extractors )
       ),
       div(
         "Prefer fracking for",
@@ -46,7 +46,7 @@ object OptionsView {
           Forms.optionsFrackingKey,
           extractorsOptionLabel,
           options.preferFracking,
-          Some( Vector( Extractors.OilExtractor, Extractors.WaterExtractor ) )
+          Some( Vector( ExtractorType.OilPump, ExtractorType.WaterPump ) )
         )
       )
     )
@@ -84,11 +84,11 @@ object OptionsView {
     case ClockSpeed.ClockSpeed250 => "250%"
   }
 
-  def extractorsOptionLabel( extractor: Extractors ): String = extractor match {
-    case Extractors.Miners         => "Miner"
-    case Extractors.OilExtractor   => "Oil extractor"
-    case Extractors.WaterExtractor => "Water extractor"
-    case Extractors.WellExtractor  => "Resource Well Extractor"
+  def extractorsOptionLabel( extractor: ExtractorType ): String = extractor match {
+    case ExtractorType.Miner             => "Miner"
+    case ExtractorType.WaterPump         => "Water extractor"
+    case ExtractorType.OilPump           => "Oil extractor"
+    case ExtractorType.FrackingExtractor => "Resource Well Extractor"
   }
 
   def enumRadios[A <: EnumEntry]( key: String, describe: A => String, current: A )( implicit E: Enum[A] ): Frag = {

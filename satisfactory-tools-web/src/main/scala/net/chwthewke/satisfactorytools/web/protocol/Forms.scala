@@ -85,8 +85,8 @@ object Forms {
       enumFormDataDecoder[Options.Pipe]( Forms.optionsPipeKey ),
       enumFormDataDecoder[Options.Miner]( Forms.optionsMinerKey ),
       enumFormDataDecoder[Options.ClockSpeed]( Forms.optionsClockKey ),
-      enumSetFormDataDecoder[Options.Extractors]( Forms.optionsExtractorsKey ),
-      enumSetFormDataDecoder[Options.Extractors]( Forms.optionsFrackingKey )
+      enumSetFormDataDecoder[ExtractorType]( Forms.optionsExtractorsKey ),
+      enumSetFormDataDecoder[ExtractorType]( Forms.optionsFrackingKey )
     ).mapN(
       Options( _, _, _, _, _, _ )
     )

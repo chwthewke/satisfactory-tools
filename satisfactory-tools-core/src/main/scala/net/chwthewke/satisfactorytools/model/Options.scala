@@ -7,23 +7,29 @@ import enumeratum.Enum
 import enumeratum.EnumEntry
 
 import data.ClassName
-import data.Extractor
 
 case class Options(
     belt: Options.Belt,
     pipe: Options.Pipe,
     miner: Options.Miner,
     clockSpeed: Options.ClockSpeed,
-    extractors: Set[Options.Extractors],
-    preferFracking: Set[Options.Extractors]
+    extractors: Set[ExtractorType],
+    preferFracking: Set[ExtractorType]
 ) {
+
+  private def allowExtractor( extractorType: ExtractorType, recipe: Recipe ): Boolean =
+    extractorType.dataKey
+      .fold(
+        _ => recipe.producedIn.className == miner.extractorClass,
+        _ == recipe.producedIn.className
+      )
 
   // None: not allowed, Int: priority for resource
   def scoreExtractionRecipe( recipe: Recipe ): Option[Int] =
-    Option.when( extractors.exists( _.allow( recipe.producedIn, miner ) ) ) {
-      if (Options.Extractors.WellExtractor.allow( recipe.producedIn, miner ))
+    Option.when( extractors.exists( allowExtractor( _, recipe ) ) ) {
+      if (allowExtractor( ExtractorType.FrackingExtractor, recipe ))
         0
-      else if (preferFracking.exists( _.allow( recipe.producedIn, miner ) ))
+      else if (preferFracking.exists( allowExtractor( _, recipe ) ))
         1
       else
         -1
@@ -32,38 +38,52 @@ case class Options(
 
 object Options {
   val full: Options =
-    Options( Belt.BeltMk5, Pipe.PipeMk2, Miner.MinerMk3, ClockSpeed.ClockSpeed250, Extractors.values.toSet, Set.empty )
+    Options(
+      Belt.BeltMk5,
+      Pipe.PipeMk2,
+      Miner.MinerMk3,
+      ClockSpeed.ClockSpeed250,
+      ExtractorType.values.toSet,
+      Set.empty
+    )
   val default: Options =
-    Options( Belt.BeltMk4, Pipe.PipeMk2, Miner.MinerMk2, ClockSpeed.ClockSpeed100, Extractors.values.toSet, Set.empty )
+    Options(
+      Belt.BeltMk4,
+      Pipe.PipeMk2,
+      Miner.MinerMk2,
+      ClockSpeed.ClockSpeed100,
+      ExtractorType.values.toSet,
+      Set.empty
+    )
 
   implicit val optionsShow: Show[Options] = semiauto.show[Options]
 
-  sealed abstract class Belt( val itemsPerMinute: Int ) extends EnumEntry
+  sealed abstract class Belt( override val entryName: String, val itemsPerMinute: Int ) extends EnumEntry
 
   object Belt extends Enum[Belt] {
-    final case object BeltMk1 extends Belt( 60 )
-    final case object BeltMk2 extends Belt( 120 )
-    final case object BeltMk3 extends Belt( 270 )
-    final case object BeltMk4 extends Belt( 480 )
-    final case object BeltMk5 extends Belt( 780 )
+    final case object BeltMk1 extends Belt( "belt-mk1", 60 )
+    final case object BeltMk2 extends Belt( "belt-mk2", 120 )
+    final case object BeltMk3 extends Belt( "belt-mk3", 270 )
+    final case object BeltMk4 extends Belt( "belt-mk4", 480 )
+    final case object BeltMk5 extends Belt( "belt-mk5", 780 )
 
     override val values: Vector[Belt] = findValues.toVector
 
     implicit val beltShow: Show[Belt] = Show.fromToString
   }
 
-  sealed abstract class Pipe( val cubicMetersPerMinute: Int ) extends EnumEntry
+  sealed abstract class Pipe( override val entryName: String, val cubicMetersPerMinute: Int ) extends EnumEntry
 
   object Pipe extends Enum[Pipe] {
-    final case object PipeMk1 extends Pipe( 300 )
-    final case object PipeMk2 extends Pipe( 600 )
+    final case object PipeMk1 extends Pipe( "pipe-mk1", 300 )
+    final case object PipeMk2 extends Pipe( "pipe-mk2", 600 )
 
     override val values: Vector[Pipe] = findValues.toVector
 
     implicit val pipeShow: Show[Pipe] = Show.fromToString
   }
 
-  sealed abstract class Miner( val extractorClass: ClassName ) extends EnumEntry {
+  sealed abstract class Miner( override val entryName: String, val extractorClass: ClassName ) extends EnumEntry {
     private def allowsClass( className: ClassName ): Boolean =
       className == extractorClass || Miner.values.forall( _.extractorClass != className )
 
@@ -75,45 +95,24 @@ object Options {
   }
 
   object Miner extends Enum[Miner] {
-    final case object MinerMk1 extends Miner( ClassName( "Build_MinerMk1_C" ) )
-    final case object MinerMk2 extends Miner( ClassName( "Build_MinerMk2_C" ) )
-    final case object MinerMk3 extends Miner( ClassName( "Build_MinerMk3_C" ) )
+    final case object MinerMk1 extends Miner( "miner-mk1", ClassName( "Build_MinerMk1_C" ) )
+    final case object MinerMk2 extends Miner( "miner-mk2", ClassName( "Build_MinerMk2_C" ) )
+    final case object MinerMk3 extends Miner( "miner-mk3", ClassName( "Build_MinerMk3_C" ) )
 
     override val values: Vector[Miner] = findValues.toVector
 
     implicit val minerShow: Show[Miner] = Show.fromToString
   }
 
-  sealed abstract class ClockSpeed( val percent: Int ) extends EnumEntry
+  sealed abstract class ClockSpeed( override val entryName: String, val percent: Int ) extends EnumEntry
 
   object ClockSpeed extends Enum[ClockSpeed] {
-    final case object ClockSpeed100 extends ClockSpeed( 100 )
-    final case object ClockSpeed250 extends ClockSpeed( 250 )
+    final case object ClockSpeed100 extends ClockSpeed( "clock-speed-100", 100 )
+    final case object ClockSpeed250 extends ClockSpeed( "clock-speed-250", 250 )
 
     override val values: Vector[ClockSpeed] = findValues.toVector
 
     implicit val clockSpeedShow: Show[ClockSpeed] = Show.fromToString
   }
 
-  sealed abstract class Extractors extends EnumEntry {
-    def allow( machine: Machine, miner: Miner ): Boolean
-  }
-
-  sealed abstract class SingleExtractor( className: ClassName ) extends Extractors {
-    override def allow( machine: Machine, miner: Miner ): Boolean = machine.className == className
-  }
-
-  object Extractors extends Enum[Extractors] {
-    final case object WellExtractor  extends SingleExtractor( Extractor.frackingExtractorClass )
-    final case object WaterExtractor extends SingleExtractor( Extractor.waterExtractorClass )
-    final case object OilExtractor   extends SingleExtractor( Extractor.oilExtractorClass )
-    final case object Miners extends Extractors {
-      override def allow( machine: Machine, miner: Miner ): Boolean =
-        machine.className == miner.extractorClass
-    }
-
-    override val values: Vector[Extractors] = findValues.toVector
-
-    implicit val showExtractors: Show[Extractors] = Show.fromToString
-  }
 }

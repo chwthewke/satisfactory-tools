@@ -15,7 +15,6 @@ import model.Model
 import model.Options
 import model.Options.Belt
 import model.Options.ClockSpeed
-import model.Options.Extractors
 import model.Options.Miner
 import model.Options.Pipe
 import model.Recipe
@@ -56,8 +55,8 @@ object Codecs {
       enumCodec[Pipe] ~
       enumCodec[Miner] ~
       enumCodec[ClockSpeed] ~
-      enumSetCodec[Extractors] ~
-      enumSetCodec[Extractors])
+      enumSetCodec[ExtractorType] ~
+      enumSetCodec[ExtractorType])
       .xmap(
         Options( _, _, _, _, _, _ ),
         options =>

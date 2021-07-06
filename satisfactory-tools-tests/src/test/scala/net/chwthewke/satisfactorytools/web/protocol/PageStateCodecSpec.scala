@@ -127,8 +127,8 @@ class PageStateCodecSpec
       Gen.oneOf( Options.Pipe.values ),
       Gen.oneOf( Options.Miner.values ),
       Gen.oneOf( Options.ClockSpeed.values ),
-      pick[Set]( Options.Extractors.values ),
-      pick[Set]( Seq[Options.Extractors]( Options.Extractors.OilExtractor, Options.Extractors.WaterExtractor ) )
+      pick[Set]( ExtractorType.values ),
+      pick[Set]( Seq[ExtractorType]( ExtractorType.OilPump, ExtractorType.WaterPump ) )
     ).mapN( Options( _, _, _, _, _, _ ) )
 
   val genRecipeList: Gen[RecipeList] =

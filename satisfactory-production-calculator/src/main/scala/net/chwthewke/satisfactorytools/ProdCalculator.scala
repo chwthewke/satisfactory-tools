@@ -9,6 +9,7 @@ import com.monovore.decline.effect.CommandIOApp
 import pureconfig.module.catseffect.syntax._
 
 import loader.Loader
+import model.ExtractorType
 import model.Options
 import prod.Calculator
 import prod.ConstraintSolver
@@ -44,7 +45,7 @@ object ProdCalculator
     Options.Pipe.PipeMk2,
     Options.Miner.MinerMk3,
     Options.ClockSpeed.ClockSpeed100,
-    Options.Extractors.values.toSet,
+    ExtractorType.values.toSet,
     Set.empty
   )
 }
