@@ -24,12 +24,15 @@ import org.http4s.scalatags._
 import org.http4s.syntax.literals._
 import org.typelevel.log4cats.SelfAwareStructuredLogger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
+import org.typelevel.vault.Key
 
 import model.Bill
 import model.Model
 import model.Options
 import model.RecipeList
 import model.ResourceOptions
+import net.chwthewke.satisfactorytools.web.session.ProductionPlannerSession
+import net.chwthewke.satisfactorytools.web.session.StoredFactory
 import prod.Calculator
 import prod.ConstraintSolver
 import prod.Factory
@@ -42,7 +45,9 @@ import web.state.PageState
 import web.view.CompareView
 import web.view.View
 
-case class Pages[F[_]: Async]( model: Model, defaultInputs: SolverInputs ) {
+case class Pages[F[_]]( sessionKey: Key[ProductionPlannerSession[F]], model: Model, defaultInputs: SolverInputs )(
+    implicit F: Async[F]
+) {
 
   val logger: SelfAwareStructuredLogger[F] = Slf4jLogger.getLoggerFromName( "PAGES" )
 
@@ -118,10 +123,15 @@ case class Pages[F[_]: Async]( model: Model, defaultInputs: SolverInputs ) {
                                }
       input <- req.as[inputTab.Data]
       newInputs = inputTab.stateLens.set( state.inputs )( input )
-      newFactory = if (setCompute || (newInputs != state.inputs && state.factory.isDefined))
-        Some( solve( newInputs ) )
-      else
-        state.factory
+      session   = req.attributes.lookup( sessionKey ).getOrElse( ProductionPlannerSession.Null[F]() )
+      now <- F.realTimeInstant
+      newFactory <- if (setCompute || (newInputs != state.inputs && state.factory.isDefined)) {
+                     val solution = solve( newInputs )
+                     solution
+                       .traverse_( factory => session.pushHistory( StoredFactory( now, newInputs, factory ) ) )
+                       .as( Some( solution ) )
+                   } else
+                     F.pure( state.factory )
       response <- redirect(
                    PageState(
                      newInputs,

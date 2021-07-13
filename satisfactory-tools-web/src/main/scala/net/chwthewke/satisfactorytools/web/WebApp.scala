@@ -27,13 +27,19 @@ import model.Model
 import model.Options
 import model.RecipeList
 import prod.SolverInputs
+import web.session.SessionMiddleware
 
 object WebApp {
 
   def httpApp[F[_]: Async]( shutdownCommand: Ref[F, Boolean] ): Resource[F, HttpApp[F]] =
-    Resource.eval( loadAll[F] ).map {
-      case ( model, inputs ) =>
-        AutoSlash.httpRoutes( Pages( model, inputs ).routes <+> shutdown( shutdownCommand ) ).orNotFound
+    (
+      Resource.eval( loadAll[F] ),
+      Resource.eval( SessionMiddleware.init[F] )
+    ).mapN {
+      case ( ( model, inputs ), sessions ) =>
+        AutoSlash
+          .httpRoutes( sessions( Pages( sessions.sessionKey, model, inputs ).routes ) <+> shutdown( shutdownCommand ) )
+          .orNotFound
     }
 
   private def shutdown[F[_]: Defer: Monad]( shutdownCommand: Ref[F, Boolean] ): HttpRoutes[F] = {
