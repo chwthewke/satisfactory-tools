@@ -19,6 +19,7 @@ import cats.syntax.traverse._
 import cats.syntax.traverseFilter._
 import mouse.option._
 import scala.collection.immutable.SortedMap
+import scala.concurrent.duration._
 
 import data.ClassName
 import data.Countable
@@ -46,7 +47,9 @@ object Model {
       extractorMachines.andThen( extractors => getExtractionRecipes( data, extractors, rawSelfExtraction ) )
 
     val manufacturing: ValidatedNel[String, Vector[Recipe]] =
-      rawManufacturing.traverseFilter( validateManufacturingRecipe( data, _ ) )
+      rawManufacturing
+        .traverseFilter( validateManufacturingRecipe( data, _ ) )
+        .map( _ ++ nuclearWastePseudoRecipes( data.items, data ) )
 
     val defaultResourceOptions: ValidatedNel[String, ResourceOptions] =
       ResourceOptions.init( data.items, mapConfig ).toValidatedNel
@@ -191,6 +194,25 @@ object Model {
               )
           )
       )
+
+  def nuclearWastePseudoRecipes( items: Map[ClassName, Item], gameData: GameData ): Vector[Recipe] =
+    gameData.nuclearGenerators.values.flatMap { g =>
+      g.fuels.flatMap {
+        case ( src, prod ) =>
+          ( items.get( src ), items.get( prod.item ) ).mapN(
+            ( s, p ) =>
+              Recipe(
+                ClassName( s"${g.className.name}__${s.className.name}" ),
+                p.displayName,
+                Countable( s, 1d ) :: Nil,
+                NonEmptyList.of( Countable( p, prod.amount.toDouble ) ),
+                math.ceil( 1000 * s.fuelValue / g.powerProduction ).toLong.milliseconds,
+                Machine( g.className, g.displayName, MachineType( ManufacturerType.Manufacturer ), 0d ),
+                Power.Fixed( -g.powerProduction )
+              )
+          )
+      }
+    }.toVector
 
   implicit val modelShow: Show[Model] = Show.show { model =>
     implicit val showItem: Show[Item]       = Show.show( _.displayName )

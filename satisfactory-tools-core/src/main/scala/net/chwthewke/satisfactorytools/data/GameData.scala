@@ -12,19 +12,22 @@ final case class GameData(
     items: Map[ClassName, Item],
     extractors: Map[ClassName, Extractor],
     manufacturers: Map[ClassName, Manufacturer],
-    recipes: Vector[GameRecipe]
+    recipes: Vector[GameRecipe],
+    nuclearGenerators: Map[ClassName, NuclearGenerator]
 )
 
 object GameData {
-  val empty: GameData = GameData( Map.empty, Map.empty, Map.empty, Vector.empty )
+  val empty: GameData = GameData( Map.empty, Map.empty, Map.empty, Vector.empty, Map.empty )
 
-  def items( items: Map[ClassName, Item] ): GameData = GameData( items, Map.empty, Map.empty, Vector.empty )
+  def items( items: Map[ClassName, Item] ): GameData = GameData( items, Map.empty, Map.empty, Vector.empty, Map.empty )
   def extractors( extractors: Map[ClassName, Extractor] ): GameData =
-    GameData( Map.empty, extractors, Map.empty, Vector.empty )
+    GameData( Map.empty, extractors, Map.empty, Vector.empty, Map.empty )
   def manufacturers( manufacturers: Map[ClassName, Manufacturer] ): GameData =
-    GameData( Map.empty, Map.empty, manufacturers, Vector.empty )
+    GameData( Map.empty, Map.empty, manufacturers, Vector.empty, Map.empty )
   def recipes( recipes: Vector[GameRecipe] ): GameData =
-    GameData( Map.empty, Map.empty, Map.empty, recipes )
+    GameData( Map.empty, Map.empty, Map.empty, recipes, Map.empty )
+  def nuclearGenerators( generators: Map[ClassName, NuclearGenerator] ): GameData =
+    GameData( Map.empty, Map.empty, Map.empty, Vector.empty, generators )
 
   implicit val modelMonoid: Monoid[GameData] = new Monoid[GameData] {
     override def empty: GameData = GameData.empty
@@ -34,7 +37,8 @@ object GameData {
         x.items ++ y.items,
         x.extractors ++ y.extractors,
         x.manufacturers ++ y.manufacturers,
-        x.recipes ++ y.recipes
+        x.recipes ++ y.recipes,
+        x.nuclearGenerators ++ y.nuclearGenerators
       )
   }
 
@@ -52,6 +56,8 @@ object GameData {
         decodeMap( Decoder[Extractor] )( _.className ).map( GameData.extractors )
       case NativeClass.`recipeClass` =>
         Decoder[Vector[GameRecipe]].map( GameData.recipes )
+      case NativeClass.`nuclearGeneratorClass` =>
+        decodeMap( Decoder[NuclearGenerator] )( _.className ).map( GameData.nuclearGenerators )
       case _ => Decoder.const( GameData.empty )
     }
 

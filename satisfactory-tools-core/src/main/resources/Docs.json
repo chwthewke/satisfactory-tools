@@ -21879,6 +21879,14 @@
         "mFluidStackSizeMultiplier" : "1",
         "mFogPlaneTransforms" : "",
         "mForceNetUpdateOnRegisterPlayer" : "False",
+        "mFuel" : [
+          {
+            "mByproduct" : "",
+            "mByproductAmount" : "",
+            "mFuelClass" : "FGItemDescriptorBiomass",
+            "mSupplementalResourceClass" : ""
+          }
+        ],
         "mFuelClasses" : "",
         "mFuelLoadAmount" : "1",
         "mFuelResourceForm" : "RF_SOLID",
@@ -21934,6 +21942,26 @@
         "mFluidStackSizeMultiplier" : "1",
         "mFogPlaneTransforms" : "((Translation=(X=199.904510,Y=1143.047119,Z=162.721100)))",
         "mForceNetUpdateOnRegisterPlayer" : "False",
+        "mFuel" : [
+          {
+            "mByproduct" : "",
+            "mByproductAmount" : "",
+            "mFuelClass" : "Desc_Coal_C",
+            "mSupplementalResourceClass" : "Desc_Water_C"
+          },
+          {
+            "mByproduct" : "",
+            "mByproductAmount" : "",
+            "mFuelClass" : "Desc_CompactedCoal_C",
+            "mSupplementalResourceClass" : "Desc_Water_C"
+          },
+          {
+            "mByproduct" : "",
+            "mByproductAmount" : "",
+            "mFuelClass" : "Desc_PetroleumCoke_C",
+            "mSupplementalResourceClass" : "Desc_Water_C"
+          }
+        ],
         "mFuelClasses" : "",
         "mFuelLoadAmount" : "1",
         "mFuelResourceForm" : "RF_SOLID",
@@ -21992,6 +22020,26 @@
         "mFluidStackSizeMultiplier" : "1",
         "mFogPlaneTransforms" : "",
         "mForceNetUpdateOnRegisterPlayer" : "False",
+        "mFuel" : [
+          {
+            "mByproduct" : "",
+            "mByproductAmount" : "",
+            "mFuelClass" : "Desc_LiquidFuel_C",
+            "mSupplementalResourceClass" : ""
+          },
+          {
+            "mByproduct" : "",
+            "mByproductAmount" : "",
+            "mFuelClass" : "Desc_LiquidTurboFuel_C",
+            "mSupplementalResourceClass" : ""
+          },
+          {
+            "mByproduct" : "",
+            "mByproductAmount" : "",
+            "mFuelClass" : "Desc_LiquidBiofuel_C",
+            "mSupplementalResourceClass" : ""
+          }
+        ],
         "mFuelClasses" : "",
         "mFuelLoadAmount" : "1000",
         "mFuelResourceForm" : "RF_LIQUID",
@@ -23832,6 +23880,7 @@
         "mRememberPickUp" : "False",
         "mResourceSinkPoints" : "153184",
         "mSmallIcon" : "Texture2D /Game/FactoryGame/Resource/Parts/PlutoniumFuelRods/UI/IconDesc_PlutoniumFuelRod_64.IconDesc_PlutoniumFuelRod_64",
+        "mSpentFuelClass" : "BlueprintGeneratedClass'/Game/FactoryGame/Resource/Parts/NuclearWaste/Desc_PlutoniumWaste.Desc_PlutoniumWaste_C'",
         "mStackSize" : "SS_SMALL"
       },
       {
@@ -23850,6 +23899,7 @@
         "mRememberPickUp" : "False",
         "mResourceSinkPoints" : "44092",
         "mSmallIcon" : "Texture2D /Game/FactoryGame/Resource/Parts/NuclearFuelRod/UI/IconDesc_NuclearFuelRod_64.IconDesc_NuclearFuelRod_64",
+        "mSpentFuelClass" : "BlueprintGeneratedClass'/Game/FactoryGame/Resource/Parts/NuclearWaste/Desc_NuclearWaste.Desc_NuclearWaste_C'",
         "mStackSize" : "SS_SMALL"
       }
     ],
@@ -23881,6 +23931,20 @@
         "mFluidStackSizeMultiplier" : "1",
         "mFogPlaneTransforms" : "((Translation=(X=-200.000000,Y=2088.737549,Z=181.784302)),(Translation=(X=200.000000,Y=2088.737549,Z=181.784302)))",
         "mForceNetUpdateOnRegisterPlayer" : "False",
+        "mFuel" : [
+          {
+            "mByproduct" : "Desc_NuclearWaste_C",
+            "mByproductAmount" : "50",
+            "mFuelClass" : "Desc_NuclearFuelRod_C",
+            "mSupplementalResourceClass" : "Desc_Water_C"
+          },
+          {
+            "mByproduct" : "Desc_PlutoniumWaste_C",
+            "mByproductAmount" : "10",
+            "mFuelClass" : "Desc_PlutoniumFuelRod_C",
+            "mSupplementalResourceClass" : "Desc_Water_C"
+          }
+        ],
         "mFuelClasses" : "",
         "mFuelLoadAmount" : "1",
         "mFuelResourceForm" : "RF_SOLID",

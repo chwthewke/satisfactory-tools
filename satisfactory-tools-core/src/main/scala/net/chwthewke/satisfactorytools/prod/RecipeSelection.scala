@@ -8,7 +8,6 @@ import cats.syntax.functor._
 import cats.syntax.option._
 import cats.syntax.reducible._
 
-import data.ClassName
 import data.Countable
 import data.Form
 import data.Item
@@ -29,8 +28,6 @@ case class RecipeSelection(
 )
 
 object RecipeSelection {
-
-  val nuclearWasteClassName: ClassName = ClassName( "Desc_NuclearWaste_C" )
 
   def tieredExtractionRecipes(
       options: Options,
@@ -97,7 +94,7 @@ object RecipeSelection {
 
     RecipeSelection(
       recipesWithCost,
-      extraction ++ model.items.get( nuclearWasteClassName ),
+      extraction,
       tieredExtraction,
       caps,
       resourceOpts.resourceWeights.costs( caps )
