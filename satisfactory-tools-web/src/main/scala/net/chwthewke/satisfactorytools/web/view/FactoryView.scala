@@ -27,6 +27,8 @@ object FactoryView {
 
   import Text.all._
 
+  val Tolerance = 1e-4 // for display, bigger than in Calculator
+
   object Resources {
     def apply( factory: Factory ): Tag =
       fieldset(
@@ -41,11 +43,12 @@ object FactoryView {
 
     def extractedResourcesView( res: Vector[Countable[Double, Item]] ): Vector[Tag] =
       res
+        .filter { case Countable( _, x ) => x.abs > Tolerance }
         .sortBy { case Countable( p, x ) => ( -x, p ) }
         .map {
           case Countable( p, x ) =>
             tr(
-              td( textAlign := "right", f"$x%.3f" ),
+              numCell4( x ),
               td( p.displayName )
             )
         }
@@ -107,12 +110,12 @@ object FactoryView {
 
       tr(
         customGroupRadios,
-        td( f"$itemAmount%4.3f", textAlign.right ),
+        numCell4( itemAmount ),
         recipeCell2Cols( recipe.item ),
         td( f"$machineCount%3d", textAlign.right ),
         td( machine.displayName, textAlign.left ),
-        td( f"$itemAmountPerUnit%3.3f / unit", textAlign.right ),
-        td( " @ ", textAlign.center ),
+        numCell3( itemAmountPerUnit ),
+        td( " / unit @ ", textAlign.center ),
         td( f"${clockSpeedMillionth / 10000}%3d.${clockSpeedMillionth % 10000}%04d %%", textAlign.left ),
         td( power.show, textAlign.right ),
         td( "MW", textAlign.left )
@@ -214,8 +217,8 @@ object FactoryView {
       rows.toVector.zipWithIndex.map {
         case ( ( dest, amount ), ix ) =>
           tr(
-            td( f"$amount%4.3f" ),
-            Option.when( ix == 0 )( td( rowspan := rows.size, verticalAlign := "middle", dir ) ),
+            numCell4( amount ),
+            Option.when( ix == 0 )( td( rowspan := rows.size, verticalAlign.middle, dir ) ),
             td( dest )
           )
       }
@@ -293,13 +296,23 @@ object FactoryView {
             )
         }
 
+    private def toleranceFilter[A]( m: Map[A, Double] ): Map[A, Double] =
+      m.filter { case ( _, x ) => x.abs > Tolerance }
+
     def itemsInOutView( bill: Bill, factory: Factory, extraKey: String ): Tag =
       div(
-        itemsInOut( bill, factory, extraKey ).toVector.map {
-          case ( item, ( to, from ) ) => itemInOut( item, to, from )
-        }
+        itemsInOut( bill, factory, extraKey ).toVector
+          .map { case ( item, ( to, from ) ) => ( item, toleranceFilter( to ), toleranceFilter( from ) ) }
+          .filterNot { case ( _, to, from ) => to.isEmpty && from.isEmpty }
+          .map( (itemInOut _).tupled )
       )
   }
+
+  def numCell3( value: Double ): Frag =
+    td( f"$value%3.3f", title := value.toString, textAlign.right )
+
+  def numCell4( value: Double ): Frag =
+    td( f"$value%4.3f", title := value.toString, textAlign.right )
 
   sealed trait CustomGroupsRadios extends EnumEntry with Product
   object CustomGroupsRadios extends Enum[CustomGroupsRadios] {
