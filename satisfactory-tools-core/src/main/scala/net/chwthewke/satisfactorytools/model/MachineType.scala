@@ -1,6 +1,7 @@
 package net.chwthewke.satisfactorytools
 package model
 
+import cats.Order
 import cats.Show
 import cats.syntax.show._
 import enumeratum.Enum
@@ -30,5 +31,6 @@ object MachineType extends Enum[MachineType] {
     ExtractorType.values.map( MachineType( _ ) ) ++
       ManufacturerType.values.map( MachineType( _ ) )
 
-  implicit val machineTypeShow: Show[MachineType] = Show.show( _.machineType.fold( _.show, _.show ) )
+  implicit val machineTypeShow: Show[MachineType]   = Show.show( _.machineType.fold( _.show, _.show ) )
+  implicit val machineTypeOrder: Order[MachineType] = Order.by( _.machineType )
 }

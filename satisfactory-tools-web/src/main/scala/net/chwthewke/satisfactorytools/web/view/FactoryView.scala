@@ -4,6 +4,7 @@ package web.view
 import cats.Order
 import cats.Order.catsKernelOrderingForOrder
 import cats.syntax.foldable._
+import cats.syntax.functor._
 import cats.syntax.order._
 import cats.syntax.semigroup._
 import cats.syntax.show._
@@ -16,6 +17,7 @@ import scalatags.Text
 import data.Countable
 import data.Item
 import model.Bill
+import model.Machine
 import model.Model
 import model.Recipe
 import prod.ClockedRecipe
@@ -52,6 +54,28 @@ object FactoryView {
               td( p.displayName )
             )
         }
+  }
+
+  object Machines {
+
+    def apply( recipes: Vector[ClockedRecipe] ): Tag =
+      fieldset(
+        legend( "Machines" ),
+        machinesList( recipes.map( r => r.recipe.as( r.machine ) ) )
+      )
+
+    def machinesList( machines: Vector[Countable[Int, Machine]] ): Tag =
+      table(
+        machines.gather
+          .sortBy( m => ( m.item.machineType, m.item.powerConsumption ) )
+          .map(
+            m =>
+              tr(
+                td( f"${m.amount}%3d", textAlign.right ),
+                td( m.item.displayName )
+              )
+          )
+      )
   }
 
   object Blocks {
@@ -166,11 +190,12 @@ object FactoryView {
 
   object CustomGroup {
     def apply( model: Model, state: PageState, factory: Factory, group: Int ): Tag = {
-      val subFactory = extractSubFactory( model, state, factory, group )
+      val subFactory = extractSubFactory( state, factory, group )
 
       fieldset(
         legend( s"Custom Group $group" ),
         Blocks.recipeTable( model, state, subFactory, CustomGroupsRadios.Empty ),
+        Machines( subFactory.allRecipes ),
         fieldset(
           legend( "Inputs" ),
           table( Resources.extractedResourcesView( subFactory.extraInputs ) )
@@ -186,7 +211,7 @@ object FactoryView {
       )
     }
 
-    private def extractSubFactory( model: Model, pageState: PageState, factory: Factory, group: Int ) = {
+    private def extractSubFactory( pageState: PageState, factory: Factory, group: Int ) = {
       val manufacturing = factory.manufacturing
         .filter( b => pageState.customGroupSelection.customGroups.get( b.item ).contains( group ) )
 

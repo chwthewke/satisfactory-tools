@@ -120,6 +120,7 @@ object View {
       Vector(
         ( "Production steps", OutputTab.BlocksTab ),
         ( "Raw resources", OutputTab.ResourcesTab ),
+        ( "Manufacturing machines", OutputTab.MachinesTab ),
         ( "Item I/O", OutputTab.ItemsTab )
       ).map {
         case ( text, tab ) =>

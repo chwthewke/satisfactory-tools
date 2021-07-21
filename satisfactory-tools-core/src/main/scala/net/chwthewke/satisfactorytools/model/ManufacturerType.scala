@@ -1,6 +1,7 @@
 package net.chwthewke.satisfactorytools
 package model
 
+import cats.Order
 import cats.Show
 import enumeratum.Enum
 import enumeratum.EnumEntry
@@ -15,5 +16,6 @@ object ManufacturerType extends Enum[ManufacturerType] {
 
   override val values: Vector[ManufacturerType] = findValues.toVector
 
-  implicit val manufacturerTypeShow: Show[ManufacturerType] = Show.show( _.description )
+  implicit val manufacturerTypeShow: Show[ManufacturerType]   = Show.show( _.description )
+  implicit val manufacturerTypeOrder: Order[ManufacturerType] = Order.by( values.indexOf )
 }

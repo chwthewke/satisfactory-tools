@@ -33,6 +33,11 @@ object OutputTab {
       FactoryView.Resources( solution )
   }
 
+  final case object MachinesTab extends OutputTab( "machines", 252 ) {
+    override def view( model: Model, state: PageState, solution: Factory ): Tag =
+      FactoryView.Machines( solution.allRecipes )
+  }
+
   final case object ItemsTab extends OutputTab( "items", 255 ) {
     override def view( model: Model, state: PageState, solution: Factory ): Tag =
       FactoryView.Items( state, solution )
@@ -55,6 +60,7 @@ object OutputTab {
       case BlocksTab.id    => Some( BlocksTab )
       case ResourcesTab.id => Some( ResourcesTab )
       case ItemsTab.id     => Some( ItemsTab )
+      case MachinesTab.id  => Some( MachinesTab )
       case _               => CustomGroup.parse( s )
     }
 
@@ -62,6 +68,7 @@ object OutputTab {
     case 255 => ItemsTab
     case 254 => ResourcesTab
     case 253 => BlocksTab
+    case 252 => MachinesTab
     case x   => CustomGroup( x )
   }
 

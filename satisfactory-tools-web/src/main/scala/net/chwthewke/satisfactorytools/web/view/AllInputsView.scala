@@ -4,6 +4,7 @@ package web.view
 import cats.syntax.foldable._
 import scalatags.Text
 
+import data.Countable
 import model.Bill
 import model.ResourceOptions
 import model.Model
@@ -11,7 +12,6 @@ import model.Options
 import model.RecipeList
 import model.ResourcePurity
 import model.ResourceWeights
-import net.chwthewke.satisfactorytools.data.Countable
 import web.protocol.Forms
 import web.state.PageState
 
