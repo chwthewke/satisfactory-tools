@@ -24,7 +24,7 @@ import model.ResourceDistrib
 import model.ResourceOptions
 import model.ResourcePurity
 import model.ResourceWeights
-import web.state.CustomGroupSelection
+import protocol.CustomGroupSelection
 
 object Forms {
 

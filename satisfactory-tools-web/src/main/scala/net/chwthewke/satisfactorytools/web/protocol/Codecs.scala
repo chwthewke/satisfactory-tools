@@ -25,7 +25,7 @@ import model.ResourceWeights
 import prod.ClockedRecipe
 import prod.Factory
 import prod.SolverInputs
-import web.state.CustomGroupSelection
+import protocol.CustomGroupSelection
 
 object Codecs {
 

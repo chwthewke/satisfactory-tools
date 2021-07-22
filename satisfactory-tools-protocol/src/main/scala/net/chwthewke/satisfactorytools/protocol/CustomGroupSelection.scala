@@ -1,5 +1,5 @@
 package net.chwthewke.satisfactorytools
-package web.state
+package protocol
 
 import model.Recipe
 

@@ -9,6 +9,7 @@ import scodec.codecs
 
 import model.Model
 import prod.Factory
+import protocol.CustomGroupSelection
 import web.protocol.Forms
 import web.view.FactoryView
 

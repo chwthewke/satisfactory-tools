@@ -46,6 +46,23 @@ val `satisfactory-tools-app` = project
   .dependsOn( `satisfactory-tools-core` )
   .enablePlugins( ScalacPlugin )
 
+val `satisfactory-tools-protocol` = project
+  .settings( compilerPlugins )
+  .settings(
+    libraryDependencies ++= circe
+  )
+  .dependsOn( `satisfactory-tools-core` )
+  .enablePlugins( ScalacPlugin )
+
+val `satisfactory-tools-api` = project
+  .settings( compilerPlugins )
+  .settings(
+    libraryDependencies ++=
+      http4s ++ http4sBlazeServer ++ logging
+  )
+  .dependsOn( `satisfactory-tools-app`, `satisfactory-tools-protocol` )
+  .enablePlugins( ScalacPlugin )
+
 val `satisfactory-tools-web` = project
   .settings( compilerPlugins )
   .settings(
@@ -56,7 +73,7 @@ val `satisfactory-tools-web` = project
         scalatags ++
         logging
   )
-  .dependsOn( `satisfactory-tools-app` )
+  .dependsOn( `satisfactory-tools-app`, `satisfactory-tools-protocol` )
   .enablePlugins( ScalacPlugin )
 
 val `satisfactory-tools-dev` = project
@@ -102,6 +119,8 @@ val `satisfactory-tools-all` = project
   .aggregate(
     `satisfactory-tools-core`,
     `satisfactory-tools-app`,
+    `satisfactory-tools-protocol`,
+    `satisfactory-tools-api`,
     `satisfactory-tools-dev`,
     `satisfactory-tools-web`,
     `satisfactory-production-calculator`,

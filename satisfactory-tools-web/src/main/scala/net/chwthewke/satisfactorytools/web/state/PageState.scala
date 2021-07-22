@@ -16,6 +16,7 @@ import shapeless.lens
 import model.Model
 import prod.Factory
 import prod.SolverInputs
+import protocol.CustomGroupSelection
 import text.FactoryTable
 import web.protocol
 import web.protocol.Codecs

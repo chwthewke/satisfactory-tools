@@ -34,8 +34,8 @@ import prod.Calculator
 import prod.ConstraintSolver
 import prod.Factory
 import prod.SolverInputs
+import _root_.net.chwthewke.satisfactorytools.protocol.CustomGroupSelection
 import web.protocol.Forms
-import web.state.CustomGroupSelection
 import web.state.InputTab
 import web.state.OutputTab
 import web.state.PageState

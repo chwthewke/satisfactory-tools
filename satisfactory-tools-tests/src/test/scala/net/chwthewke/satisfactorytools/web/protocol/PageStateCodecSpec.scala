@@ -42,7 +42,7 @@ import model.ResourceWeights
 import prod.ClockedRecipe
 import prod.Factory
 import prod.SolverInputs
-import web.state.CustomGroupSelection
+import protocol.CustomGroupSelection
 import web.state.InputTab
 import web.state.OutputTab
 import web.state.OutputTab.CustomGroup
