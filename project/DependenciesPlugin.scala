@@ -34,6 +34,7 @@ object DependenciesPlugin extends AutoPlugin {
     val mouse: Deps         = Seq( "org.typelevel" %% "mouse" % "1.0.3" )
     val kittens: Deps       = Seq( "org.typelevel" %% "kittens" % "2.3.2" )
     val alleycatsCore: Deps = Seq( "org.typelevel" %% "alleycats-core" % catsVersion )
+    val catsTime: Deps      = Seq( "io.chrisdavenport" %% "cats-time" % "0.3.4" )
 
     val catsEffect: Deps = "org.typelevel" %% Seq( "cats-effect", "cats-effect-std" ) % "3.1.1"
 

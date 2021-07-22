@@ -1,0 +1,13 @@
+package net.chwthewke.satisfactorytools
+package protocol
+
+import cats.Order
+import cats.Show
+import cats.syntax.contravariant._
+
+case class SolutionId( id: Int ) extends AnyVal
+
+object SolutionId {
+  implicit val solutionIdShow: Show[SolutionId]   = Show[Int].contramap( _.id )
+  implicit val solutionIdOrder: Order[SolutionId] = Order.by( _.id )
+}

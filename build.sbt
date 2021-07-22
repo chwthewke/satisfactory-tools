@@ -26,6 +26,7 @@ val `satisfactory-tools-core` = project
         alleycatsCore ++
         mouse ++
         kittens ++
+        catsTime ++
         atto ++
         circe ++
         enumeratum ++
@@ -46,6 +47,23 @@ val `satisfactory-tools-app` = project
   .dependsOn( `satisfactory-tools-core` )
   .enablePlugins( ScalacPlugin )
 
+val `satisfactory-tools-api` = project
+  .settings( compilerPlugins )
+  .settings(
+    libraryDependencies ++= circe
+  )
+  .dependsOn( `satisfactory-tools-core` )
+  .enablePlugins( ScalacPlugin )
+
+val `satisfactory-tools-persistence` = project
+  .settings( compilerPlugins )
+  .settings(
+    libraryDependencies ++=
+      http4s ++ http4sBlazeServer ++ logging
+  )
+  .dependsOn( `satisfactory-tools-app`, `satisfactory-tools-api` )
+  .enablePlugins( ScalacPlugin )
+
 val `satisfactory-tools-web` = project
   .settings( compilerPlugins )
   .settings(
@@ -56,7 +74,7 @@ val `satisfactory-tools-web` = project
         scalatags ++
         logging
   )
-  .dependsOn( `satisfactory-tools-app` )
+  .dependsOn( `satisfactory-tools-app`, `satisfactory-tools-api` )
   .enablePlugins( ScalacPlugin )
 
 val `satisfactory-tools-dev` = project
@@ -94,7 +112,7 @@ val `satisfactory-tools-tests` = project
       "import net.chwthewke.satisfactorytools._"
     ).mkString( "\n" )
   )
-  .dependsOn( `satisfactory-production-calculator`, `satisfactory-tools-web` )
+  .dependsOn( `satisfactory-production-calculator`, `satisfactory-tools-persistence`, `satisfactory-tools-web` )
   .enablePlugins( ScalacPlugin )
 
 val `satisfactory-tools-all` = project
@@ -102,6 +120,8 @@ val `satisfactory-tools-all` = project
   .aggregate(
     `satisfactory-tools-core`,
     `satisfactory-tools-app`,
+    `satisfactory-tools-api`,
+    `satisfactory-tools-persistence`,
     `satisfactory-tools-dev`,
     `satisfactory-tools-web`,
     `satisfactory-production-calculator`,
