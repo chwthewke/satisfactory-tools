@@ -59,7 +59,14 @@ val `satisfactory-tools-persistence` = project
   .settings( compilerPlugins )
   .settings(
     libraryDependencies ++=
-      http4s ++ http4sBlazeServer ++ logging
+      doobie ++
+        doobiePostgres ++
+        doobiePostgresCirce ++
+        flywayCore ++
+        postgresql ++
+        http4s ++
+        http4sBlazeServer ++
+        logging
   )
   .dependsOn( `satisfactory-tools-app`, `satisfactory-tools-api` )
   .enablePlugins( ScalacPlugin )
@@ -99,9 +106,11 @@ val `satisfactory-tools-tests` = project
         scalatest ++
         scalacheck ++
         discipline ++
-        catsLaws
+        catsLaws ++
+        doobieScalatest
     ).map( _ % "test" )
   )
+  .settings( Test / fork := true )
   .settings(
     initialCommands := Seq(
       "import cats._",
