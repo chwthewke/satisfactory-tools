@@ -29,6 +29,19 @@ class LoadingSpec extends AnyWordSpec with Matchers {
 
       Inside.inside( Loader.io.loadResource[GameData].attempt.unsafeRunSync() ) { case Right( _ ) => succeed }
     }
+
+    "have class names less than 256 characters long" in {
+
+      Inside.inside( Loader.io.loadResource[GameData].unsafeRunSync() ) {
+        case GameData( items, extractors, manufacturers, recipes, nuclearGenerators ) =>
+          all( items.keys.map( _.name.length ) ) shouldBe <=( 256 )
+          all( extractors.keys.map( _.name.length ) ) shouldBe <=( 256 )
+          all( manufacturers.keys.map( _.name.length ) ) shouldBe <=( 256 )
+          all( recipes.map( _.className.name.length ) ) shouldBe <=( 256 )
+          all( nuclearGenerators.keys.map( _.name.length ) ) shouldBe <=( 256 )
+      }
+
+    }
   }
 
   "The model" should {
