@@ -9,7 +9,6 @@ import cats.syntax.traverseFilter._
 import mouse.boolean._
 import pureconfig.ConfigReader
 import pureconfig.generic.semiauto
-import scala.annotation.nowarn
 
 import data.ClassName
 import data.Countable
@@ -58,7 +57,7 @@ object ProductionConfig {
       ConfigReader[Map[ClassName, Double]]
         .map( _.map( (Countable.apply[Double, ClassName] _).tupled ).toVector )
 
-    semiauto.deriveReader[ProductionConfig]: @nowarn( "cat=lint-byname-implicit" )
+    semiauto.deriveReader[ProductionConfig]
   }
 
 }

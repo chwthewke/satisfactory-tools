@@ -7,10 +7,8 @@ import cats.syntax.traverse._
 import pureconfig.ConfigReader
 import pureconfig.error.CannotConvert
 import pureconfig.generic.semiauto
-import scala.annotation.nowarn
 
 import data.ClassName
-import data.classNameMapReader
 
 case class MapConfig( resourceNodes: Map[ExtractorType, Map[ClassName, ResourceDistrib]] )
 
@@ -42,5 +40,5 @@ object MapConfig {
     )
 
   implicit val mapConfigReader: ConfigReader[MapConfig] =
-    semiauto.deriveReader[MapConfig]: @nowarn( "cat=lint-byname-implicit" )
+    semiauto.deriveReader[MapConfig]
 }

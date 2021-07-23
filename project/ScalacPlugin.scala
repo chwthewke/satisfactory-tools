@@ -12,7 +12,7 @@ object ScalacPlugin extends AutoPlugin {
     "-Vimplicits",
     "-Vtype-diffs",
     "-Xfatal-warnings",
-    "-Xlint",
+    "-Xlint:_,-byname-implicit",
     "-Ywarn-macros:after",
     "-Ywarn-dead-code",
     "-Ywarn-numeric-widen",
