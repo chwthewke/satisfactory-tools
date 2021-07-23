@@ -58,7 +58,14 @@ val `satisfactory-tools-api` = project
   .settings( compilerPlugins )
   .settings(
     libraryDependencies ++=
-      http4s ++ http4sBlazeServer ++ logging
+      doobie ++
+        doobiePostgres ++
+        doobiePostgresCirce ++
+        flywayCore ++
+        postgresql ++
+        http4s ++
+        http4sBlazeServer ++
+        logging
   )
   .dependsOn( `satisfactory-tools-app`, `satisfactory-tools-protocol` )
   .enablePlugins( ScalacPlugin )
@@ -98,7 +105,8 @@ val `satisfactory-tools-tests` = project
         scalatest ++
         scalacheck ++
         discipline ++
-        catsLaws
+        catsLaws ++
+        doobieScalatest
     ).map( _ % "test" )
   )
   .settings(
@@ -111,7 +119,7 @@ val `satisfactory-tools-tests` = project
       "import net.chwthewke.satisfactorytools._"
     ).mkString( "\n" )
   )
-  .dependsOn( `satisfactory-production-calculator`, `satisfactory-tools-web` )
+  .dependsOn( `satisfactory-production-calculator`, `satisfactory-tools-api`, `satisfactory-tools-web` )
   .enablePlugins( ScalacPlugin )
 
 val `satisfactory-tools-all` = project
