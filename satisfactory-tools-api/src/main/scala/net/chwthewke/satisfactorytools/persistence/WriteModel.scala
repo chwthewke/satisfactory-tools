@@ -29,106 +29,111 @@ object WriteModel {
       case Power.Variable( min, max ) => ( min, Some( max ) )
     }
 
-  private[persistence] def insertItem( version: Int ): Update[Item] =
-    Update[( Item, Int )](
-      // language=SQL
-      """INSERT INTO "items"
-        |( "class_name"
-        |, "display_name"
-        |, "form"
-        |, "energy_value"
-        |, "sink_points"
-        |, "data_version"
-        |)
-        |VALUES ( ?, ?, ?, ?, ?, ? )
-        |""".stripMargin
-    ).contramap( ( _, version ) )
+  private[persistence] object statements {
 
-  private[persistence] def insertMachine( version: Int ): Update[Machine] =
-    Update[( Machine, Int )](
-      // language=SQL
-      """INSERT INTO "machines"
-        |( "class_name"
-        |, "display_name"
-        |, "machine_type"
-        |, "power_consumption"
-        |, "data_version"
-        |)
-        |VALUES ( ?, ?, ?, ?, ? )
-        |""".stripMargin
-    ).contramap( ( _, version ) )
+    def insertItem( version: Int ): Update[Item] =
+      Update[( Item, Int )](
+        // language=SQL
+        """INSERT INTO "items"
+          |( "class_name"
+          |, "display_name"
+          |, "form"
+          |, "energy_value"
+          |, "sink_points"
+          |, "data_version"
+          |)
+          |VALUES ( ?, ?, ?, ?, ?, ? )
+          |""".stripMargin
+      ).contramap( ( _, version ) )
 
-  private[persistence] def insertRecipe( version: Int ): Update[( Recipe, MachineId )] =
-    Update[( ClassName, String, FiniteDuration, MachineId, Power, Int )](
-      // language=SQL
-      """INSERT INTO "recipes"
-        |( "class_name"
-        |, "display_name"
-        |, "duration_ms"
-        |, "produced_in"
-        |, "power"
-        |, "power_var"
-        |, "data_version"
-        |)
-        |VALUES ( ?, ?, ?, ?, ?, ?, ? )
-        |""".stripMargin
-    ).contramap {
-      case ( recipe, machineId ) =>
-        ( recipe.className, recipe.displayName, recipe.duration, machineId, recipe.power, version )
-    }
+    def insertMachine( version: Int ): Update[Machine] =
+      Update[( Machine, Int )](
+        // language=SQL
+        """INSERT INTO "machines"
+          |( "class_name"
+          |, "display_name"
+          |, "machine_type"
+          |, "power_consumption"
+          |, "data_version"
+          |)
+          |VALUES ( ?, ?, ?, ?, ? )
+          |""".stripMargin
+      ).contramap( ( _, version ) )
 
-  private[persistence] val insertRecipeIngredient: Update[( RecipeId, Countable[Double, ItemId] )] =
-    Update(
-      // language=SQL
-      """INSERT INTO "recipe_ingredients"
-        |( "recipe_id"
-        |, "item_id"
-        |, "amount"
-        |)
-        |VALUES ( ?, ?, ? )
-        |""".stripMargin
-    )
+    def insertRecipe( version: Int ): Update[( Recipe, MachineId )] =
+      Update[( ClassName, String, FiniteDuration, MachineId, Power, Int )](
+        // language=SQL
+        """INSERT INTO "recipes"
+          |( "class_name"
+          |, "display_name"
+          |, "duration_ms"
+          |, "produced_in"
+          |, "power"
+          |, "power_var"
+          |, "data_version"
+          |)
+          |VALUES ( ?, ?, ?, ?, ?, ?, ? )
+          |""".stripMargin
+      ).contramap {
+        case ( recipe, machineId ) =>
+          ( recipe.className, recipe.displayName, recipe.duration, machineId, recipe.power, version )
+      }
 
-  private[persistence] val insertRecipeProduct: Update[( RecipeId, Countable[Double, ItemId] )] =
-    Update(
-      // language=SQL
-      """INSERT INTO "recipe_products"
-        |( "recipe_id"
-        |, "item_id"
-        |, "amount"
-        |)
-        |VALUES ( ?, ?, ? )
-        |""".stripMargin
-    )
+    val insertRecipeIngredient: Update[( RecipeId, Countable[Double, ItemId] )] =
+      Update(
+        // language=SQL
+        """INSERT INTO "recipe_ingredients"
+          |( "recipe_id"
+          |, "item_id"
+          |, "amount"
+          |)
+          |VALUES ( ?, ?, ? )
+          |""".stripMargin
+      )
 
-  private[persistence] val insertExtractionRecipe: Update[( ItemId, ResourcePurity, RecipeId )] =
-    Update(
-      // language=SQL
-      """INSERT INTO "extraction_recipes"
-        |( "item_id"
-        |, "purity"
-        |, "recipe_id"
-        |)
-        |VALUES ( ?, ?, ? )
-        |""".stripMargin
-    )
+    val insertRecipeProduct: Update[( RecipeId, Countable[Double, ItemId] )] =
+      Update(
+        // language=SQL
+        """INSERT INTO "recipe_products"
+          |( "recipe_id"
+          |, "item_id"
+          |, "amount"
+          |)
+          |VALUES ( ?, ?, ? )
+          |""".stripMargin
+      )
 
-  private[persistence] def insertResourceNodes( version: Int ): Update[( ExtractorType, ItemId, ResourceDistrib )] =
-    Update[( ExtractorType, ItemId, ResourceDistrib, Int )](
-      // language=SQL
-      """INSERT INTO "resource_nodes"
-        |( "extractor_type"
-        |, "item_id"
-        |, "impure"
-        |, "normal"
-        |, "pure"
-        |, "data_version"
-        |)
-        |VALUES ( ?, ?, ?, ?, ?, ? )
-        |""".stripMargin
-    ).contramap {
-      case ( extractorType, itemId, distrib ) => ( extractorType, itemId, distrib, version )
-    }
+    val insertExtractionRecipe: Update[( ItemId, ResourcePurity, RecipeId )] =
+      Update(
+        // language=SQL
+        """INSERT INTO "extraction_recipes"
+          |( "item_id"
+          |, "purity"
+          |, "recipe_id"
+          |)
+          |VALUES ( ?, ?, ? )
+          |""".stripMargin
+      )
+
+    def insertResourceNodes( version: Int ): Update[( ExtractorType, ItemId, ResourceDistrib )] =
+      Update[( ExtractorType, ItemId, ResourceDistrib, Int )](
+        // language=SQL
+        """INSERT INTO "resource_nodes"
+          |( "extractor_type"
+          |, "item_id"
+          |, "impure"
+          |, "normal"
+          |, "pure"
+          |, "data_version"
+          |)
+          |VALUES ( ?, ?, ?, ?, ?, ? )
+          |""".stripMargin
+      ).contramap {
+        case ( extractorType, itemId, distrib ) => ( extractorType, itemId, distrib, version )
+      }
+  }
+
+  import statements._
 
   private def writeItems( items: Vector[Item], version: Int ): ConnectionIO[Map[ClassName, ItemId]] =
     insertItem( version )

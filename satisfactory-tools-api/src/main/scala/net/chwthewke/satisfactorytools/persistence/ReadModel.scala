@@ -35,66 +35,98 @@ object ReadModel {
       case ( min, Some( max ) ) => Power.Variable( min, max )
     }
 
-  def selectItems( version: Int ): Query0[( ItemId, Item )] =
-    // language=SQL
-    sql"""SELECT 
-         |    "id"
-         |  , "class_name"
-         |  , "display_name"
-         |  , "form"
-         |  , "energy_value"
-         |  , "sink_points"
-         |FROM "items"
-         |WHERE "data_version" = $version
-         |""".stripMargin //
-    .query
+  private[persistence] object statements {
 
-  def selectMachines( version: Int ): Query0[( MachineId, Machine )] =
-    // language=SQL
-    sql"""SELECT
-         |    "id"
-         |  , "class_name"
-         |  , "display_name"
-         |  , "machine_type"
-         |  , "power_consumption"
-         |FROM "machines"
-         |WHERE "data_version" = $version
-         |""".stripMargin //
-    .query
+    def selectItems( version: Int ): Query0[( ItemId, Item )] =
+      // language=SQL
+      sql"""SELECT 
+           |    "id"
+           |  , "class_name"
+           |  , "display_name"
+           |  , "form"
+           |  , "energy_value"
+           |  , "sink_points"
+           |FROM "items"
+           |WHERE "data_version" = $version
+           |""".stripMargin //
+      .query
 
-  type RecipeRow = ( RecipeId, ( ClassName, String, FiniteDuration, MachineId, Power ), Countable[Double, ItemId] )
+    def selectMachines( version: Int ): Query0[( MachineId, Machine )] =
+      // language=SQL
+      sql"""SELECT
+           |    "id"
+           |  , "class_name"
+           |  , "display_name"
+           |  , "machine_type"
+           |  , "power_consumption"
+           |FROM "machines"
+           |WHERE "data_version" = $version
+           |""".stripMargin //
+      .query
 
-  def selectRecipes( version: Int ): Query0[RecipeRow] =
-    // language=SQL
-    sql"""SELECT
-         |    r."id"
-         |  , r."class_name"
-         |  , r."display_name"
-         |  , r."duration_ms"
-         |  , r."produced_in"
-         |  , r."power"
-         |  , r."power_var"
-         |  , p."item_id"
-         |  , p."amount"
-         |FROM         "recipes"          r
-         |  INNER JOIN "recipe_products"  p  ON r."id" = p."recipe_id"
-         |WHERE r."data_version" = $version
-         |ORDER BY r."id", p."id"
-         |""".stripMargin //
-    .query
+    type RecipeRow = ( RecipeId, ( ClassName, String, FiniteDuration, MachineId, Power ), Countable[Double, ItemId] )
 
-  def selectRecipeIngredients( version: Int ): Query0[( RecipeId, Countable[Double, ItemId] )] =
-    // language=SQL
-    sql"""SELECT
-         |    i."recipe_id"
-         |  , i."item_id"
-         |  , i."amount"
-         |FROM          "recipe_ingredients"  i
-         |  INNER JOIN  "recipes"             r  ON i."recipe_id" = r."id"
-         |WHERE  r."data_version" = $version
-         |ORDER BY i."recipe_id", i."id"
-         |""".stripMargin //
-    .query
+    def selectRecipes( version: Int ): Query0[RecipeRow] =
+      // language=SQL
+      sql"""SELECT
+           |    r."id"
+           |  , r."class_name"
+           |  , r."display_name"
+           |  , r."duration_ms"
+           |  , r."produced_in"
+           |  , r."power"
+           |  , r."power_var"
+           |  , p."item_id"
+           |  , p."amount"
+           |FROM         "recipes"          r
+           |  INNER JOIN "recipe_products"  p  ON r."id" = p."recipe_id"
+           |WHERE r."data_version" = $version
+           |ORDER BY r."id", p."id"
+           |""".stripMargin //
+      .query
+
+    def selectRecipeIngredients( version: Int ): Query0[( RecipeId, Countable[Double, ItemId] )] =
+      // language=SQL
+      sql"""SELECT
+           |    i."recipe_id"
+           |  , i."item_id"
+           |  , i."amount"
+           |FROM          "recipe_ingredients"  i
+           |  INNER JOIN  "recipes"             r  ON i."recipe_id" = r."id"
+           |WHERE  r."data_version" = $version
+           |ORDER BY i."recipe_id", i."id"
+           |""".stripMargin //
+      .query
+
+    def selectExtractionRecipes( version: Int ): Query0[( ItemId, ResourcePurity, RecipeId )] =
+      // language=SQL
+      sql"""SELECT
+           |    "item_id"
+           |  , "purity"
+           |  , "recipe_id"
+           |FROM "extraction_recipes" x
+           |INNER JOIN "recipes" r on x."recipe_id" = r."id"
+           |WHERE r."data_version" = $version
+           |ORDER BY "item_id"
+           |""".stripMargin //
+      .query
+
+    def selectResourceNodes( version: Int ): Query0[( ExtractorType, ( ItemId, ResourceDistrib ) )] =
+      // language=SQL
+      sql"""SELECT
+           |    "extractor_type"
+           |  , "item_id"
+           |  , "impure"
+           |  , "normal"
+           |  , "pure"
+           |FROM "resource_nodes"
+           |WHERE "data_version" = $version
+           |ORDER BY "extractor_type"
+           |""".stripMargin //
+      .query
+  }
+
+  import statements._
 
   def readRecipes(
       itemsById: Map[ItemId, Item],
@@ -129,19 +161,6 @@ object ReadModel {
         power
       )
 
-  def selectExtractionRecipes( version: Int ): Query0[( ItemId, ResourcePurity, RecipeId )] =
-    // language=SQL
-    sql"""SELECT
-         |    "item_id"
-         |  , "purity"
-         |  , "recipe_id"
-         |FROM "extraction_recipes" x
-         |INNER JOIN "recipes" r on x."recipe_id" = r."id"
-         |WHERE r."data_version" = $version
-         |ORDER BY "item_id"
-         |""".stripMargin //
-    .query
-
   def readExtractionRecipes(
       itemsById: Map[ItemId, Item],
       recipesById: Map[RecipeId, Recipe],
@@ -157,20 +176,6 @@ object ReadModel {
       .compile
       .toVector
   }
-
-  def selectResourceNodes( version: Int ): Query0[( ExtractorType, ( ItemId, ResourceDistrib ) )] =
-    // language=SQL
-    sql"""SELECT
-         |    "extractor_type"
-         |  , "item_id"
-         |  , "impure"
-         |  , "normal"
-         |  , "pure"
-         |FROM "resource_nodes"
-         |WHERE "data_version" = $version
-         |ORDER BY "extractor_type"
-         |""".stripMargin //
-    .query
 
   def readResourceNodes(
       itemsById: Map[ItemId, Item],
