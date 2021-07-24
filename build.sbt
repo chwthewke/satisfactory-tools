@@ -26,6 +26,7 @@ val `satisfactory-tools-core` = project
         alleycatsCore ++
         mouse ++
         kittens ++
+        catsTime ++
         atto ++
         circe ++
         enumeratum ++

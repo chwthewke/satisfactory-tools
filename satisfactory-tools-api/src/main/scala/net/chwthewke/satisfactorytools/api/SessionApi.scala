@@ -5,19 +5,19 @@ import cats.data.OptionT
 import cats.~>
 import org.http4s.Credentials
 
+import protocol.Session
 import protocol.SessionId
-import protocol.UserId
 
 trait SessionApi[F[_]] { self =>
-  def newSession( credentials: Credentials ): F[( UserId, SessionId )]
+  def newSession( credentials: Credentials ): F[Session]
 
-  def getUser( sessionId: SessionId ): OptionT[F, UserId]
+  def getSession( sessionId: SessionId ): OptionT[F, Session]
 
   def mapK[G[_]]( f: F ~> G ): SessionApi[G] = new SessionApi[G] {
-    override def newSession( credentials: Credentials ): G[( UserId, SessionId )] =
+    override def newSession( credentials: Credentials ): G[Session] =
       f( self.newSession( credentials ) )
 
-    override def getUser( sessionId: SessionId ): OptionT[G, UserId] =
-      self.getUser( sessionId ).mapK( f )
+    override def getSession( sessionId: SessionId ): OptionT[G, Session] =
+      self.getSession( sessionId ).mapK( f )
   }
 }
