@@ -12,6 +12,7 @@ import scala.concurrent.duration._
 import data.Form
 import model.ExtractorType
 import model.MachineType
+import model.Options
 import model.ResourcePurity
 
 package object persistence {
@@ -38,6 +39,13 @@ package object persistence {
   implicit val extractorTypeMeta: Meta[ExtractorType] = enumMeta( "T_EXTRACTOR_TYPE" )
   implicit val machineTypeMeta: Meta[MachineType]     = enumMeta( "T_MACHINE_TYPE" )
   implicit val purityMeta: Meta[ResourcePurity]       = enumMeta( "T_PURITY" )
+
+  implicit val beltOptionsMeta: Meta[Options.Belt]            = enumMeta( "T_BELT_TIER" )
+  implicit val pipeOptionMeta: Meta[Options.Pipe]             = enumMeta( "T_PIPE_TIER" )
+  implicit val minerOptionMeta: Meta[Options.Miner]           = enumMeta( "T_MINER_TIER" )
+  implicit val clockSpeedOptionMeta: Meta[Options.ClockSpeed] = enumMeta( "T_CLOCK_SPEED" )
+  implicit val extractorTypeArrayMeta: Meta[Set[ExtractorType]] =
+    enumArrayMeta[ExtractorType]( "T_EXTRACTOR_TYPE" ).timap( _.toSet )( _.toVector )
 
   implicit val finiteDurationMeta: Meta[FiniteDuration] =
     Meta[Int].timap( _.millis )( _.toMillis.toInt )

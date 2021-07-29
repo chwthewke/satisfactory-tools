@@ -38,6 +38,18 @@ class ReadModelChecks extends DatabaseSpec {
         check( ReadModel.statements.selectResourceNodes( 0 ) )
       }
     }
+
+    "selects item ids" must {
+      "type check" in {
+        check( ReadModel.statements.selectItemIds( ModelVersion ) )
+      }
+    }
+
+    "selects recipe ids" must {
+      "type check" in {
+        check( ReadModel.statements.selectRecipeIds( ModelVersion ) )
+      }
+    }
   }
 
 }

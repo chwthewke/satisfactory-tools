@@ -122,11 +122,27 @@ object ReadModel {
            |ORDER BY "extractor_type"
            |""".stripMargin //
       .query
+
+    def selectItemIds( modelVersion: Int ): Query0[( ClassName, ItemId )] =
+      // language=SQL
+      sql"""SELECT "class_name", "id"
+           |FROM "items"
+           |WHERE "data_version" = $modelVersion
+           |""".stripMargin //
+      .query
+
+    def selectRecipeIds( modelVersion: Int ): Query0[( ClassName, RecipeId )] =
+      // language=SQL
+      sql"""SELECT "class_name", "id"
+           |FROM "recipes"
+           |WHERE "data_version" = $modelVersion
+           |""".stripMargin //
+      .query
   }
 
   import statements._
 
-  def readRecipes(
+  private def buildRecipes(
       itemsById: Map[ItemId, Item],
       machinesById: Map[MachineId, Machine],
       version: Int
@@ -159,7 +175,7 @@ object ReadModel {
         power
       )
 
-  def readExtractionRecipes(
+  private def readExtractionRecipes(
       itemsById: Map[ItemId, Item],
       recipesById: Map[RecipeId, Recipe],
       version: Int
@@ -175,7 +191,7 @@ object ReadModel {
       .toVector
   }
 
-  def readResourceNodes(
+  private def readResourceNodes(
       itemsById: Map[ItemId, Item],
       version: Int
   ): ConnectionIO[Map[ExtractorType, Map[Item, ResourceDistrib]]] =
@@ -195,7 +211,7 @@ object ReadModel {
     for {
       itemsById         <- selectItems( version ).toMap
       machinesById      <- selectMachines( version ).toMap
-      recipesById       <- readRecipes( itemsById, machinesById, version ).map( _.to( SortedMap ) )
+      recipesById       <- buildRecipes( itemsById, machinesById, version ).map( _.to( SortedMap ) )
       extractionRecipes <- readExtractionRecipes( itemsById, recipesById, version )
       resourceNodes     <- readResourceNodes( itemsById, version )
     } yield {
@@ -216,5 +232,21 @@ object ReadModel {
         ResourceOptions( resourceNodes, ResourceWeights.default )
       )
     }
+
+  def readItemIds: ConnectionIO[Map[ClassName, ItemId]] =
+    selectItemIds( ModelVersion ).toMap
+
+  def readItems: ConnectionIO[Map[ItemId, Item]] =
+    selectItems( ModelVersion ).toMap
+
+  def readRecipeIds: ConnectionIO[Map[ClassName, RecipeId]] =
+    selectRecipeIds( ModelVersion ).toMap
+
+  def readRecipes: ConnectionIO[Map[RecipeId, Recipe]] =
+    for {
+      itemsById    <- readItems
+      machinesById <- selectMachines( ModelVersion ).toMap
+      recipes      <- buildRecipes( itemsById, machinesById, ModelVersion )
+    } yield recipes.toMap
 
 }
