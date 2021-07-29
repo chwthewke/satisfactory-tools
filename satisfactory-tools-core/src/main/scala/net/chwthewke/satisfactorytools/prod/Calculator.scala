@@ -32,7 +32,7 @@ object Calculator {
     val selection = RecipeSelection( model, inputs.recipeList, inputs.options, inputs.resourceOptions )
 
     solver
-      .solve( inputs.bill, RecipeSelection( model, inputs.recipeList, inputs.options, inputs.resourceOptions ) )
+      .solve( inputs.bill, selection )
       .map( solutionFactory( inputs.bill, selection, _ ) )
   }
 

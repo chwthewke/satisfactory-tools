@@ -6,7 +6,9 @@ import cats.Show
 import enumeratum.Enum
 import enumeratum.EnumEntry
 
-sealed abstract class ResourcePurity( override val entryName: String, val multiplier: Double ) extends EnumEntry
+sealed abstract class ResourcePurity( override val entryName: String, val multiplier: Double )
+    extends EnumEntry
+    with Product
 
 object ResourcePurity extends Enum[ResourcePurity] {
   final case object Pure   extends ResourcePurity( "pure", 2.0d )

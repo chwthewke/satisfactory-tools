@@ -1,6 +1,7 @@
 package net.chwthewke.satisfactorytools
 package model
 
+import cats.Eq
 import cats.Monoid
 import cats.Show
 import cats.derived.semiauto
@@ -27,7 +28,16 @@ case class ResourceDistrib( impureNodes: Int, normalNodes: Int, pureNodes: Int )
 }
 
 object ResourceDistrib {
+  def of( purity: ResourcePurity, amount: Int ): ResourceDistrib =
+    purity match {
+      case ResourcePurity.Pure   => ResourceDistrib( 0, 0, amount )
+      case ResourcePurity.Normal => ResourceDistrib( 0, amount, 0 )
+      case ResourcePurity.Impure => ResourceDistrib( amount, 0, 0 )
+    }
+
   implicit val resourceDistribMonoid: Monoid[ResourceDistrib] = semiauto.monoid[ResourceDistrib]
 
   implicit val resourceDistribShow: Show[ResourceDistrib] = Show.fromToString[ResourceDistrib]
+
+  implicit val resourceDistribEq: Eq[ResourceDistrib] = semiauto.eq[ResourceDistrib]
 }

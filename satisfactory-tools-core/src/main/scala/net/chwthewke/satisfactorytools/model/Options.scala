@@ -1,6 +1,7 @@
 package net.chwthewke.satisfactorytools
 package model
 
+import cats.Eq
 import cats.Show
 import cats.derived.semiauto
 import enumeratum.Enum
@@ -46,17 +47,19 @@ object Options {
       ExtractorType.values.toSet,
       Set.empty
     )
+
   val default: Options =
     Options(
-      Belt.BeltMk4,
+      Belt.BeltMk5,
       Pipe.PipeMk2,
-      Miner.MinerMk2,
+      Miner.MinerMk3,
       ClockSpeed.ClockSpeed100,
       ExtractorType.values.toSet,
       Set.empty
     )
 
   implicit val optionsShow: Show[Options] = semiauto.show[Options]
+  implicit val optionsEq: Eq[Options]     = Eq.fromUniversalEquals[Options]
 
   sealed abstract class Belt( override val entryName: String, val itemsPerMinute: Int ) extends EnumEntry
 

@@ -1,6 +1,8 @@
 package net.chwthewke.satisfactorytools
 package model
 
+import cats.Order.catsKernelOrderingForOrder
+import cats.Eq
 import cats.Show
 import cats.syntax.option._
 
@@ -21,5 +23,8 @@ object Bill {
       .map { case Countable( item, amount ) => f"$amount%.2f ${item.displayName}" }
       .mkString( "\n" )
   )
+
+  implicit val billEq: Eq[Bill] =
+    Eq.by( _.items.gather.sorted )
 
 }

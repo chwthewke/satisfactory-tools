@@ -1,6 +1,8 @@
 package net.chwthewke.satisfactorytools
 package model
 
+import cats.kernel.Eq
+
 import data.Item
 
 case class ResourceWeights( weights: Map[Item, Int] /* int coded btw `0` and `2 * range` inclusive */ ) {
@@ -24,4 +26,7 @@ object ResourceWeights {
 
   val total: Double = 1e6
   val range: Int    = 4 // weight between -range and range inclusive
+
+  implicit val resourceWeightsEq: Eq[ResourceWeights] =
+    Eq.by( _.weights.filterNot { case ( _, w ) => w == range } )
 }

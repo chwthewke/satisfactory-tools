@@ -4,6 +4,7 @@ package data
 import cats.Applicative
 import cats.Eval
 import cats.Monad
+import cats.Order
 import cats.Show
 import cats.Traverse
 import cats.syntax.show._
@@ -59,4 +60,7 @@ object Countable {
 
   implicit def countableShow[N: Show, A: Show]: Show[Countable[N, A]] =
     Show.show { case Countable( name, amount ) => show"$name ($amount)" }
+
+  implicit def countableOrder[N: Order, A: Order]: Order[Countable[N, A]] =
+    Order.by { case Countable( item, amount ) => ( item, amount ) }
 }

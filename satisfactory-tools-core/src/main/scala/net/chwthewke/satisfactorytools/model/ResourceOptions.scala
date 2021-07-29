@@ -2,6 +2,7 @@ package net.chwthewke.satisfactorytools
 package model
 
 import alleycats.std.map._
+import cats.Eq
 import cats.Show
 import cats.syntax.foldable._
 import cats.syntax.functor._
@@ -55,4 +56,12 @@ object ResourceOptions {
               |""".stripMargin
     )
   }
+
+  implicit val resourceOptionsEq: Eq[ResourceOptions] = Eq.by(
+    ro =>
+      (
+        ro.resourceNodes.map { case ( t, m ) => ( t, m.map { case ( i, d ) => ( i.className, d ) } ) },
+        ro.resourceWeights
+      )
+  )
 }
