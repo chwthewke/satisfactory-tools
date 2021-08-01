@@ -17,9 +17,9 @@ trait LibraryApi[F[_]] { self =>
 
   def copyPlan( userId: UserId, planId: PlanId ): F[PlanId]
 
-  def getAllPlans( userId: UserId ): F[Vector[( PlanId, PlanHeader )]]
+  def getAllPlans( userId: UserId ): F[Vector[PlanHeader]]
 
-  def getPlans( userId: UserId, page: PageQuery ): F[Page[( PlanId, PlanHeader )]]
+  def getPlans( userId: UserId, page: PageQuery ): F[Page[PlanHeader]]
 
   def mapK[G[_]]( f: F ~> G ): LibraryApi[G] = new LibraryApi[G] {
     override def savePlan( userId: UserId, planId: PlanId, srcIdOpt: Option[PlanId], title: PlanName ): G[PlanId] =
@@ -31,10 +31,10 @@ trait LibraryApi[F[_]] { self =>
     override def copyPlan( userId: UserId, planId: PlanId ): G[PlanId] =
       f( self.copyPlan( userId, planId ) )
 
-    override def getAllPlans( userId: UserId ): G[Vector[( PlanId, PlanHeader )]] =
+    override def getAllPlans( userId: UserId ): G[Vector[PlanHeader]] =
       f( self.getAllPlans( userId ) )
 
-    override def getPlans( userId: UserId, page: PageQuery ): G[Page[( PlanId, PlanHeader )]] =
+    override def getPlans( userId: UserId, page: PageQuery ): G[Page[PlanHeader]] =
       f( self.getPlans( userId, page ) )
   }
 }

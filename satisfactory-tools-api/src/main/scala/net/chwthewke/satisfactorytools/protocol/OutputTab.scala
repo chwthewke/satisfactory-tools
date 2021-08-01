@@ -7,14 +7,14 @@ import data.Item
 import model.Machine
 import prod.Factory
 
-sealed abstract class OutputTab {
+sealed abstract class OutputTab extends Product {
   type Data
 }
 
 object OutputTab {
   type Aux[D] = OutputTab { type Data = D }
 
-  final case object Plan                  extends OutputTab { type Data = ( Factory, Map[ClassName, Int] ) }
+  final case object Steps                 extends OutputTab { type Data = ( Factory, Map[ClassName, Int] ) }
   final case object Items                 extends OutputTab { type Data = Map[Item, ItemIO]                }
   final case object Machines              extends OutputTab { type Data = Vector[Countable[Int, Machine]]  }
   final case object Inputs                extends OutputTab { type Data = Vector[Countable[Double, Item]]  }

@@ -2,7 +2,6 @@ package net.chwthewke.satisfactorytools
 package persistence
 
 import cats.effect.IO
-import cats.syntax.flatMap._
 import doobie.implicits._
 import fr.thomasdufour.autodiff.extra.scalatest.AutodiffMatchers.~=
 

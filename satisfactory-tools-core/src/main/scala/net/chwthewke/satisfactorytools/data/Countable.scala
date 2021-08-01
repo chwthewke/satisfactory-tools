@@ -16,6 +16,7 @@ final case class Countable[N, A]( item: A, amount: N )
 object Countable {
   implicit class GatherOps[F[x] <: Iterable[x], N, A]( private val self: F[Countable[N, A]] ) {
     def gather( implicit N: Numeric[N], F: Factory[Countable[N, A], F[Countable[N, A]]] ): F[Countable[N, A]] =
+      // TODO stable order?
       self
         .groupMap( _.item )( _.amount )
         .map { case ( item, amounts ) => Countable( item, amounts.sum ) }

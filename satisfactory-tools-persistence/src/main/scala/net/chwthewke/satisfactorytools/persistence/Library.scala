@@ -54,10 +54,10 @@ object Library extends LibraryApi[ConnectionIO] {
       _     <- copyPlanParts( planId, newId )
     } yield newId
 
-  override def getAllPlans( userId: UserId ): ConnectionIO[Vector[( PlanId, PlanHeader )]] =
+  override def getAllPlans( userId: UserId ): ConnectionIO[Vector[PlanHeader]] =
     statements.selectPlanHeaders.toQuery0( userId ).to[Vector]
 
-  override def getPlans( userId: UserId, page: PageQuery ): ConnectionIO[Page[( PlanId, PlanHeader )]] =
+  override def getPlans( userId: UserId, page: PageQuery ): ConnectionIO[Page[PlanHeader]] =
     statements.selectPlanHeadersPage
       .toQuery0( ( userId, page.limit + 1L, page.offset ) )
       .to[Vector]
@@ -76,20 +76,20 @@ object Library extends LibraryApi[ConnectionIO] {
   private def copyPlanParts( from: PlanId, to: PlanId ): ConnectionIO[Unit] =
     for {
       // TODO optimized SQL for the inputs part?
-      bill       <- Plans.getPlanQuery( from, InputTab.BillTab )
+      bill       <- Plans.getPlanQuery( from, InputTab.Bill )
       _          <- Plans.setBill( to, bill )
-      recipeList <- Plans.getPlanQuery( from, InputTab.RecipeListTab )
-      _          <- Plans.setRecipeList( from, recipeList )
-      options    <- Plans.getPlanQuery( from, InputTab.OptionsTab )
-      _          <- Plans.setOptions( from, options )
-      resources  <- Plans.getPlanQuery( from, InputTab.ResourceOptionsTab )
-      _          <- Plans.setResourceOptions( from, resources )
+      recipeList <- Plans.getPlanQuery( from, InputTab.Recipes )
+      _          <- Plans.setRecipeList( to, recipeList )
+      options    <- Plans.getPlanQuery( from, InputTab.Options )
+      _          <- Plans.setOptions( to, options )
+      resources  <- Plans.getPlanQuery( from, InputTab.ResourceOptions )
+      _          <- Plans.setResourceOptions( to, resources )
       //
       _ <- Plans.statements.deleteSolution.run( to )
       _ <- copySolution( from, to )
     } yield ()
 
-  private def copySolution( from: PlanId, to: PlanId ) =
+  private def copySolution( from: PlanId, to: PlanId ): ConnectionIO[Unit] =
     for {
       newId <- statements.copyPlanSolution.withUniqueGeneratedKeys[SolutionId]( "id" )( ( to, from ) )
       _     <- copySolutionItems( from, newId )
@@ -122,6 +122,8 @@ object Library extends LibraryApi[ConnectionIO] {
     type PlanHeaderRow =
       (
           PlanId,
+          UserId,
+          Option[PlanName],
           Option[PlanName],
           Option[PlanId],
           Instant,
@@ -131,19 +133,30 @@ object Library extends LibraryApi[ConnectionIO] {
           Option[Int]
       )
 
-    private val fromPlanHeaderRow: PlanHeaderRow => ( PlanId, PlanHeader ) = {
-      case ( id, nameOpt, srcIdOpt, updated, solutionIdOpt, solutionErrorOpt, groupCountOpt, lastGroupOpt ) =>
-        (
+    private val fromPlanHeaderRow: PlanHeaderRow => PlanHeader = {
+      case (
           id,
-          PlanHeader(
-            nameOpt,
-            srcIdOpt,
-            updated,
-            solutionIdOpt,
-            solutionErrorOpt,
-            groupCountOpt,
-            lastGroupOpt
-          )
+          owner,
+          nameOpt,
+          srcNameOpt,
+          srcIdOpt,
+          updated,
+          solutionIdOpt,
+          solutionErrorOpt,
+          groupCountOpt,
+          lastGroupOpt
+          ) =>
+        PlanHeader(
+          id,
+          owner,
+          nameOpt,
+          srcNameOpt,
+          srcIdOpt,
+          updated,
+          solutionIdOpt,
+          solutionErrorOpt,
+          groupCountOpt,
+          lastGroupOpt
         )
     }
 
@@ -151,7 +164,9 @@ object Library extends LibraryApi[ConnectionIO] {
       // language=SQL
       """SELECT
         |    p."id"
+        |  , p."user_id"  
         |  , p."name"
+        |  , q."name"
         |  , p."src_id"
         |  , p."updated"
         |  , s."id"
@@ -159,17 +174,18 @@ object Library extends LibraryApi[ConnectionIO] {
         |  , s."custom_groups"
         |  , MAX( r."custom_group" )
         |FROM        "plans"                          p
+        |LEFT JOIN   "plans"                          q ON q."id" = p."src_id"
         |LEFT JOIN   "plan_solutions"                 s ON p."id" = s."plan_id"
         |LEFT JOIN   "solution_manufacturing_recipes" r ON s."id" = r."solution_id"
         |WHERE p."user_id" = ?
-        |GROUP BY p."id", p."updated", s."id"
+        |GROUP BY p."id", p."updated", q."name", s."id"
         |ORDER BY p."updated" DESC
         |""".stripMargin
 
-    val selectPlanHeaders: Query[UserId, ( PlanId, PlanHeader )] =
+    val selectPlanHeaders: Query[UserId, PlanHeader] =
       Query[UserId, PlanHeaderRow]( selectPlanHeadersStmt ).map( fromPlanHeaderRow )
 
-    val selectPlanHeadersPage: Query[( UserId, Long, Long ), ( PlanId, PlanHeader )] =
+    val selectPlanHeadersPage: Query[( UserId, Long, Long ), PlanHeader] =
       Query[( UserId, Long, Long ), PlanHeaderRow](
         selectPlanHeadersStmt ++
           """LIMIT ? OFFSET ?

@@ -84,6 +84,19 @@ val `satisfactory-tools-web` = project
   .dependsOn( `satisfactory-tools-app`, `satisfactory-tools-api` )
   .enablePlugins( ScalacPlugin )
 
+val `satisfactory-tools-web-v2` = project
+  .settings( compilerPlugins )
+  .settings(
+    libraryDependencies ++=
+      http4s ++
+        http4sBlazeServer ++
+        scodec ++
+        scalatags ++
+        logging
+  )
+  .dependsOn( `satisfactory-tools-api`, `satisfactory-tools-persistence` )
+  .enablePlugins( ScalacPlugin )
+
 val `satisfactory-tools-dev` = project
   .settings( compilerPlugins )
   .dependsOn( `satisfactory-tools-app` )
@@ -121,7 +134,12 @@ val `satisfactory-tools-tests` = project
       "import net.chwthewke.satisfactorytools._"
     ).mkString( "\n" )
   )
-  .dependsOn( `satisfactory-production-calculator`, `satisfactory-tools-persistence`, `satisfactory-tools-web` )
+  .dependsOn(
+    `satisfactory-production-calculator`,
+    `satisfactory-tools-persistence`,
+    `satisfactory-tools-web`,
+    `satisfactory-tools-web-v2`
+  )
   .enablePlugins( ScalacPlugin )
 
 val `satisfactory-tools-all` = project
@@ -133,6 +151,7 @@ val `satisfactory-tools-all` = project
     `satisfactory-tools-persistence`,
     `satisfactory-tools-dev`,
     `satisfactory-tools-web`,
+    `satisfactory-tools-web-v2`,
     `satisfactory-production-calculator`,
     `satisfactory-tools-tests`
   )

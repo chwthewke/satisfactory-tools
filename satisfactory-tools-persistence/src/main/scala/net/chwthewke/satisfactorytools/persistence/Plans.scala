@@ -14,7 +14,6 @@ import cats.syntax.traverse._
 import doobie._
 import doobie.implicits._
 import doobie.postgres.implicits._
-import java.time.Instant
 
 import api.PlannerApi
 import data.ClassName
@@ -42,7 +41,6 @@ import protocol.ItemSrcDest
 import protocol.OutputTab
 import protocol.PlanHeader
 import protocol.PlanId
-import protocol.PlanName
 import protocol.SolutionHeader
 import protocol.SolutionId
 import protocol.UserId
@@ -55,9 +53,7 @@ import protocol.UserId
 // TODO also OMG such a large file
 object Plans extends PlannerApi[ConnectionIO] {
 
-  private val Tolerance: Double        = 1e-4
-  private val DefaultCustomGroups: Int = 4
-  private val MaxCustomGroups: Int     = 16
+  private val Tolerance: Double = 1e-4
 
   override def newPlan(
       userId: UserId,
@@ -73,8 +69,9 @@ object Plans extends PlannerApi[ConnectionIO] {
 
   override def addCustomGroup( planId: PlanId ): ConnectionIO[Boolean] =
     getPlanHeader( planId )
-      .subflatMap( extractSolutionIdWithCount )
-      .filter( _._1 < MaxCustomGroups )
+      .map( _.solution )
+      .filter( _.canAddGroup )
+      .subflatMap( extractIdAndGroupCount )
       .semiflatMap {
         case ( groupCount, solutionId ) =>
           statements.updateGroupCount.run( ( groupCount + 1, solutionId ) )
@@ -83,14 +80,19 @@ object Plans extends PlannerApi[ConnectionIO] {
 
   override def removeCustomGroup( planId: PlanId ): ConnectionIO[Boolean] =
     getPlanHeader( planId )
-      .subflatMap( extractSolutionIdWithCountAndLast )
-      .filter { case ( groupCount, lastGroup, _ ) => groupCount > lastGroup }
+      .map( _.solution )
+      .filter( _.canRemoveGroup )
+      .subflatMap( extractIdAndGroupCount )
       .semiflatMap {
-        case ( groupCount, _, solutionId ) =>
+        case ( groupCount, solutionId ) =>
           statements.updateGroupCount.run( ( groupCount - 1, solutionId ) )
       }
       .fold( false )( _ > 0 )
 
+  /*
+   * TODO might be able to wrangle a ConnectionIO[Boolean] indicating change or lack thereof
+   *  https://stackoverflow.com/questions/41482441/postgresql-upsert-do-nothing-if-fields-dont-change
+   */
   override def setBill( planId: PlanId, bill: Bill ): ConnectionIO[Unit] =
     statements.deleteBill.run( planId ) *>
       insertBill( planId, bill )
@@ -108,7 +110,8 @@ object Plans extends PlannerApi[ConnectionIO] {
 
   override def setCustomGroupSelection( planId: PlanId, groups: Map[ClassName, Int] ): ConnectionIO[Unit] =
     getPlanHeader( planId )
-      .subflatMap( extractSolutionIdWithCount )
+      .map( _.solution )
+      .subflatMap( extractIdAndGroupCount )
       .semiflatMap {
         case ( groupCount, solutionId ) =>
           for {
@@ -219,10 +222,10 @@ object Plans extends PlannerApi[ConnectionIO] {
 
   private def getPlanQueryAux[D]( planId: PlanId, tab: InputTab.Aux[D] ): ConnectionIO[D] =
     tab match {
-      case InputTab.BillTab            => getBill( planId )
-      case InputTab.RecipeListTab      => getRecipeList( planId )
-      case InputTab.OptionsTab         => getOptions( planId )
-      case InputTab.ResourceOptionsTab => getResourceOptions( planId )
+      case InputTab.Bill            => getBill( planId )
+      case InputTab.Recipes         => getRecipeList( planId )
+      case InputTab.Options         => getOptions( planId )
+      case InputTab.ResourceOptions => getResourceOptions( planId )
     }
 
   private def getBill( planId: PlanId ): ConnectionIO[Bill] =
@@ -262,7 +265,7 @@ object Plans extends PlannerApi[ConnectionIO] {
   ): ConnectionIO[D] =
     outputTab match {
       case OutputTab.CustomGroup( ix ) => getGroupResult( solutionId, ix )
-      case OutputTab.Plan              => getSolution( solutionId )
+      case OutputTab.Steps             => getSolution( solutionId )
       case OutputTab.Items             => getItems( planId, solutionId )
       case OutputTab.Machines          => getMachines( solutionId )
       case OutputTab.Inputs            => getRawInputs( solutionId )
@@ -290,6 +293,7 @@ object Plans extends PlannerApi[ConnectionIO] {
           )
 
           CustomGroupResult(
+            group,
             factory,
             extractItemIO( Bill.empty, factory, ItemSrcDest.Output ),
             extractMachines( factory )
@@ -348,56 +352,30 @@ object Plans extends PlannerApi[ConnectionIO] {
         .map( _._1 )
     ).mapN( extractItemIO( _, _, ItemSrcDest.Byproduct ) )
 
-  private type ItemIOBySrcDest =
-    ( Map[ItemSrcDest, Double], Map[ItemSrcDest, Double] )
-
   private def extractItemIO( bill: Bill, factory: Factory, extraOutput: ItemSrcDest ): Map[Item, ItemIO] =
-    (factory.allRecipes.foldMap( itemInOut ) |+|
+    factory.allRecipes.foldMap( itemInOut ) |+|
       itemOut( ItemSrcDest.Requested, bill.items ) |+|
       itemIn( ItemSrcDest.Input, factory.extraInputs ) |+|
-      itemOut( extraOutput, factory.extraOutputs )).map {
-      case ( item, ( ins, outs ) ) =>
-        item ->
-          ItemIO(
-            ins.map { case ( isd, am )  => Countable( isd, am ) }.toVector,
-            outs.map { case ( isd, am ) => Countable( isd, am ) }.toVector
-          )
-    }
+      itemOut( extraOutput, factory.extraOutputs )
 
-  private def itemInOut( recipeBlock: ClockedRecipe ): Map[Item, ItemIOBySrcDest] = {
-    val key = ItemSrcDest.Recipe( recipeBlock.recipe.item.displayName )
+  private def itemInOut( recipeBlock: ClockedRecipe ): Map[Item, ItemIO] = {
+    val key = ItemSrcDest.Step( recipeBlock.recipe.item )
 
-    itemIn( key, recipeBlock.ingredientsPerMinute ) |+|
-      itemOut( key, recipeBlock.productsPerMinute )
+    itemOut( key, recipeBlock.ingredientsPerMinute ) |+|
+      itemIn( key, recipeBlock.productsPerMinute )
   }
 
   private def itemIn[F[_]: Foldable](
       key: ItemSrcDest,
       items: F[Countable[Double, Item]]
-  ): Map[Item, ItemIOBySrcDest] =
-    items.foldMap {
-      case Countable( item, amount ) =>
-        Map[Item, ItemIOBySrcDest](
-          (
-            item,
-            ( Map( key -> amount ), Map.empty )
-          )
-        )
-    }
+  ): Map[Item, ItemIO] =
+    items.foldMap( c => Map( c.item -> ItemIO.in( key, c.amount ) ) )
 
   private def itemOut[F[_]: Foldable](
       key: ItemSrcDest,
       items: F[Countable[Double, Item]]
-  ): Map[Item, ItemIOBySrcDest] =
-    items.foldMap {
-      case Countable( item, amount ) =>
-        Map[Item, ItemIOBySrcDest](
-          (
-            item,
-            ( Map.empty, Map( key -> amount ) )
-          )
-        )
-    }
+  ): Map[Item, ItemIO] =
+    items.foldMap( c => Map( c.item -> ItemIO.out( key, c.amount ) ) )
 
   private def getMachines( solutionId: SolutionId ): ConnectionIO[Vector[Countable[Int, Machine]]] =
     getSolution( solutionId )
@@ -424,8 +402,7 @@ object Plans extends PlannerApi[ConnectionIO] {
 
   private[persistence] def writeSolution( planId: PlanId, solution: Either[String, Factory] ): ConnectionIO[Unit] =
     for {
-      solutionHeader                         <- getPlanHeader( planId ).subflatMap( extractSolutionIdWithCount ).value
-      ( customGroupCount, groupsByRecipeId ) <- getCustomGroups( solutionHeader )
+      ( customGroupCount, groupsByRecipeId ) <- getPlanCustomGroups( planId )
       _                                      <- statements.deleteSolution.run( planId )
       _ <- solution.fold(
             err => statements.insertSolutionError.run( ( planId, err ) ),
@@ -433,25 +410,11 @@ object Plans extends PlannerApi[ConnectionIO] {
           )
     } yield ()
 
-  private def extractSolutionIdWithCount( planHeader: PlanHeader ): Option[( Int, SolutionId )] =
-    planHeader.solution match {
-      case SolutionHeader.NotComputed                           => None
-      case SolutionHeader.PlanError( _ )                        => None
-      case SolutionHeader.Computed( solutionId, groupCount, _ ) => Some( ( groupCount, solutionId ) )
-    }
-
-  private def extractSolutionIdWithCountAndLast( planHeader: PlanHeader ): Option[( Int, Int, SolutionId )] =
-    planHeader.solution match {
-      case SolutionHeader.NotComputed                                   => None
-      case SolutionHeader.PlanError( _ )                                => None
-      case SolutionHeader.Computed( solutionId, groupCount, lastGroup ) => Some( ( groupCount, lastGroup, solutionId ) )
-    }
-
-  private def getCustomGroups(
-      solutionHeader: Option[( Int, SolutionId )]
-  ): ConnectionIO[( Int, Map[RecipeId, Int] )] =
-    solutionHeader
-      .foldMapM {
+  private def getPlanCustomGroups( planId: PlanId ): ConnectionIO[( Int, Map[RecipeId, Int] )] =
+    getPlanHeader( planId )
+      .map( _.solution )
+      .subflatMap( extractIdAndGroupCount )
+      .semiflatMap {
         case ( groupCount, solutionId ) =>
           statements.selectManufacturingRecipes
             .toQuery0( solutionId )
@@ -462,6 +425,14 @@ object Plans extends PlannerApi[ConnectionIO] {
             .to( Map )
             .tupleLeft( groupCount )
       }
+      .getOrElse( ( SolutionHeader.DefaultCustomGroups, Map.empty ) )
+
+  private def extractIdAndGroupCount( solutionHeader: SolutionHeader[SolutionId] ): Option[( Int, SolutionId )] =
+    solutionHeader match {
+      case SolutionHeader.NotComputed                           => None
+      case SolutionHeader.PlanError( _ )                        => None
+      case SolutionHeader.Computed( solutionId, groupCount, _ ) => Some( ( groupCount, solutionId ) )
+    }
 
   private def writeSolution(
       planId: PlanId,
@@ -481,9 +452,7 @@ object Plans extends PlannerApi[ConnectionIO] {
 
   private def writeSolutionHeader( planId: PlanId, customGroupCount: Int ): ConnectionIO[SolutionId] =
     statements.insertSolution
-      .withUniqueGeneratedKeys[SolutionId]( "id" )(
-        ( planId, if (customGroupCount == 0) DefaultCustomGroups else customGroupCount )
-      )
+      .withUniqueGeneratedKeys[SolutionId]( "id" )( ( planId, customGroupCount ) )
 
   private def writeExtractionRecipes(
       solutionId: SolutionId,
@@ -582,7 +551,7 @@ object Plans extends PlannerApi[ConnectionIO] {
           |  )
           |VALUES
           |  ( ?, ?, ?, ?, ?, ?, ? )
-          |ON CONFLICT ON CONSTRAINT "options_plan_fkey"
+          |ON CONFLICT ON CONSTRAINT "plan_option_unique"
           |DO UPDATE SET
           |    "belt_option"        = "excluded"."belt_option"
           |  , "pipe_option"        = "excluded"."pipe_option"
@@ -741,22 +710,14 @@ object Plans extends PlannerApi[ConnectionIO] {
           |""".stripMargin
       )
 
-    type PlanHeaderRow =
-      (
-          Option[PlanName],
-          Option[PlanId],
-          Instant,
-          Option[SolutionId],
-          Option[String],
-          Option[Int],
-          Option[Int]
-      )
-
     val selectPlanHeader: Query[PlanId, PlanHeader] =
-      Query[PlanId, PlanHeaderRow](
+      Query[PlanId, PlanHeader.Row](
         // language=SQL
         """SELECT 
-          |    p."name"
+          |    p."id"
+          |  , p."user_id"
+          |  , p."name"
+          |  , q."name"
           |  , p."src_id"
           |  , p."updated"
           |  , s."id"
@@ -764,23 +725,13 @@ object Plans extends PlannerApi[ConnectionIO] {
           |  , s."custom_groups"
           |  , MAX( r."custom_group" )
           |FROM        "plans"                          p
+          |LEFT JOIN   "plans"                          q ON q."id" = p."src_id"
           |LEFT JOIN   "plan_solutions"                 s ON p."id" = s."plan_id"
           |LEFT JOIN   "solution_manufacturing_recipes" r ON s."id" = r."solution_id"
           |WHERE p."id" = ?
-          |GROUP BY p."id", s."id"
+          |GROUP BY p."id", q."name", s."id"
           |""".stripMargin
-      ).map {
-        case ( nameOpt, srcIdOpt, updated, solutionIdOpt, solutionErrorOpt, groupCountOpt, lastGroupOpt ) =>
-          PlanHeader(
-            nameOpt,
-            srcIdOpt,
-            updated,
-            solutionIdOpt,
-            solutionErrorOpt,
-            groupCountOpt,
-            lastGroupOpt
-          )
-      }
+      ).map( PlanHeader.apply )
 
     val selectBillItems: Query[PlanId, Countable[Double, ItemId]] =
       Query(

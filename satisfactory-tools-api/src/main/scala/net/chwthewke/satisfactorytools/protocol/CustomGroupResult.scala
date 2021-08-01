@@ -7,6 +7,7 @@ import model.Machine
 import prod.Factory
 
 case class CustomGroupResult(
+    index: Int,
     subFactory: Factory,
     items: Map[Item, ItemIO],
     machines: Vector[Countable[Int, Machine]]

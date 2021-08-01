@@ -45,6 +45,7 @@ CREATE TABLE "plan_options"
 , "fracking_option"     T_EXTRACTOR_TYPE[]  NOT NULL
 
 , CONSTRAINT "options_plan_fkey"  FOREIGN KEY ("plan_id")  REFERENCES "plans" ("id")  ON DELETE CASCADE
+, CONSTRAINT "plan_option_unique" UNIQUE      ("plan_id")
 );
 
 CREATE TABLE "bill_items"

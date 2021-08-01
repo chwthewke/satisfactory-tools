@@ -91,7 +91,7 @@ object View {
         case ( text, tab ) =>
           input(
             `type` := "submit",
-            formaction := s"/input/${tab.id}",
+            formaction := s"input/${tab.id}",
             value := text,
             Option.when( tab == selectedTab )( fontWeight := "bold" )
           )
@@ -114,7 +114,6 @@ object View {
     div(
       input(
         `type` := "submit",
-        formaction := "/",
         value := state.factory.fold( "Compute" )( _ => "Recompute" )
       ),
       Vector(

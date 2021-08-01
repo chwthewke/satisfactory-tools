@@ -9,17 +9,17 @@ import model.Options
 import model.RecipeList
 import model.ResourceOptions
 
-sealed abstract class InputTab extends EnumEntry {
+sealed abstract class InputTab extends EnumEntry with Product {
   type Data
 }
 
 object InputTab extends Enum[InputTab] {
   type Aux[D] = InputTab { type Data = D }
 
-  final case object BillTab            extends InputTab { type Data = Bill            }
-  final case object RecipeListTab      extends InputTab { type Data = RecipeList      }
-  final case object OptionsTab         extends InputTab { type Data = Options         }
-  final case object ResourceOptionsTab extends InputTab { type Data = ResourceOptions }
+  final case object Bill            extends InputTab { type Data = Bill            }
+  final case object Recipes         extends InputTab { type Data = RecipeList      }
+  final case object Options         extends InputTab { type Data = Options         }
+  final case object ResourceOptions extends InputTab { type Data = ResourceOptions }
 
   override val values: IndexedSeq[InputTab] = findValues
 }

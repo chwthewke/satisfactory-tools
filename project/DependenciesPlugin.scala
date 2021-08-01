@@ -1,6 +1,7 @@
 import sbt._
 import sbt.Keys._
 import sbt.librarymanagement.DependencyBuilders
+import scala.language.implicitConversions
 
 object DependenciesPlugin extends AutoPlugin {
   type Deps = Seq[ModuleID]
@@ -31,16 +32,16 @@ object DependenciesPlugin extends AutoPlugin {
     val cats: Deps          = "org.typelevel" %% Seq( "cats-core", "cats-kernel" ) % catsVersion
     val catsFree: Deps      = Seq( "org.typelevel" %% "cats-free" % catsVersion )
     val catsMtl: Deps       = Seq( "org.typelevel" %% "cats-mtl-core" % "0.7.1" )
-    val mouse: Deps         = Seq( "org.typelevel" %% "mouse" % "1.0.3" )
+    val mouse: Deps         = Seq( "org.typelevel" %% "mouse" % "1.0.4" )
     val kittens: Deps       = Seq( "org.typelevel" %% "kittens" % "2.3.2" )
     val alleycatsCore: Deps = Seq( "org.typelevel" %% "alleycats-core" % catsVersion )
     val catsTime: Deps      = Seq( "io.chrisdavenport" %% "cats-time" % "0.3.4" )
 
-    val catsEffect: Deps = "org.typelevel" %% Seq( "cats-effect", "cats-effect-std" ) % "3.1.1"
+    val catsEffect: Deps = "org.typelevel" %% Seq( "cats-effect", "cats-effect-std" ) % "3.2.1"
 
-    val fs2: Deps = "co.fs2" %% Seq( "fs2-core", "fs2-io" ) % "3.0.4"
+    val fs2: Deps = "co.fs2" %% Seq( "fs2-core", "fs2-io" ) % "3.0.6"
 
-    val http4sVersion           = "0.23.0-RC1"
+    val http4sVersion           = "0.23.0"
     val http4s: Deps            = Seq( "org.http4s" %% "http4s-dsl" % http4sVersion )
     val http4sBlazeServer: Deps = Seq( "org.http4s" %% "http4s-blaze-server" % http4sVersion )
     val http4sBlazeClient: Deps = Seq( "org.http4s" %% "http4s-blaze-client" % http4sVersion )
@@ -90,19 +91,20 @@ object DependenciesPlugin extends AutoPlugin {
 
     val ojAlgo: Deps = Seq( "org.ojalgo" % "ojalgo" % "48.4.2" )
 
+    val enumeratumVersion: String = "1.7.0"
     val enumeratum: Deps =
-      Seq( "com.beachape" %% "enumeratum" % "1.6.1", "com.beachape" %% "enumeratum-cats" % "1.6.1" )
-    val enumeratumCirce: Deps = Seq( "com.beachape" %% "enumeratum-circe" % "1.6.1" )
+      Seq( "com.beachape" %% "enumeratum" % enumeratumVersion, "com.beachape" %% "enumeratum-cats" % enumeratumVersion )
+    val enumeratumCirce: Deps = Seq( "com.beachape" %% "enumeratum-circe" % enumeratumVersion )
 
-    val shapeless: Deps = Seq( "com.chuusai" %% "shapeless" % "2.3.3" )
+    val shapeless: Deps = Seq( "com.chuusai" %% "shapeless" % "2.3.7" )
 
-    val java8compat: Deps = Seq( "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0" )
-    val scalaXml: Deps    = Seq( "org.scala-lang.modules" %% "scala-xml"          % "1.2.0" )
+    val java8compat: Deps = Seq( "org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0" )
+    val scalaXml: Deps    = Seq( "org.scala-lang.modules" %% "scala-xml"          % "2.0.1" )
 
     val logging: Deps =
       Seq(
-        "org.slf4j"      % "slf4j-api"       % "1.7.31",
-        "ch.qos.logback" % "logback-classic" % "1.2.3",
+        "org.slf4j"      % "slf4j-api"       % "1.7.32",
+        "ch.qos.logback" % "logback-classic" % "1.2.5",
         "org.typelevel"  %% "log4cats-slf4j" % "2.1.1"
       )
 
@@ -118,9 +120,9 @@ object DependenciesPlugin extends AutoPlugin {
     val pureconfigFs2: Deps        = Seq( "com.github.pureconfig" %% "pureconfig-fs2"         % pureconfigVersion )
     val pureconfigHttp4s: Deps     = Seq( "com.github.pureconfig" %% "pureconfig-http4s"      % pureconfigVersion )
 
-    private[DependenciesPlugin] val typesafeConfig: Deps = Seq( "com.typesafe" % "config" % "1.4.0" )
+    private[DependenciesPlugin] val typesafeConfig: Deps = Seq( "com.typesafe" % "config" % "1.4.1" )
 
-    val decline: Deps = "com.monovore" %% Seq( "decline", "decline-effect" ) % "2.0.0"
+    val decline: Deps = "com.monovore" %% Seq( "decline", "decline-effect" ) % "2.1.0"
 
     val doobieVersion             = "1.0.0-M5"
     val doobie: Deps              = "org.tpolecat" %% Seq( "doobie-core", "doobie-free" ) % doobieVersion
@@ -129,9 +131,9 @@ object DependenciesPlugin extends AutoPlugin {
     val doobieH2: Deps            = Seq( "org.tpolecat" %% "doobie-h2" % doobieVersion )
     val doobieScalatest: Deps     = Seq( "org.tpolecat" %% "doobie-scalatest" % doobieVersion )
 
-    val postgresql: Deps = Seq( "org.postgresql" % "postgresql"  % "42.2.22" )
+    val postgresql: Deps = Seq( "org.postgresql" % "postgresql"  % "42.2.23" )
     val h2database: Deps = Seq( "com.h2database" % "h2"          % "1.4.200" )
-    val flywayCore: Deps = Seq( "org.flywaydb"   % "flyway-core" % "7.10.0" )
+    val flywayCore: Deps = Seq( "org.flywaydb"   % "flyway-core" % "7.12.0" )
 
     val scalatest: Deps = Seq(
       "org.scalatest"     %% "scalatest"       % "3.2.9",

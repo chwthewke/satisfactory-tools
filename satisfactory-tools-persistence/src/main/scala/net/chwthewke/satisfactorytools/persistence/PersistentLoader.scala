@@ -3,13 +3,18 @@ package persistence
 
 import cats.data.OptionT
 import cats.syntax.flatMap._
+import cats.~>
 import doobie._
 
 import loader.Loader
 import model.Model
 
-trait PersistentLoader[F[_]] {
+trait PersistentLoader[F[_]] { self =>
   def loadModel: F[Model]
+
+  def mapK[G[_]]( f: F ~> G ): PersistentLoader[G] = new PersistentLoader[G] {
+    override def loadModel: G[Model] = f( self.loadModel )
+  }
 }
 
 object PersistentLoader {
