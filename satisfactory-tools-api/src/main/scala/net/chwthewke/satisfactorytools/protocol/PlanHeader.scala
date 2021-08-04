@@ -15,8 +15,7 @@ case class PlanHeader(
     updated: Instant,
     solution: SolutionHeader[SolutionId]
 ) {
-  def isTransient: Boolean =
-    title.isEmpty || copy.isDefined
+  def isTransient: Boolean = title.isEmpty || copy.isDefined
 }
 
 object PlanHeader {

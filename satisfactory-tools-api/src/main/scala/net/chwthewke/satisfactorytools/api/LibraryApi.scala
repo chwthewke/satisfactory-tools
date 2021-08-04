@@ -17,6 +17,8 @@ trait LibraryApi[F[_]] { self =>
 
   def copyPlan( userId: UserId, planId: PlanId ): F[PlanId]
 
+  def deletePlan( userId: UserId, planId: PlanId ): F[Unit]
+
   def getAllPlans( userId: UserId ): F[Vector[PlanHeader]]
 
   def getPlans( userId: UserId, page: PageQuery ): F[Page[PlanHeader]]
@@ -30,6 +32,9 @@ trait LibraryApi[F[_]] { self =>
 
     override def copyPlan( userId: UserId, planId: PlanId ): G[PlanId] =
       f( self.copyPlan( userId, planId ) )
+
+    override def deletePlan( userId: UserId, planId: PlanId ): G[Unit] =
+      f( self.deletePlan( userId, planId ) )
 
     override def getAllPlans( userId: UserId ): G[Vector[PlanHeader]] =
       f( self.getAllPlans( userId ) )

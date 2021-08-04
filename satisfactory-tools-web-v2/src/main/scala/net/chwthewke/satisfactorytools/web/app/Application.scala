@@ -1,18 +1,21 @@
 package net.chwthewke.satisfactorytools
 package web.app
 
-import cats.Order
+import cats.Apply
+import cats.Eq
+import cats.Semigroup
+import cats.data.OptionT
 import cats.effect.Async
-import cats.effect.Concurrent
 import cats.syntax.applicative._
 import cats.syntax.apply._
+import cats.syntax.eq._
 import cats.syntax.flatMap._
+import cats.syntax.foldable._
 import cats.syntax.functor._
+import cats.syntax.semigroup._
 import cats.syntax.semigroupk._
 import cats.syntax.show._
 import cats.syntax.traverse._
-import enumeratum.Enum
-import enumeratum.EnumEntry
 import org.http4s.ContextRequest
 import org.http4s.ContextRoutes
 import org.http4s.FormDataDecoder
@@ -21,7 +24,6 @@ import org.http4s.Request
 import org.http4s.Response
 import org.http4s.Uri
 import org.http4s.dsl.Http4sDsl
-import org.http4s.dsl.RequestDsl
 import org.http4s.headers.Location
 import org.http4s.scalatags._
 import org.http4s.server.ContextMiddleware
@@ -34,7 +36,9 @@ import model.Model
 import model.Options
 import protocol.InputTab
 import protocol.OutputTab
+import protocol.PlanHeader
 import protocol.PlanId
+import protocol.PlanName
 import protocol.Session
 import protocol.SolutionHeader
 import web.forms.Actions
@@ -47,14 +51,14 @@ class Application[F[_]](
     val library: LibraryApi[F],
     val planner: PlannerApi[F],
     val sessionMiddleware: ContextMiddleware[F, Session]
-)( implicit F: Concurrent[F] ) {
+)( implicit F: Async[F] ) {
 
   private implicit val dsl: Http4sDsl[F] = new Http4sDsl[F] {}
   import dsl._
 
-  import Application.Compute
-  import Application.Outcome
   import Application.segment
+
+  private implicit def semigroupForF[A: Semigroup]: Semigroup[F[A]] = Apply.semigroup
 
   val libraryRoutes: ContextRoutes[Session, F] = ContextRoutes.of[Session, F] {
     case ContextRequest( session, GET -> Root ) =>
@@ -65,6 +69,18 @@ class Application[F[_]](
         .newPlan( session.userId, Options.default, model.defaultResourceOptions )
         .flatMap( redirect( _, InputTab.Bill, OutputTab.Steps ) )
 
+    case ContextRequest( session, GET -> Root / "delete" / segment.PlanId( id ) ) =>
+      planner
+        .getPlanHeader( id )
+        .toRightF( NotFound() )
+        .semiflatMap( header => Ok( LibraryView.deleteConfirm( header ) ) )
+        .merge
+
+    case ContextRequest( session, POST -> Root / "delete" / segment.PlanId( id ) / "confirm" ) =>
+      library.deletePlan( session.userId, id ) *> Found( Location( uri"/" ) )
+
+    case ContextRequest( session, POST -> Root / "delete" / segment.PlanId( id ) / "cancel" ) =>
+      Found( Location( uri"/" ) )
   }
 
   val planRoutes: ContextRoutes[Session, F] = ContextRoutes.of {
@@ -83,7 +99,7 @@ class Application[F[_]](
         req @ POST -> "plan" /: segment.PlanId( planId ) /: segment.InputTab( inputTab ) /:
           segment.OutputTab( outputTab ) /: rest
         ) =>
-      planAction( planId, inputTab, outputTab, rest, req )
+      updatePlan[inputTab.Data, outputTab.Data]( planId, inputTab, outputTab, req, rest )
 
   }
 
@@ -109,70 +125,165 @@ class Application[F[_]](
       .merge
   }
 
-  private def planAction(
+  private def updatePlan[I, O](
       planId: PlanId,
-      inputTab: InputTab,
-      outputTab: OutputTab,
-      path: Uri.Path,
-      request: Request[F]
+      inputTab: InputTab.Aux[I],
+      outputTab: OutputTab.Aux[O],
+      request: Request[F],
+      actionPath: Uri.Path
   ): F[Response[F]] =
     planner
       .getPlanHeader( planId )
       .toRightF( NotFound() )
       .semiflatMap(
         header =>
-          recordInput( planId, inputTab, request ) *>
-            recordOutput( planId, outputTab, request ) *>
-            // TODO later normal recompute decision (has changed), see Plans#setBill
-            reviewPlan( planId, inputTab, outputTab, header.solution, Outcome.of( path ) )
+          for {
+            changes  <- collectAllChanges( planId, inputTab, outputTab, request ).value
+            targetId <- targetPlanId( header, request, changes.isDefined, actionPath )
+            _        <- changes.traverse_( act => act( targetId ) )
+            _ <- planner
+                  .computePlan( targetId )
+                  .whenA( computeAction( changes.isDefined, header.solution, actionPath ) )
+            _ <- planner
+                  .addCustomGroup( targetId )
+                  .whenA( addCustomGroup( actionPath ) )
+            _ <- planner
+                  .removeCustomGroup( targetId )
+                  .whenA( removeCustomGroup( actionPath ) )
+            ( nextInputTab, nextOutputTab ) = destination( inputTab, outputTab, actionPath )
+            response <- redirect( targetId, nextInputTab, nextOutputTab )
+          } yield response
       )
       .merge
 
-  private def recordInput(
+  private def targetPlanId(
+      header: PlanHeader,
+      request: Request[F],
+      hasChanges: Boolean,
+      actionPath: Uri.Path
+  ): F[PlanId] =
+    actionPath match {
+      case "save" /: _ =>
+        decode( request )( Decoders.title )
+          .flatMap(
+            nameOpt =>
+              library.savePlan(
+                header.owner,
+                header.id,
+                header.copy,
+                nameOpt.getOrElse( PlanName( show"Plan #${header.id}" ) )
+              )
+          )
+      case "copy" /: _ =>
+        library.copyPlan( header.owner, header.id )
+      case _ =>
+        if (header.isTransient || !hasChanges)
+          header.id.pure[F]
+        else
+          library.editPlan( header.owner, header.id )
+    }
+
+  private def computeAction[X]( hasChanges: Boolean, solution: SolutionHeader[X], actionPath: Uri.Path ): Boolean =
+    actionPath match {
+      case "compute" /: _ => true
+      case _              => hasChanges && solution.isComputed
+    }
+
+  private def addCustomGroup( actionPath: Uri.Path ): Boolean =
+    actionPath match {
+      case "group_inc" /: _ => true
+      case _                => false
+    }
+
+  private def removeCustomGroup( actionPath: Uri.Path ): Boolean =
+    actionPath match {
+      case "group_dec" /: _ => true
+      case _                => false
+    }
+
+  private def destination( inputTab: InputTab, outputTab: OutputTab, actionPath: Uri.Path ): ( InputTab, OutputTab ) =
+    actionPath match {
+      case "input" /: segment.InputTab( newInputTab ) /: _    => ( newInputTab, outputTab )
+      case "output" /: segment.OutputTab( newOutputTab ) /: _ => ( inputTab, newOutputTab )
+      case _                                                  => ( inputTab, outputTab )
+    }
+
+  private def collectAllChanges(
+      planId: PlanId,
+      inputTab: InputTab,
+      outputTab: OutputTab,
+      request: Request[F]
+  ): OptionT[F, PlanId => F[Unit]] =
+    collectInputChanges( planId, inputTab, request ) |+| collectOutputChanges( planId, outputTab, request )
+
+  private def collectInputChanges(
       planId: PlanId,
       inputTab: InputTab,
       request: Request[F]
-  ): F[Unit] =
-    inputTab match {
-      case InputTab.Bill =>
-        decode( request )( Decoders.bill( model ) ).flatMap( planner.setBill( planId, _ ) )
-      case InputTab.Recipes =>
-        decode( request )( Decoders.recipeList( model ) ).flatMap( planner.setRecipeList( planId, _ ) )
-      case InputTab.Options =>
-        decode( request )( Decoders.options ).flatMap( planner.setOptions( planId, _ ) )
-      case InputTab.ResourceOptions =>
-        decode( request )( Decoders.resourceOptions( model ) ).flatMap( planner.setResourceOptions( planId, _ ) )
-    }
+  ): OptionT[F, PlanId => F[Unit]] = inputTab match {
+    case InputTab.Bill =>
+      collectChanges(
+        request,
+        Decoders.bill( model ),
+        planner.getPlanQuery( planId, InputTab.Bill ),
+        planner.setBill
+      )
+    case InputTab.Recipes =>
+      collectChanges(
+        request,
+        Decoders.recipeList( model ),
+        planner.getPlanQuery( planId, InputTab.Recipes ),
+        planner.setRecipeList
+      )
+    case InputTab.Options =>
+      collectChanges(
+        request,
+        Decoders.options,
+        planner.getPlanQuery( planId, InputTab.Options ),
+        planner.setOptions
+      )
+    case InputTab.ResourceOptions =>
+      collectChanges(
+        request,
+        Decoders.resourceOptions( model ),
+        planner.getPlanQuery( planId, InputTab.ResourceOptions ),
+        planner.setResourceOptions
+      )
+  }
 
-  private def recordOutput(
+  private def collectOutputChanges(
       planId: PlanId,
       outputTab: OutputTab,
       request: Request[F]
-  ): F[Unit] =
+  ): OptionT[F, PlanId => F[Unit]] =
     outputTab match {
       case OutputTab.Steps =>
-        decode( request )( Decoders.customGroups ).flatMap( planner.setCustomGroupSelection( planId, _ ) )
-      case _ => F.unit
+        collectChanges(
+          request,
+          Decoders.customGroups,
+          planner.getCustomGroupSelection( planId ),
+          planner.setCustomGroupSelection
+        )
+      case _ => OptionT.none
     }
+
+  private def collectChanges[A: Eq](
+      request: Request[F],
+      decoder: FormDataDecoder[A],
+      readValue: F[A],
+      writeValue: ( PlanId, A ) => F[Unit]
+  ): OptionT[F, PlanId => F[Unit]] =
+    OptionT
+      .liftF( ( decode( request )( decoder ), readValue ).tupled )
+      .flatMap {
+        case ( newValue, oldValue ) =>
+          OptionT.when( newValue =!= oldValue )( writeValue( _, newValue ) )
+      }
 
   private def decode[A]( request: Request[F] )( implicit formDataDecoder: FormDataDecoder[A] ): F[A] = {
     import FormDataDecoder.formEntityDecoder
     request.as[A]
   }
-
-  private def reviewPlan[X](
-      planId: PlanId,
-      inputTab: InputTab,
-      outputTab: OutputTab,
-      solution: SolutionHeader[X],
-      outcome: Outcome
-  ): F[Response[F]] =
-    planner
-      .computePlan( planId )
-      .whenA( outcome.compute == Compute.Force || outcome.compute == Compute.Update && solution.isComputed ) *>
-      planner.addCustomGroup( planId ).whenA( outcome.groupAdjustment > 0 ) *>
-      planner.removeCustomGroup( planId ).whenA( outcome.groupAdjustment < 0 ) *>
-      redirect( planId, outcome.newInput.getOrElse( inputTab ), outcome.newOutput.getOrElse( outputTab ) )
 
   private def redirect(
       planId: PlanId,
@@ -186,50 +297,6 @@ class Application[F[_]](
 }
 
 object Application {
-
-  sealed trait Compute extends EnumEntry
-  object Compute extends Enum[Compute] {
-    final case object Pass   extends Compute
-    final case object Update extends Compute
-    final case object Force  extends Compute
-
-    override val values: IndexedSeq[Compute] = findValues
-
-    implicit val computeOrder: Order[Compute] = Order.by( indexOf )
-  }
-
-  sealed abstract class Outcome(
-      val newInput: Option[InputTab],
-      val newOutput: Option[OutputTab],
-      val groupAdjustment: Int,
-      val compute: Compute
-  ) extends Product
-
-  object Outcome {
-    final case class ToInput( inputTab: InputTab )    extends Outcome( Some( inputTab ), None, 0, Compute.Update )
-    final case class ToOutput( outputTab: OutputTab ) extends Outcome( None, Some( outputTab ), 0, Compute.Update )
-    final case object AddGroup                        extends Outcome( None, None, 1, Compute.Update )
-    final case object RemoveGroup                     extends Outcome( None, None, -1, Compute.Update )
-    final case object ForceCompute                    extends Outcome( None, None, 0, Compute.Force )
-    final case object Neutral                         extends Outcome( None, None, 0, Compute.Pass )
-
-    def of( path: Uri.Path )( implicit dsl: RequestDsl ): Outcome = {
-      import dsl._
-
-      val outcome = path match {
-        case "input" /: Actions.input( tab ) /: _   => ToInput( tab )
-        case "output" /: Actions.output( tab ) /: _ => ToOutput( tab )
-        case "compute" /: _                         => ForceCompute
-        case "group_dec" /: _                       => RemoveGroup
-        case "group_inc" /: _                       => AddGroup
-        case _                                      => Neutral
-      }
-
-      println( s"$path => $outcome" )
-
-      outcome
-    }
-  }
 
   def apply[F[_]: Async](
       model: Model,

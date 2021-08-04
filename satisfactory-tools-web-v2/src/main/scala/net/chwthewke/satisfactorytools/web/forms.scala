@@ -32,6 +32,7 @@ import model.ResourcePurity
 import model.ResourceWeights
 import protocol.InputTab
 import protocol.OutputTab
+import protocol.PlanName
 
 object forms {
 
@@ -123,6 +124,9 @@ object forms {
     def enumSetFormDataDecoder[E <: EnumEntry]( key: String )( implicit E: Enum[E] ): FormDataDecoder[Set[E]] =
       FormDataDecoder( fd => Valid( fd.getOrElse( key, Chain.empty ) ) )
         .mapValidated( strs => strs.traverse( validateEnum[E] ).map( _.toVector.toSet ) )
+
+    val title: FormDataDecoder[Option[PlanName]] =
+      FormDataDecoder.fieldOptional[String]( Keys.planTitle ).map( _.filterNot( _.isEmpty ).map( PlanName( _ ) ) )
 
     def bill( model: Model ): FormDataDecoder[Bill] =
       model.items.values.toVector

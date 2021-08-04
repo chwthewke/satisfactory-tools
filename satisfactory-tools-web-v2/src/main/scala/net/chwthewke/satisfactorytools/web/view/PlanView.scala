@@ -27,6 +27,7 @@ object PlanView {
       form(
         method := "POST",
         enctype := "application/x-www-form-urlencoded",
+        documentHeader( header ),
         div(
           id := "main",
           div(
@@ -49,7 +50,28 @@ object PlanView {
     )
   )
 
-  def inputTabs( selected: InputTab ): Tag =
+  private def documentHeader( header: PlanHeader ): Tag =
+    div(
+      id := "header",
+      input(
+        `type` := "text",
+        fontSize.`x-large`,
+        value := header.title.fold( "" )( _.show ),
+        placeholder := "Untitled plan",
+        name := Keys.planTitle
+      ),
+      button(
+        formaction := "save",
+        "Save"
+      ),
+      button(
+        formaction := "copy",
+        "Copy"
+      ),
+      a( href := "/", "Library" )
+    )
+
+  private def inputTabs( selected: InputTab ): Tag =
     div(
       Vector(
         ( "Requested", InputTab.Bill ),
@@ -66,7 +88,7 @@ object PlanView {
       }
     )
 
-  def inputView[I]( inputTab: InputTab.Aux[I] ): ( Model, I ) => Tag =
+  private def inputView[I]( inputTab: InputTab.Aux[I] ): ( Model, I ) => Tag =
     inputTab match {
       case InputTab.Bill            => BillView
       case InputTab.Recipes         => RecipesView
@@ -74,7 +96,7 @@ object PlanView {
       case InputTab.ResourceOptions => ResourceOptionsView
     }
 
-  def outputTabs[X]( selected: OutputTab, solution: SolutionHeader[X] ): Tag = {
+  private def outputTabs[X]( selected: OutputTab, solution: SolutionHeader[X] ): Tag = {
     val computeTab =
       button(
         formaction := "compute",
@@ -120,7 +142,7 @@ object PlanView {
     )
   }
 
-  def outputView[O]( outputTab: OutputTab.Aux[O] ): ( O, Int ) => Tag =
+  private def outputView[O]( outputTab: OutputTab.Aux[O] ): ( O, Int ) => Tag =
     outputTab match {
       case OutputTab.CustomGroup( _ ) => CustomGroupView
       case OutputTab.Steps            => StepsView

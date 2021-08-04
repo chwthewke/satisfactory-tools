@@ -54,6 +54,9 @@ object Library extends LibraryApi[ConnectionIO] {
       _     <- copyPlanParts( planId, newId )
     } yield newId
 
+  override def deletePlan( userId: UserId, planId: PlanId ): ConnectionIO[Unit] =
+    statements.deletePlan.run( planId ).void
+
   override def getAllPlans( userId: UserId ): ConnectionIO[Vector[PlanHeader]] =
     statements.selectPlanHeaders.toQuery0( userId ).to[Vector]
 
