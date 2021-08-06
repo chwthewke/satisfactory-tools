@@ -99,7 +99,7 @@ object PlanView {
   private def outputTabs[X]( selected: OutputTab, solution: SolutionHeader[X] ): Tag = {
     val computeTab =
       button(
-        formaction := "compute",
+        formaction := Actions.compute,
         if (solution.isComputed) "Recompute" else "Compute"
       )
 
@@ -125,12 +125,12 @@ object PlanView {
     val groupActionTabs =
       Vector(
         button(
-          formaction := "group_dec",
+          formaction := Actions.removeGroup,
           Option.when( !solution.canRemoveGroup )( disabled ),
           "-"
         ),
         button(
-          formaction := "group_inc",
+          formaction := Actions.addGroup,
           Option.when( !solution.canAddGroup )( disabled ),
           "+"
         )

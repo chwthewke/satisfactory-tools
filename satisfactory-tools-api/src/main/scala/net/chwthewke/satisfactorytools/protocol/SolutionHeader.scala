@@ -17,6 +17,8 @@ sealed trait SolutionHeader[+T] extends Product {
 
   def isComputed: Boolean = fold( false, _ => false, ( _, _, _ ) => true )
 
+  def valueAndCount: Option[( T, Int )] = fold( None, _ => None, ( v, c, _ ) => Some( ( v, c ) ) )
+
   def canAddGroup: Boolean    = fold( false, _ => false, ( _, c, _ ) => c < MaxCustomGroups )
   def canRemoveGroup: Boolean = fold( false, _ => false, ( _, c, l ) => c > l )
 

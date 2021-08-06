@@ -150,6 +150,7 @@ class Application[F[_]](
             _ <- planner
                   .removeCustomGroup( targetId )
                   .whenA( removeCustomGroup( actionPath ) )
+            _ <- reorderGroup( targetId, changes.isDefined, outputTab, actionPath )
             ( nextInputTab, nextOutputTab ) = destination( inputTab, outputTab, actionPath )
             response <- redirect( targetId, nextInputTab, nextOutputTab )
           } yield response
@@ -185,20 +186,28 @@ class Application[F[_]](
 
   private def computeAction[X]( hasChanges: Boolean, solution: SolutionHeader[X], actionPath: Uri.Path ): Boolean =
     actionPath match {
-      case "compute" /: _ => true
-      case _              => hasChanges && solution.isComputed
+      case Actions.compute /: _ => true
+      case _                    => hasChanges && solution.isComputed
     }
 
   private def addCustomGroup( actionPath: Uri.Path ): Boolean =
     actionPath match {
-      case "group_inc" /: _ => true
-      case _                => false
+      case Actions.addGroup /: _ => true
+      case _                     => false
     }
 
   private def removeCustomGroup( actionPath: Uri.Path ): Boolean =
     actionPath match {
-      case "group_dec" /: _ => true
-      case _                => false
+      case Actions.removeGroup /: _ => true
+      case _                        => false
+    }
+
+  private def reorderGroup( planId: PlanId, hasChanges: Boolean, outputTab: OutputTab, actionPath: Uri.Path ): F[Unit] =
+    ( outputTab, actionPath ) match {
+      case ( OutputTab.CustomGroup( ix ), Actions.outputGroupOrder /: segment.Int( row ) /: _ ) =>
+        planner.setCustomGroupOrder( planId, ix, row ).whenA( !hasChanges )
+      case _ =>
+        F.unit
     }
 
   private def destination( inputTab: InputTab, outputTab: OutputTab, actionPath: Uri.Path ): ( InputTab, OutputTab ) =

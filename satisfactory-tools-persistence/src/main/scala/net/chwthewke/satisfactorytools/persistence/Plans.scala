@@ -53,8 +53,6 @@ import protocol.UserId
 // TODO also OMG such a large file
 object Plans extends PlannerApi[ConnectionIO] {
 
-  private val Tolerance: Double = 1e-4
-
   override def newPlan(
       userId: UserId,
       options: Options,
@@ -71,9 +69,9 @@ object Plans extends PlannerApi[ConnectionIO] {
     getPlanHeader( planId )
       .map( _.solution )
       .filter( _.canAddGroup )
-      .subflatMap( extractIdAndGroupCount )
+      .subflatMap( _.valueAndCount )
       .semiflatMap {
-        case ( groupCount, solutionId ) =>
+        case ( solutionId, groupCount ) =>
           statements.updateGroupCount.run( ( groupCount + 1, solutionId ) )
       }
       .fold( false )( _ > 0 )
@@ -82,9 +80,9 @@ object Plans extends PlannerApi[ConnectionIO] {
     getPlanHeader( planId )
       .map( _.solution )
       .filter( _.canRemoveGroup )
-      .subflatMap( extractIdAndGroupCount )
+      .subflatMap( _.valueAndCount )
       .semiflatMap {
-        case ( groupCount, solutionId ) =>
+        case ( solutionId, groupCount ) =>
           statements.updateGroupCount.run( ( groupCount - 1, solutionId ) )
       }
       .fold( false )( _ > 0 )
@@ -109,20 +107,7 @@ object Plans extends PlannerApi[ConnectionIO] {
       .flatMap( updateResourceOptions( planId, _, resourceOptions ) )
 
   override def setCustomGroupSelection( planId: PlanId, groups: Map[ClassName, Int] ): ConnectionIO[Unit] =
-    getPlanHeader( planId )
-      .map( _.solution )
-      .subflatMap( extractIdAndGroupCount )
-      .semiflatMap {
-        case ( groupCount, solutionId ) =>
-          for {
-            recipeIds <- ReadModel.readRecipeIds
-            groupSelection = groups.flatMap { case ( cn, ix ) => recipeIds.get( cn ).tupleRight( ix ) }
-            rows <- groupManufacturingRecipes( solutionId, groupCount, groupSelection )
-            _    <- statements.insertSolutionManufacturingRecipe.updateMany( rows )
-          } yield ()
-      }
-      .value
-      .void
+    updateCustomGroupSelection( planId, groups )
 
   override def getPlanHeader( planId: PlanId ): OptionT[ConnectionIO, PlanHeader] =
     OptionT( statements.selectPlanHeader.toQuery0( planId ).option )
@@ -142,11 +127,15 @@ object Plans extends PlannerApi[ConnectionIO] {
       getPlanCustomGroups( planId ),
       ReadModel.readRecipes
     ).mapN {
-      case ( ( _, recipeIdGroups ), recipes ) =>
-        recipeIdGroups.toVector.mapFilter {
-          case ( recipeId, ix ) => recipes.get( recipeId ).map( _.className ).tupleRight( ix )
-        }.toMap
+      case ( groups, recipes ) =>
+        groups.assignments
+          .flatMap {
+            case ( recipeId, ix ) => recipes.get( recipeId ).map( _.className ).tupleRight( ix )
+          }
     }
+
+  override def setCustomGroupOrder( planId: PlanId, group: Int, groupRow: Int ): ConnectionIO[Unit] =
+    statements.updateGroupOrder( planId, group, groupRow ).run.void
 
   override def computePlan( planId: PlanId ): ConnectionIO[Unit] =
     for {
@@ -154,6 +143,10 @@ object Plans extends PlannerApi[ConnectionIO] {
       solverInputs <- getSolverInputs( planId )
       _            <- writeSolution( planId, Calculator.computeFactory( model, solverInputs, ConstraintSolver ) )
     } yield ()
+
+  ////////////////////////////
+  // SET INPUTS
+  ////////////////////////////
 
   private def insertBill( planId: PlanId, bill: Bill ): ConnectionIO[Unit] =
     ReadModel.readItemIds.flatMap { itemIds =>
@@ -220,6 +213,10 @@ object Plans extends PlannerApi[ConnectionIO] {
     statements.upsertResourceDistribution.updateMany( rows ).void
   }
 
+  ////////////////////////////
+  // GET INPUTS
+  ////////////////////////////
+
   private def getPlanQueryAux[D]( planId: PlanId, tab: InputTab.Aux[D] ): ConnectionIO[D] =
     tab match {
       case InputTab.Bill            => getBill( planId )
@@ -258,6 +255,10 @@ object Plans extends PlannerApi[ConnectionIO] {
         )
     )
 
+  ////////////////////////////
+  // SET RESULTS
+  ////////////////////////////
+
   private def getPlanResultAux[D](
       planId: PlanId,
       solutionId: SolutionId,
@@ -281,7 +282,6 @@ object Plans extends PlannerApi[ConnectionIO] {
           val external = recipes
             .foldMap( _.flatTraverse( _.itemsPerMinute ) )
             .gather
-            .filter( _.amount.abs > Tolerance )
 
           val ( input, output ) = external.partition( _.amount < 0 )
 
@@ -400,52 +400,38 @@ object Plans extends PlannerApi[ConnectionIO] {
     ( getBill( planId ), getRecipeList( planId ), getOptions( planId ), getResourceOptions( planId ) )
       .mapN( SolverInputs( _, _, _, _ ) )
 
+  ////////////////////////
+  // PERSIST SOLUTION
+  ////////////////////////
+
   private[persistence] def writeSolution( planId: PlanId, solution: Either[String, Factory] ): ConnectionIO[Unit] =
     for {
-      ( customGroupCount, groupsByRecipeId ) <- getPlanCustomGroups( planId )
-      _                                      <- statements.deleteSolution.run( planId )
+      customGroups <- getPlanCustomGroups( planId )
+      _            <- statements.deleteSolution.run( planId )
       _ <- solution.fold(
             err => statements.insertSolutionError.run( ( planId, err ) ),
-            factory => writeSolution( planId, factory, customGroupCount, groupsByRecipeId )
+            factory => writeSolutionWithGroups( planId, factory, customGroups )
           )
     } yield ()
 
-  private def getPlanCustomGroups( planId: PlanId ): ConnectionIO[( Int, Map[RecipeId, Int] )] =
+  // TODO merge SQL?
+  private def getPlanCustomGroups( planId: PlanId ): ConnectionIO[CustomGroups] =
     getPlanHeader( planId )
-      .map( _.solution )
-      .subflatMap( extractIdAndGroupCount )
-      .semiflatMap {
-        case ( groupCount, solutionId ) =>
-          statements.selectManufacturingRecipes
-            .toQuery0( solutionId )
-            .stream
-            .map { case ( c, g ) => g.tupleLeft( c.item ) }
-            .unNone
-            .compile
-            .to( Map )
-            .tupleLeft( groupCount )
-      }
-      .getOrElse( ( SolutionHeader.DefaultCustomGroups, Map.empty ) )
+      .subflatMap( _.solution.valueAndCount )
+      .semiflatMap { case ( solutionId, groupCount ) => readCustomGroups( solutionId, groupCount ) }
+      .getOrElse( CustomGroups.empty( SolutionHeader.DefaultCustomGroups ) )
 
-  private def extractIdAndGroupCount( solutionHeader: SolutionHeader[SolutionId] ): Option[( Int, SolutionId )] =
-    solutionHeader match {
-      case SolutionHeader.NotComputed                           => None
-      case SolutionHeader.PlanError( _ )                        => None
-      case SolutionHeader.Computed( solutionId, groupCount, _ ) => Some( ( groupCount, solutionId ) )
-    }
-
-  private def writeSolution(
+  private def writeSolutionWithGroups(
       planId: PlanId,
       factory: Factory,
-      customGroupCount: Int,
-      groupsByRecipeId: Map[RecipeId, Int]
+      customGroups: CustomGroups
   ): ConnectionIO[Unit] =
     for {
-      solutionId <- writeSolutionHeader( planId, customGroupCount )
+      solutionId <- writeSolutionHeader( planId, customGroups.count )
       itemIds    <- ReadModel.readItemIds
       recipeIds  <- ReadModel.readRecipeIds
       _          <- writeExtractionRecipes( solutionId, recipeIds, factory.extraction )
-      _          <- writeManufacturingRecipes( solutionId, recipeIds, groupsByRecipeId, factory.manufacturing )
+      _          <- writeManufacturingRecipes( solutionId, customGroups, factory.manufacturing, recipeIds )
       _          <- writeExtraInputs( solutionId, itemIds, factory.extraInputs )
       _          <- writeExtraOutputs( solutionId, itemIds, factory.extraOutputs )
     } yield ()
@@ -468,19 +454,25 @@ object Plans extends PlannerApi[ConnectionIO] {
     statements.insertSolutionExtractionRecipe.updateMany( rows )
   }
 
-  private def writeManufacturingRecipes(
+  def writeManufacturingRecipes(
       solutionId: SolutionId,
-      recipeIds: Map[ClassName, RecipeId],
-      groupsByRecipeId: Map[RecipeId, Int],
-      recipes: Vector[Countable[Double, Recipe]]
-  ): ConnectionIO[Int] = {
+      groups: CustomGroups,
+      recipes: Vector[Countable[Double, Recipe]],
+      recipeIds: Map[ClassName, RecipeId]
+  ): doobie.ConnectionIO[Int] =
+    writeManufacturingRecipesIds(
+      solutionId,
+      groups,
+      recipes.mapFilter( _.traverse( r => recipeIds.get( r.className ) ) )
+    )
 
-    val rows: Vector[( SolutionId, RecipeId, Double, Option[Int] )] = recipes.mapFilter {
-      case Countable( recipe, amount ) =>
-        recipeIds
-          .get( recipe.className )
-          .map( recipeId => ( solutionId, recipeId, amount, groupsByRecipeId.get( recipeId ) ) )
-    }
+  private def writeManufacturingRecipesIds(
+      solutionId: SolutionId,
+      customGroups: CustomGroups,
+      recipes: Vector[Countable[Double, RecipeId]]
+  ): ConnectionIO[Int] = {
+    val rows: Vector[( SolutionId, Countable[Double, RecipeId], Option[( Int, Int )] )] =
+      recipes.map( recipeId => ( solutionId, recipeId, customGroups.groupIndex( recipeId.item ) ) )
 
     statements.insertSolutionManufacturingRecipe.updateMany( rows )
   }
@@ -513,18 +505,79 @@ object Plans extends PlannerApi[ConnectionIO] {
     stmt.updateMany( rows )
   }
 
-  private def groupManufacturingRecipes(
-      solutionId: SolutionId,
-      groupCount: Int,
-      groupSelection: Map[RecipeId, Int]
-  ): ConnectionIO[Vector[( SolutionId, RecipeId, Double, Option[Int] )]] =
-    statements.selectUngroupedManufacturingRecipes
-      .toQuery0( solutionId )
-      .map {
-        case Countable( recipe, amount ) =>
-          ( solutionId, recipe, amount, groupSelection.get( recipe ).filter( _ <= groupCount ) )
+  ////////////////////////////
+  // CUSTOM GROUP MAINTENANCE
+  ////////////////////////////
+
+  case class CustomGroups( groups: Vector[Vector[RecipeId]] ) {
+    def count: Int = groups.size
+
+    def groupIndex( recipeId: RecipeId ): Option[( Int, Int )] =
+      groups.iterator.zipWithIndex
+        .map { case ( g, i ) => ( i + 1, g.indexOf( recipeId ) ) }
+        .find( _._2 >= 0 )
+
+    // TBT:
+    // - update( newAssignments ).groups.flatten [has the same elements as] newAssignments.keys
+    // - update( newAssignments ).groupIndex( recipeId ).map( _._1 ) === newAssignments.get( recipeId ) [forall recipeId]
+    // - update( newAssignemnts ).assignments === newAssignments
+    def update( newAssignments: Map[RecipeId, Int] ): CustomGroups = CustomGroups(
+      groups.zipWithIndex.map {
+        case ( g, ix ) =>
+          val kept  = g.filter( newAssignments.get( _ ).contains( ix + 1 ) )
+          val added = newAssignments.filter { _._2 == ix + 1 }.keys.filterNot( kept.contains )
+          kept ++ added
       }
-      .to[Vector]
+    )
+
+    def assignments: Map[RecipeId, Int] =
+      groups.zipWithIndex.flatMap { case ( g, ix ) => g.map( ( _, ix + 1 ) ) }.toMap
+
+  }
+
+  object CustomGroups {
+    def empty( groupCount: Int ): CustomGroups = CustomGroups( Vector.fill( groupCount )( Vector.empty[RecipeId] ) )
+
+    def of( groupCount: Int, assignments: Map[RecipeId, Int] ): CustomGroups =
+      empty( groupCount ).update( assignments )
+  }
+
+  private def readCustomGroups( solutionId: SolutionId, groupCount: Int ): ConnectionIO[CustomGroups] =
+    statements.selectRecipeGroups
+      .toQuery0( solutionId )
+      .stream
+      .mapFilter { case ( recipe, groupOpt ) => groupOpt.tupleRight( recipe ) }
+      .groupAdjacentBy( _._1 )
+      .compile
+      .fold( Vector.fill( groupCount )( Vector.empty[RecipeId] ) ) {
+        case ( acc, ( groupIx, chunk ) ) => acc.updated( groupIx - 1, chunk.map( _._2 ).toVector )
+      }
+      .map( CustomGroups( _ ) )
+
+  private def updateCustomGroupSelection( planId: PlanId, groups: Map[ClassName, Int] ): ConnectionIO[Unit] =
+    getPlanHeader( planId )
+      .subflatMap( _.solution.valueAndCount )
+      .semiflatMap {
+        case ( solutionId, groupCount ) =>
+          for {
+            recipeIds <- ReadModel.readRecipeIds
+            assignments = groups.flatMap { case ( cn, ix ) => recipeIds.get( cn ).tupleRight( ix ) }
+            // TODO reading same table twice (with different ORDER BY clauses, but not using order in 2nd case)...
+            // TODO also an opportunity to avoid the read/diff/write from Application
+            currentGroups <- readCustomGroups( solutionId, groupCount )
+            recipes       <- statements.selectUngroupedManufacturingRecipes.toQuery0( solutionId ).to[Vector]
+
+            _ <- writeManufacturingRecipesIds(
+                  solutionId,
+                  currentGroups.update(
+                    recipes.mapFilter( cr => assignments.get( cr.item ).tupleLeft( cr.item ) ).toMap
+                  ),
+                  recipes
+                )
+          } yield ()
+      }
+      .value
+      .void
 
   object statements {
     val insertUnnamedPlan: Update[UserId] =
@@ -542,7 +595,7 @@ object Plans extends PlannerApi[ConnectionIO] {
         // language=SQL
         """INSERT INTO "plan_options"
           |  ( "plan_id"
-          |  , "belt_option" 
+          |  , "belt_option"
           |  , "pipe_option"
           |  , "miner_option"
           |  , "clock_speed_option"
@@ -572,7 +625,7 @@ object Plans extends PlannerApi[ConnectionIO] {
           |  , "purity"
           |  , "amount"
           |  )
-          |VALUES 
+          |VALUES
           |  ( ?, ?, ?, ?, ? )
           |ON CONFLICT ON CONSTRAINT "resource_distribution_unique"
           |DO UPDATE SET
@@ -650,7 +703,7 @@ object Plans extends PlannerApi[ConnectionIO] {
         // language=SQL
         """INSERT INTO "plan_solutions"
           |  ( "plan_id", "custom_groups" )
-          |VALUES 
+          |VALUES
           |  ( ?, ? )
           |""".stripMargin
       )
@@ -659,7 +712,7 @@ object Plans extends PlannerApi[ConnectionIO] {
       Update(
         // language=SQL
         """INSERT INTO "plan_solutions"
-          |  ( "plan_id", "error_message", "custom_groups" ) 
+          |  ( "plan_id", "error_message", "custom_groups" )
           |VALUES
           |  ( ?, ?, 0 )
           |""".stripMargin
@@ -669,24 +722,25 @@ object Plans extends PlannerApi[ConnectionIO] {
       Update(
         // language=SQL
         """INSERT INTO "solution_extraction_recipes"
-          |  ( "solution_id", "recipe_id", "amount", "clock_speed" ) 
+          |  ( "solution_id", "recipe_id", "amount", "clock_speed" )
           |VALUES
           |  ( ?, ?, ?, ? )
           |""".stripMargin
       )
 
-    val insertSolutionManufacturingRecipe: Update[( SolutionId, RecipeId, Double, Option[Int] )] =
+    val insertSolutionManufacturingRecipe: Update[( SolutionId, Countable[Double, RecipeId], Option[( Int, Int )] )] =
       Update(
         // language=SQL
         """INSERT INTO "solution_manufacturing_recipes"
-          |  ( "solution_id", "recipe_id", "amount", "custom_group" ) 
+          |  ( "solution_id", "recipe_id", "amount", "custom_group", "group_order" )
           |VALUES
-          |  ( ?, ?, ?, ? )
+          |  ( ?, ?, ?, ?, ? )
           |ON CONFLICT ON CONSTRAINT "solution_manufacturing_recipes_unique"
           |DO UPDATE
           |  SET
           |    "amount"       = "excluded"."amount"
           |  , "custom_group" = "excluded"."custom_group"
+          |  , "group_order"  = "excluded"."group_order"
           |""".stripMargin
       )
 
@@ -713,7 +767,7 @@ object Plans extends PlannerApi[ConnectionIO] {
     val selectPlanHeader: Query[PlanId, PlanHeader] =
       Query[PlanId, PlanHeader.Row](
         // language=SQL
-        """SELECT 
+        """SELECT
           |    p."id"
           |  , p."user_id"
           |  , p."name"
@@ -804,6 +858,7 @@ object Plans extends PlannerApi[ConnectionIO] {
           |FROM "solution_manufacturing_recipes"
           |WHERE "solution_id" = ?
           |  AND "custom_group" = ?
+          |ORDER BY "group_order"
           |""".stripMargin
       )
 
@@ -816,6 +871,19 @@ object Plans extends PlannerApi[ConnectionIO] {
           |  , "custom_group"
           |FROM "solution_manufacturing_recipes"
           |WHERE "solution_id" = ?
+          |ORDER BY "id"
+          |""".stripMargin
+      )
+
+    val selectRecipeGroups: Query[SolutionId, ( RecipeId, Option[Int] )] =
+      Query(
+        // language=SQL
+        """SELECT
+          |    "recipe_id"
+          |  , "custom_group"
+          |FROM "solution_manufacturing_recipes"
+          |WHERE "solution_id" = ?
+          |ORDER BY "custom_group", "group_order"
           |""".stripMargin
       )
 
@@ -827,6 +895,7 @@ object Plans extends PlannerApi[ConnectionIO] {
           |  , "amount"
           |FROM "solution_manufacturing_recipes"
           |WHERE "solution_id" = ?
+          |ORDER BY "id"
           |""".stripMargin
       )
 
@@ -839,6 +908,7 @@ object Plans extends PlannerApi[ConnectionIO] {
           |  , "clock_speed"
           |FROM "solution_extraction_recipes"
           |WHERE "solution_id" = ?
+          |ORDER BY "id"
           |""".stripMargin
       )
 
@@ -873,6 +943,19 @@ object Plans extends PlannerApi[ConnectionIO] {
           |WHERE "id" = ?
           |""".stripMargin
       )
+
+    def updateGroupOrder( planId: PlanId, groupIndex: Int, groupRow: Int ): Update0 =
+      // language=SQL
+      sql"""UPDATE "solution_manufacturing_recipes" r
+           |SET
+           |  "group_order" = ${2 * groupRow + 1} - r."group_order"
+           |FROM "plan_solutions" s
+           |WHERE s."id"           = r."solution_id"
+           |  AND s."plan_id"      = $planId
+           |  AND r."custom_group" = $groupIndex
+           |  AND "group_order"    IN ( $groupRow, ${groupRow + 1} )
+           |""".stripMargin //
+      .update
 
   }
 

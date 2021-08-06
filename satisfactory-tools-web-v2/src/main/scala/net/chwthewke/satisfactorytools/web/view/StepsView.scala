@@ -30,23 +30,46 @@ object StepsView extends ( ( ( Factory, Map[ClassName, Int] ), Int ) => Tag ) {
       groups: Map[ClassName, Int],
       groupCount: Int,
       radios: CustomGroupsRadios
-  ): Tag =
+  ): Tag = {
+    def groupHeaders: Frag = radios match {
+      case CustomGroupsRadios.Empty   => Seq.empty[Frag]
+      case CustomGroupsRadios.Sorting => Seq( th( colspan := 2 ) )
+      case CustomGroupsRadios.Placeholder | CustomGroupsRadios.Full =>
+        Seq[Frag](
+          th( "-", textAlign.center ),
+          1.to( groupCount ).map( ix => th( ix.toString, textAlign.center ) )
+        )
+    }
+
     table(
       thead(
         tr(
-          Option.when( radios >= CustomGroupsRadios.Placeholder )(
-            Seq[Frag](
-              td( "-", textAlign.center ),
-              1.to( groupCount ).map( ix => td( ix.toString, textAlign.center ) )
-            )
-          ),
+          groupHeaders,
           headers.map { case ( w, h, al ) => th( colspan := w, h, al ) }
         )
       ),
       tbody(
         factory.extraction
-          .map( recipeRow( _, groups, groupCount, radios = radios.min( CustomGroupsRadios.Placeholder ) ) ),
-        factory.manufacturing.map( r => recipeRow( ClockedRecipe.roundUp( r ), groups, groupCount, radios ) ),
+          .map(
+            recipe =>
+              recipeRow(
+                recipe,
+                RowIndex.zero,
+                groups,
+                groupCount,
+                radios = radios.min( CustomGroupsRadios.Placeholder )
+              )
+          ),
+        factory.manufacturing.zipWithIndex.map {
+          case ( r, ix ) =>
+            recipeRow(
+              ClockedRecipe.roundUp( r ),
+              RowIndex( ix, factory.manufacturing.size ),
+              groups,
+              groupCount,
+              radios
+            )
+        },
         tr(
           Option.when( radios >= CustomGroupsRadios.Placeholder )(
             td( colspan := (1 + groupCount) )
@@ -57,9 +80,11 @@ object StepsView extends ( ( ( Factory, Map[ClassName, Int] ), Int ) => Tag ) {
         )
       )
     )
+  }
 
   def recipeRow(
       block: ClockedRecipe,
+      rowIndex: RowIndex,
       groups: Map[ClassName, Int],
       groupCount: Int,
       radios: CustomGroupsRadios
@@ -68,6 +93,7 @@ object StepsView extends ( ( ( Factory, Map[ClassName, Int] ), Int ) => Tag ) {
 
     def customGroupRadios: Frag = radios match {
       case CustomGroupsRadios.Empty       => None
+      case CustomGroupsRadios.Sorting     => Some( groupOrder( rowIndex ) )
       case CustomGroupsRadios.Placeholder => Some( td( colspan := (groupCount + 1) ) )
       case CustomGroupsRadios.Full =>
         Some( 0.to( groupCount ).map( groupRadio( block.recipe.item, groups, _ ) ) )
@@ -112,11 +138,30 @@ object StepsView extends ( ( ( Factory, Map[ClassName, Int] ), Int ) => Tag ) {
       textAlign.center,
       input(
         `type` := "radio",
-        name := Keys.outputGroup( recipe ),
+        name := Keys.outputGroup( recipe.className ),
         value := groupIndex,
         Option.when( groups.getOrElse( recipe.className, 0 ) == groupIndex )( checked )
       )
     )
+
+  def groupOrder(
+      rowIndex: RowIndex
+  ): Frag = Seq(
+    td(
+      button(
+        formaction := s"${Actions.outputGroupOrder}/${rowIndex.index - 1}",
+        Option.when( !rowIndex.canMoveUp )( disabled ),
+        "\u25B2"
+      )
+    ),
+    td(
+      button(
+        formaction := s"${Actions.outputGroupOrder}/${rowIndex.index}",
+        Option.when( !rowIndex.canMoveDown )( disabled ),
+        "\u25BC"
+      )
+    )
+  )
 
   val headers =
     Vector(
@@ -127,9 +172,19 @@ object StepsView extends ( ( ( Factory, Map[ClassName, Int] ), Int ) => Tag ) {
       ( 2, "Power", textAlign.left )
     )
 
+  final case class RowIndex( index: Int, total: Int ) {
+    def canMoveUp: Boolean   = index > 0
+    def canMoveDown: Boolean = index + 1 < total
+  }
+
+  object RowIndex {
+    val zero: RowIndex = RowIndex( 0, 0 )
+  }
+
   sealed trait CustomGroupsRadios extends EnumEntry with Product
   object CustomGroupsRadios extends Enum[CustomGroupsRadios] {
     final case object Empty       extends CustomGroupsRadios
+    final case object Sorting     extends CustomGroupsRadios
     final case object Placeholder extends CustomGroupsRadios
     final case object Full        extends CustomGroupsRadios
 

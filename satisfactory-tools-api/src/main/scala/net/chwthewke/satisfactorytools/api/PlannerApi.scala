@@ -34,6 +34,8 @@ trait PlannerApi[F[_]] { self =>
 
   def setCustomGroupSelection( planId: PlanId, groups: Map[ClassName, Int] ): F[Unit]
 
+  def setCustomGroupOrder( planId: PlanId, group: Int, groupRow: Int ): F[Unit]
+
   def getPlanHeader( planId: PlanId ): OptionT[F, PlanHeader]
 
   def getPlanQuery( planId: PlanId, inputTab: InputTab ): F[inputTab.Data]
@@ -69,6 +71,9 @@ trait PlannerApi[F[_]] { self =>
 
     override def setCustomGroupSelection( planId: PlanId, groups: Map[ClassName, Int] ): G[Unit] =
       f( self.setCustomGroupSelection( planId, groups ) )
+
+    override def setCustomGroupOrder( planId: PlanId, group: Int, groupRow: Int ): G[Unit] =
+      f( self.setCustomGroupOrder( planId, group, groupRow ) )
 
     override def getPlanHeader( planId: PlanId ): OptionT[G, PlanHeader] =
       self.getPlanHeader( planId ).mapK( f )

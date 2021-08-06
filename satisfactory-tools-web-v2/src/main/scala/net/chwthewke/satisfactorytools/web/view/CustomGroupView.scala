@@ -14,7 +14,7 @@ object CustomGroupView extends ( ( CustomGroupResult, Int ) => Tag ) {
   override def apply( result: CustomGroupResult, groupCount: Int ): Tag =
     fieldset(
       legend( s"Custom Group ${result.index}" ),
-      StepsView.recipeTable( result.subFactory, Map.empty, groupCount, CustomGroupsRadios.Empty ),
+      StepsView.recipeTable( result.subFactory, Map.empty, groupCount, CustomGroupsRadios.Sorting ),
       MachinesView( result.machines, groupCount ),
       fieldset(
         legend( "Inputs" ),

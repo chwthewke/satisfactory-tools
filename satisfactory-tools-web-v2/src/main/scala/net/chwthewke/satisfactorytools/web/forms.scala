@@ -24,7 +24,6 @@ import model.Bill
 import model.ExtractorType
 import model.Model
 import model.Options
-import model.Recipe
 import model.RecipeList
 import model.ResourceDistrib
 import model.ResourceOptions
@@ -37,6 +36,12 @@ import protocol.PlanName
 object forms {
 
   object Keys {
+    abstract class Prefix[A] private[forms] ( prefix: String, to: A => String, from: String => Option[A] ) {
+      def apply( value: A ): String = s"${prefix}_${to( value )}"
+
+      def unapply( string: String ): Option[A] =
+        Option.when( string.startsWith( s"${prefix}_" ) )( string.stripPrefix( s"${prefix}_" ) ).flatMap( from )
+    }
 
     val planTitle: String = "plan_title"
 
@@ -58,13 +63,7 @@ object forms {
     def resourceWeightKey( item: Item ): String =
       s"weight_${item.className.name}"
 
-    object outputGroup {
-      def apply( recipe: Recipe ): String =
-        show"group_${recipe.className}"
-
-      def unapply( string: String ): Option[ClassName] =
-        Option.when( string.startsWith( "group_" ) )( string.stripPrefix( "group_" ) ).map( ClassName( _ ) )
-    }
+    object outputGroup extends Prefix[ClassName]( "group", _.show, s => Some( ClassName( s ) ) )
 
     val outputGroupCount: String = "group_count"
 
@@ -106,6 +105,12 @@ object forms {
               .map( OutputTab.CustomGroup )
           )
     }
+
+    val compute: String     = "compute"
+    val addGroup: String    = "group_inc"
+    val removeGroup: String = "group_dec"
+
+    val outputGroupOrder: String = "group_order"
 
   }
 
@@ -212,6 +217,7 @@ object forms {
                   Keys.outputGroup.unapply( k ),
                   Numeric[Int].parseString( v )
                 ).tupled.toVector
+                  .filter( _._2 != 0 )
               case _ => Vector.empty
             }.toMap
           )

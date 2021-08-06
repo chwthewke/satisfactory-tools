@@ -101,7 +101,8 @@ CREATE TABLE "plan_solutions"
 );
 
 CREATE TABLE "solution_extraction_recipes"
-( "solution_id"  INTEGER           NOT NULL
+( "id"           BIGSERIAL         NOT NULL
+, "solution_id"  INTEGER           NOT NULL
 , "recipe_id"    INTEGER           NOT NULL
 , "amount"       INTEGER           NOT NULL
 , "clock_speed"  DOUBLE PRECISION  NOT NULL
@@ -119,10 +120,12 @@ CREATE TABLE "solution_extraction_recipes"
 );
 
 CREATE TABLE "solution_manufacturing_recipes"
-( "solution_id"   INTEGER           NOT NULL
+( "id"            BIGSERIAL         NOT NULL
+, "solution_id"   INTEGER           NOT NULL
 , "recipe_id"     INTEGER           NOT NULL
 , "amount"        DOUBLE PRECISION  NOT NULL
 , "custom_group"  INTEGER           DEFAULT NULL
+, "group_order"   INTEGER           DEFAULT NULL
 
 , CONSTRAINT "solution_manufacturing_recipes_solution_fkey"
     FOREIGN KEY ("solution_id")

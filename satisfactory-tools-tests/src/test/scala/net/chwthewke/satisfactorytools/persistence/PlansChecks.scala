@@ -1,6 +1,8 @@
 package net.chwthewke.satisfactorytools
 package persistence
 
+import protocol.PlanId
+
 class PlansChecks extends DatabaseSpec {
 
   "the statement" which {
@@ -149,6 +151,12 @@ class PlansChecks extends DatabaseSpec {
       }
     }
 
+    "selects manufacturing recipe groups" must {
+      "type check" in {
+        check( Plans.statements.selectRecipeGroups )
+      }
+    }
+
     "selects ungrouped manufacturing recipes" must {
       "type check" in {
         check( Plans.statements.selectUngroupedManufacturingRecipes )
@@ -176,6 +184,12 @@ class PlansChecks extends DatabaseSpec {
     "updates group count" must {
       "type check" in {
         check( Plans.statements.updateGroupCount )
+      }
+    }
+
+    "updates group order" must {
+      "type check" in {
+        check( Plans.statements.updateGroupOrder( PlanId( 1 ), 1, 0 ) )
       }
     }
 
