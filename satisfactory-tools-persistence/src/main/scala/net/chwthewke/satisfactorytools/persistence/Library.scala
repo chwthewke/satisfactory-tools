@@ -88,7 +88,7 @@ object Library extends LibraryApi[ConnectionIO] {
       resources  <- Plans.getPlanQuery( from, InputTab.ResourceOptions )
       _          <- Plans.setResourceOptions( to, resources )
       //
-      _ <- Plans.statements.deleteSolution.run( to )
+      _ <- plans.WriteSolution.clearSolution( to )
       _ <- copySolution( from, to )
     } yield ()
 
