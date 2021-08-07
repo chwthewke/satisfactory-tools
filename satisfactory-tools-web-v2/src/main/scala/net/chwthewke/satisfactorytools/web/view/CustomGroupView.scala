@@ -24,10 +24,7 @@ object CustomGroupView extends ( ( CustomGroupResult, Int ) => Tag ) {
         legend( "Outputs" ),
         InputsView.extractedResourcesView( result.subFactory.extraOutputs )
       ),
-      fieldset(
-        legend( "Item I/O" ),
-        ItemsView( result.items, groupCount )
-      )
+      ItemsView( result.items, groupCount )
     )
 
 }

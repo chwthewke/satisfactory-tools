@@ -93,23 +93,25 @@ object ResourceOptionsView {
           )
         ),
         tbody(
-          model.extractedItems.map(
-            item =>
-              tr(
-                td( item.displayName ),
-                td(
-                  colspan := 2,
-                  input(
-                    `type` := "range",
-                    name := Forms.resourceWeightKey( item ),
-                    min := 0,
-                    max := (2 * ResourceWeights.range),
-                    step := 1,
-                    value := weights.weights.getOrElse( item, ResourceWeights.range )
+          model.extractedItems
+            .sortBy( _.displayName )
+            .map(
+              item =>
+                tr(
+                  td( item.displayName ),
+                  td(
+                    colspan := 2,
+                    input(
+                      `type` := "range",
+                      name := Forms.resourceWeightKey( item ),
+                      min := 0,
+                      max := (2 * ResourceWeights.range),
+                      step := 1,
+                      value := weights.weights.getOrElse( item, ResourceWeights.range )
+                    )
                   )
                 )
-              )
-          )
+            )
         )
       )
     )
