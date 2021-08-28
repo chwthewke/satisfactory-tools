@@ -16,7 +16,7 @@ object DependenciesPlugin extends AutoPlugin {
     implicit def ToGroupOps( deps: Deps ): GroupOps = new GroupOps( deps )
 
     val kindProjector: Deps =
-      Seq( compilerPlugin( "org.typelevel" %% "kind-projector" % "0.13.0" cross CrossVersion.full ) )
+      Seq( compilerPlugin( "org.typelevel" %% "kind-projector" % "0.13.1" cross CrossVersion.full ) )
 
     val splain: Deps = Seq( compilerPlugin( "io.tryp" % "splain" % "0.5.8" cross CrossVersion.patch ) )
 
@@ -37,11 +37,11 @@ object DependenciesPlugin extends AutoPlugin {
     val alleycatsCore: Deps = Seq( "org.typelevel" %% "alleycats-core" % catsVersion )
     val catsTime: Deps      = Seq( "io.chrisdavenport" %% "cats-time" % "0.3.4" )
 
-    val catsEffect: Deps = "org.typelevel" %% Seq( "cats-effect", "cats-effect-std" ) % "3.2.1"
+    val catsEffect: Deps = "org.typelevel" %% Seq( "cats-effect", "cats-effect-kernel", "cats-effect-std" ) % "3.2.4"
 
-    val fs2: Deps = "co.fs2" %% Seq( "fs2-core", "fs2-io" ) % "3.0.6"
+    val fs2: Deps = "co.fs2" %% Seq( "fs2-core", "fs2-io" ) % "3.1.1"
 
-    val http4sVersion           = "0.23.0"
+    val http4sVersion           = "0.23.1"
     val http4s: Deps            = Seq( "org.http4s" %% "http4s-dsl" % http4sVersion )
     val http4sBlazeServer: Deps = Seq( "org.http4s" %% "http4s-blaze-server" % http4sVersion )
     val http4sBlazeClient: Deps = Seq( "org.http4s" %% "http4s-blaze-client" % http4sVersion )
@@ -89,7 +89,7 @@ object DependenciesPlugin extends AutoPlugin {
         "com.github.fommil.netlib" % "core"          % "1.1.2"
       )
 
-    val ojAlgo: Deps = Seq( "org.ojalgo" % "ojalgo" % "48.4.2" )
+    val ojAlgo: Deps = Seq( "org.ojalgo" % "ojalgo" % "49.0.2" )
 
     val enumeratumVersion: String = "1.7.0"
     val enumeratum: Deps =
@@ -133,7 +133,7 @@ object DependenciesPlugin extends AutoPlugin {
 
     val postgresql: Deps = Seq( "org.postgresql" % "postgresql"  % "42.2.23" )
     val h2database: Deps = Seq( "com.h2database" % "h2"          % "1.4.200" )
-    val flywayCore: Deps = Seq( "org.flywaydb"   % "flyway-core" % "7.12.0" )
+    val flywayCore: Deps = Seq( "org.flywaydb"   % "flyway-core" % "7.14.0" )
 
     val scalatest: Deps = Seq(
       "org.scalatest"     %% "scalatest"       % "3.2.9",
@@ -143,7 +143,7 @@ object DependenciesPlugin extends AutoPlugin {
     val scalacheck: Deps =
       Seq(
         "org.scalacheck"    %% "scalacheck"      % "1.15.4",
-        "io.chrisdavenport" %% "cats-scalacheck" % "0.3.0"
+        "io.chrisdavenport" %% "cats-scalacheck" % "0.3.1"
       )
 
     val catsLaws: Deps = Seq( "org.typelevel" %% "cats-laws" % catsVersion )
