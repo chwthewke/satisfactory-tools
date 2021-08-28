@@ -11,7 +11,10 @@ case class ResourceWeights( weights: Map[Item, Int] /* int coded btw `0` and `2 
   def costs( resourceCaps: Map[Item, Double] ): Map[Item, Double] = {
     val raw = resourceCaps.map {
       case ( item, cap ) =>
-        ( item, 1d / cap * math.pow( 2d, (weights.getOrElse( item, range ) - range).toDouble / 4d ) )
+        (
+          item,
+          1d / math.max( cap, 1e-5 ) * math.pow( 2d, (weights.getOrElse( item, range ) - range).toDouble / 4d )
+        )
     }
 
     val sum = raw.values.sum
