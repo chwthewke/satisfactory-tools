@@ -58,7 +58,11 @@ object LibraryView {
         width.auto,
         form( method := "POST" ),
         h4( "Confirmation needed" ),
-        p( show"Delete plan ${planHeader.title} ?", br(), s"It was last modified on ${planHeader.updated}." ),
+        p(
+          show"Delete plan ${planHeader.title.fold( "(Untitled)" )( _.show )} ?",
+          br(),
+          s"It was last modified on ${planHeader.updated}."
+        ),
         form(
           method := "POST",
           div(
