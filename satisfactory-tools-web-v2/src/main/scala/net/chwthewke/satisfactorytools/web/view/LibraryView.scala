@@ -22,9 +22,11 @@ object LibraryView {
         method := "POST",
         table(
           id := "library",
+          `class` := "table is-striped",
           tr(
             td(
               button(
+                `class` := "button is-success",
                 formaction := "/new",
                 "New plan"
               )
@@ -41,6 +43,7 @@ object LibraryView {
                 td( plan.updated.atZone( ZoneId.systemDefault() ).format( DateTimeFormatter.RFC_1123_DATE_TIME ) ),
                 td(
                   button(
+                    `class` := "button is-danger",
                     formaction := show"/delete/${plan.id}/",
                     "Delete"
                   )
@@ -69,10 +72,12 @@ object LibraryView {
           div(
             alignContent.center,
             button(
+              `class` := "button",
               formaction := "confirm",
               "Yes"
             ),
             button(
+              `class` := "button",
               formaction := "cancel",
               "No"
             )
