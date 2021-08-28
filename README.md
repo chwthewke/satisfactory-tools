@@ -1,23 +1,48 @@
 ## Satisfactory Production Calculator prototype
 
-**Good**
+A production planner for the game [Satisfactory](https://satisfactorygame.com/)
 
-* Requires only the game-provided `Docs.json`
+* Built from the game-provided `Docs.json` plus a small amount of manual data entry (resource node counts).
 * Works with U4
 * Should hopefully resist future updates fairly well. U3 to U4 still took work though so ¯\\_(ツ)_/¯
 
-**Bad**
+### Features
 
-* No provision for unused by-products yet
-* No GUI, copy `satisfactory-tools-core/src/main/resources/reference.conf` to `satisfactory-production-calculator/src/main/resources/application.conf`, edit and pray
-  * Need to have the right set of recipes to produce desired items without by-products, and no more
+* Select the products you want, select the recipes to use – or let the calculator select the best recipes, get a production plan.
+* Production plan presented as several convenient lists
+  * Production steps, how many buildings for each recipe, which clock speeds
+  * Power consumption
+  * Total input of raw resources
+  * Possible by-products (the solver favors solutions without by-products, but allows them if unavoidable.)
+  * Sources and destinations for each intermediate product
+* Make groups of production steps to organize your plan prior to building the factory
+  * With all the same lists shown for each group
+* Manage your plans in a pertistent library
 
-**Ugly**
+### Run requirements
 
-* Needs Java 11+ (https://adoptopenjdk.net/)
-* Run with [sbt](https://scala-sbt.org) `sbt satisfactory-production-calculator/run`
+* Java 11+ (from e.g. [OpenJDK](https://adoptopenjdk.net/))
+* [SBT](https://scala-sbt.org)
+* Postgresql 13+
 
-### Sample output
+Postgres needs to run on the default port localhost:5432, create a database called `factory_data`, 
+owned by role `factory` with password `factory` (alternatively, copy
+`satisfactory-tools-persistence/src/main/resources/reference.conf` to 
+`satisfactory-tools-web-v2/src/main/resources/application.conf` and edit that to your preference)
+
+Once the requirements are met, run with `sbt run satisfactory-tools-web-v2`.
+
+Point your browser at http://localhost:7282
+
+
+### Old text-based interface
+
+#### To run
+
+* Copy `satisfactory-tools-core/src/main/resources/reference.conf` to `satisfactory-production-calculator/src/main/resources/application.conf`, edit and pray
+* Run with SBT `sbt satisfactory-production-calculator/run`
+
+#### Sample output
 
 <details>
 <summary>Expand</summary>
