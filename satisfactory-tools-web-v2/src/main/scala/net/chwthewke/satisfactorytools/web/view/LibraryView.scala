@@ -11,36 +11,39 @@ import protocol.PlanName
 
 object LibraryView {
 
-  private def buttonNew: Tag =
-    button(
-      formaction := "/new",
-      "New plan"
-    )
-
   private def planDisplayName( title: Option[PlanName] ): PlanName =
     title.getOrElse( PlanName( "(Untitled plan)" ) )
 
-  private def page( bodyContents: Tag ): Tag =
-    html(
-      head( title := "Satisfactory Planner", pageStyle ),
-      body( bodyContents )
-    )
-
   def viewAllPlans( plans: Vector[PlanHeader] ): Tag =
     page(
+      "Satisfactory Planner",
       form(
         method := "POST",
         table(
+          id := "library",
           tr(
-            td( buttonNew ),
-            td( textAlign.right, show"${plans.size} plans" )
+            td(
+              button(
+                formaction := "/new",
+                "New plan"
+              )
+            ),
+            td(
+              textAlign.left,
+              show"${plans.size} plan${if (plans.size != 1) "s" else ""}"
+            )
           ),
           plans.map(
             plan =>
               tr(
                 td( a( href := show"/plan/${plan.id}", planDisplayName( plan.title ).show ) ),
                 td( plan.updated.atZone( ZoneId.systemDefault() ).toString ),
-                td( a( href := show"/delete/${plan.id}/", "Delete" ) )
+                td(
+                  button(
+                    formaction := show"/delete/${plan.id}/",
+                    "Delete"
+                  )
+                )
               )
           )
         )
@@ -49,11 +52,12 @@ object LibraryView {
 
   def deleteConfirm( planHeader: PlanHeader ): Tag =
     page(
+      "Confirmation needed",
       div(
         alignSelf.center,
         width.auto,
         form( method := "POST" ),
-        h4( "Confirmation required" ),
+        h4( "Confirmation needed" ),
         p( show"Delete plan ${planHeader.title} ?", br(), s"It was last modified on ${planHeader.updated}." ),
         form(
           method := "POST",

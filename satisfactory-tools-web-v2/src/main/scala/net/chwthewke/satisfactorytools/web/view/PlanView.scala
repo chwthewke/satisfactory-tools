@@ -21,30 +21,28 @@ object PlanView {
       input: I,
       outputTab: OutputTab.Aux[O],
       output: SolutionHeader[O]
-  ): Tag = html(
-    head( title := header.title.mkString_( "Satisfactory Planner ", "", "" ), pageStyle ),
-    body(
-      form(
-        method := "POST",
-        enctype := "application/x-www-form-urlencoded",
-        documentHeader( header ),
+  ): Tag = page(
+    header.title.mkString_( "Satisfactory Planner ", "", "" ),
+    form(
+      method := "POST",
+      enctype := "application/x-www-form-urlencoded",
+      documentHeader( header ),
+      div(
+        id := "main",
         div(
-          id := "main",
-          div(
-            id := "input",
-            inputTabs( inputTab ),
-            inputView( inputTab )( model, input )
-          ),
-          div(
-            id := "output",
-            outputTabs( outputTab, output ),
-            output match {
-              case SolutionHeader.NotComputed        => p( "Configure plan on the left and press Compute" )
-              case SolutionHeader.PlanError( error ) => p( s"Error: $error" )
-              case SolutionHeader.Computed( outputData, groupCount, _ ) =>
-                outputView( outputTab )( outputData, groupCount )
-            }
-          )
+          id := "input",
+          inputTabs( inputTab ),
+          inputView( inputTab )( model, input )
+        ),
+        div(
+          id := "output",
+          outputTabs( outputTab, output ),
+          output match {
+            case SolutionHeader.NotComputed        => p( "Configure plan on the left and press Compute" )
+            case SolutionHeader.PlanError( error ) => p( s"Error: $error" )
+            case SolutionHeader.Computed( outputData, groupCount, _ ) =>
+              outputView( outputTab )( outputData, groupCount )
+          }
         )
       )
     )
@@ -53,6 +51,10 @@ object PlanView {
   private def documentHeader( header: PlanHeader ): Tag =
     div(
       id := "header",
+      display.flex,
+      flexDirection.row,
+      flexWrap.nowrap,
+      button( "Library", formaction := "/library" ),
       input(
         `type` := "text",
         fontSize.`x-large`,
@@ -67,8 +69,7 @@ object PlanView {
       button(
         formaction := "copy",
         "Copy"
-      ),
-      a( href := "/", "Library" )
+      )
     )
 
   private def inputTabs( selected: InputTab ): Tag =

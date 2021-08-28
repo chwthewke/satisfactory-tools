@@ -69,6 +69,12 @@ class Application[F[_]](
         .newPlan( session.userId, Options.default, model.defaultResourceOptions )
         .flatMap( redirect( _, InputTab.Bill, OutputTab.Steps ) )
 
+    case ContextRequest( session, POST -> Root / "library" ) =>
+      Found( Location( uri"/" ) )
+
+    case ContextRequest( session, POST -> Root / "delete" / segment.PlanId( id ) ) =>
+      Found( Location( uri"/delete" / id.show / "" ) )
+
     case ContextRequest( session, GET -> Root / "delete" / segment.PlanId( id ) ) =>
       planner
         .getPlanHeader( id )
