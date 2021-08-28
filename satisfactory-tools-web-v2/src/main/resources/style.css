@@ -1,0 +1,308 @@
+
+/*
+==========================
+# GENERAL
+==========================
+*/
+
+html {
+    box-sizing: border-box;
+
+    background-color: #272b30;
+
+    text-rendering: optimizeLegibility;
+}
+
+body {
+    color: #aaa;
+
+    font-family: "Segoe UI", "Helvetica", "Verdana", sans-serif;
+    font-weight: 400;
+
+    line-height: 1.5;
+}
+
+a {
+    color: #fafafa;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+a:hover {
+    color: #fff;
+}
+
+a:visited {
+    color: #cdb126;
+}
+
+/*
+==========================
+# BUTTONS
+==========================
+*/
+
+.button {
+    background-color: #3a3f44;
+    border-color: #5d656d;
+    border-width: 1px;
+    color: #fafafa;
+    cursor: pointer;
+    justify-content: center;
+    padding: calc(.5em - 1px) 1em;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.button.is-medium {
+    font-size: 1.25rem;
+}
+
+.button.is-large {
+    font-size: 1.5rem;
+}
+
+.button.is-small {
+    border-radius: 2px;
+    font-size: .85rem
+}
+
+.button:active {
+    border-color: #ededed;
+    color: #d4d4d4;
+}
+
+.button:hover {
+    border-color: #7a8288;
+    color: #fff;
+}
+
+.button:focus {
+    border-color: #ededed;
+    color: #ededed;
+}
+
+.button:focus:not(:active) {
+    box-shadow: 0 0 0 .125em rgba(250, 250, 250, .25);
+}
+
+
+.button.is-danger {
+    background-color: #ee5f5b;
+    color: #fff;
+}
+
+.button.is-danger:active {
+    background-color: #ec4844;
+    border-color: transparent;
+    color: #fff;
+}
+
+.button.is-danger:hover {
+    background-color: #ed544f;
+    border-color: transparent;
+    color: #fff;
+}
+
+.button.is-danger:focus {
+    border-color: transparent;
+    color: #fff;
+}
+
+.button.is-danger:focus:not(:active) {
+    box-shadow: 0 0 0 .125em rgba(238, 95, 91, .25);
+}
+
+.button.is-info {
+    background-color: #3298dc;
+    color: #fff;
+}
+
+.button.is-info:hover {
+    background-color: #2793da;
+    border-color: transparent;
+    color: #fff;
+}
+
+.button.is-link {
+    background-color: #fafafa;
+    color: #52575c;
+}
+
+.button.is-info:focus {
+    border-color: transparent;
+    color: #fff;
+}
+
+.button.is-info:focus:not(:active) {
+    box-shadow: 0 0 0 .125em rgba(50, 152, 220, .25);
+}
+
+.button.is-info:active {
+    background-color: #238cd1;
+    border-color: transparent;
+    color: #fff;
+}
+
+.button.is-link:hover {
+    background-color: #f4f4f4;
+    border-color: transparent;
+    color: #52575c;
+}
+
+.button.is-link:focus {
+    border-color: transparent;
+    color: #52575c;
+}
+
+.button.is-link:focus:not(:active) {
+    box-shadow: 0 0 0 .125em rgba(250, 250, 250, .25);
+}
+
+.button.is-link:active {
+    background-color: #ededed;
+    border-color: transparent;
+    color: #52575c;
+}
+
+.button.is-success {
+    background-color: #62c462;
+    color: #fff;
+}
+
+.button.is-success:hover {
+    background-color: #59c159;
+    border-color: transparent;
+    color: #fff;
+}
+
+.button.is-success:focus {
+    border-color: transparent;
+    color: #fff;
+}
+
+.button.is-success:focus:not(:active) {
+    box-shadow: 0 0 0 .125em rgba(98, 196, 98, .25);
+}
+
+.button.is-success:active {
+    background-color: #4fbd4f;
+    border-color: transparent;
+    color: #fff;
+}
+
+/*
+==========================
+# CHECKBOXES & RADIOS
+==========================
+*/
+
+input[type=checkbox], input[type=radio] {
+    vertical-align: baseline;
+}
+
+
+/*
+.checkbox, .radio, .select {
+    display: inline-block;
+    position: relative;
+    appearance: none;
+
+    width: 1em;
+    height: 1em;
+    padding: 1px;
+    !* background-color only for content *!
+    background-clip: content-box;
+    border: 1px solid #aaa;
+    background-color: #e7e6e7;
+    border-radius: 50%;
+}
+
+.checkbox:checked, .radio:checked {
+    background-color: #ff8800;
+}
+
+.checkbox, .radio {
+    cursor: pointer;
+    line-height: 1.25;
+}
+
+.checkbox input, .radio input {
+    cursor: pointer;
+}
+
+.checkbox:hover, .radio:hover {
+    border-color: #7a8288;
+}
+
+.checkbox[disabled], .radio[disabled], fieldset[disabled] .checkbox, fieldset[disabled] .radio {
+    color: #c4c4c4;
+    cursor: not-allowed
+}
+*/
+
+
+/*
+==========================
+# TABLES
+==========================
+*/
+
+
+.table {
+    background-color: #3a3f44;
+    color: #aaa;
+}
+
+.table td, .table th {
+    padding: 0.5rem;
+}
+
+.table td.is-dark, .table th.is-dark {
+    background-color: #202328;
+    border-color: #202328;
+    color: #fff;
+}
+
+.table.is-striped tbody tr:not(.is-selected):nth-child(odd) {
+    background-color: #272b30;
+}
+
+
+/*
+==========================
+# SPECIFIC ELEMENTS
+==========================
+*/
+
+#library {
+    font-size: 1.5rem;
+}
+
+#library td, #library th{
+    padding: 0.5em;
+}
+
+#header > *:not(:first-child):not(:last-child) {
+    margin: 5px;
+}
+
+#header > *:first-child:not(:last-child) {
+    margin: 5px 5px 5px 0;
+}
+
+#header > *:not(:first-child):last-child {
+    margin: 5px 0 5px 5px;
+}
+
+
+#main {
+    display: flex;
+    flex-flow: row;
+}
+#input {
+    flex: auto;
+}
+#output {
+    flex: auto;
+}

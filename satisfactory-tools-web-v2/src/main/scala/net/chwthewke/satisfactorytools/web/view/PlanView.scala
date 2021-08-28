@@ -54,7 +54,7 @@ object PlanView {
       display.flex,
       flexDirection.row,
       flexWrap.nowrap,
-      button( "Library", formaction := "/library" ),
+      button( `class` := "button is-medium", "Library", formaction := "/library" ),
       input(
         `type` := "text",
         fontSize.`x-large`,
@@ -63,10 +63,12 @@ object PlanView {
         name := Keys.planTitle
       ),
       button(
+        `class` := "button is-success is-medium",
         formaction := "save",
         "Save"
       ),
       button(
+        `class` := "button is-info is-medium",
         formaction := "copy",
         "Copy"
       )
@@ -82,6 +84,7 @@ object PlanView {
       ).map {
         case ( text, tab ) =>
           button(
+            `class` := "button is-small",
             formaction := s"input/${Actions.input( tab )}",
             text,
             Option.when( tab == selected )( fontWeight.bold )
@@ -100,6 +103,7 @@ object PlanView {
   private def outputTabs[X]( selected: OutputTab, solution: SolutionHeader[X] ): Tag = {
     val computeTab =
       button(
+        `class` := "button is-small",
         formaction := Actions.compute,
         if (solution.isComputed) "Recompute" else "Compute"
       )
@@ -117,6 +121,7 @@ object PlanView {
       ).map {
         case ( text, tab ) =>
           button(
+            `class` := "button is-small",
             formaction := s"output/${Actions.output( tab )}",
             Option.when( tab == selected )( fontWeight.bold ),
             text
@@ -126,11 +131,13 @@ object PlanView {
     val groupActionTabs =
       Vector(
         button(
+          `class` := "button is-small",
           formaction := Actions.removeGroup,
           Option.when( !solution.canRemoveGroup )( disabled ),
           "-"
         ),
         button(
+          `class` := "button is-small",
           formaction := Actions.addGroup,
           Option.when( !solution.canAddGroup )( disabled ),
           "+"

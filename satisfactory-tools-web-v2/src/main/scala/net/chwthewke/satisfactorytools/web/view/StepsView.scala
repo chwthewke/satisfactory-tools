@@ -42,6 +42,7 @@ object StepsView extends ( ( ( Factory, Map[ClassName, Int] ), Int ) => Tag ) {
     }
 
     table(
+      `class` := "table is-striped",
       thead(
         tr(
           groupHeaders,
@@ -137,6 +138,7 @@ object StepsView extends ( ( ( Factory, Map[ClassName, Int] ), Int ) => Tag ) {
     td(
       textAlign.center,
       input(
+        `class` := "radio",
         `type` := "radio",
         name := Keys.outputGroup( recipe.className ),
         value := groupIndex,
