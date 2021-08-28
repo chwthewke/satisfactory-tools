@@ -49,6 +49,9 @@ object WriteSolverInputs {
       statements.insertRecipeList.updateMany( rows )
     }.void
 
+  def setDefaultRecipeList( planId: PlanId ): ConnectionIO[Unit] =
+    statements.insertDefaultRecipeList.run( planId ).void
+
   def updateOptions( planId: PlanId, options: Options ): ConnectionIO[Unit] =
     statements.upsertOptions.run( ( planId, options ) ).void
 
@@ -195,6 +198,19 @@ object WriteSolverInputs {
           |  ( ?, ? )
           |""".stripMargin
       )
+
+    val insertDefaultRecipeList: Update[PlanId] =
+      Update[( PlanId, Int )](
+        // language=SQL
+        """INSERT INTO "recipe_lists"
+          |  ( "plan_id", "recipe_id" )
+          |  SELECT
+          |      ?
+          |    , "id"
+          |  FROM "recipes"
+          |  WHERE "data_version" = ?
+          |""".stripMargin
+      ).contramap( ( _, ModelVersion ) )
 
   }
 }

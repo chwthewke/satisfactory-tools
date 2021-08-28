@@ -21,6 +21,7 @@ object Headers {
     for {
       planId  <- statements.insertUnnamedPlan.withUniqueGeneratedKeys[PlanId]( "id" )( userId )
       itemIds <- ReadModel.readItemIds
+      _       <- WriteSolverInputs.setDefaultRecipeList( planId )
       _       <- WriteSolverInputs.updateOptions( planId, options )
       _       <- WriteSolverInputs.updateResourceOptions( planId, itemIds, resourceOptions )
     } yield planId

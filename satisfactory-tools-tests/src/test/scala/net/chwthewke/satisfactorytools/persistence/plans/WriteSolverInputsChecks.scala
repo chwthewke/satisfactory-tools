@@ -53,5 +53,11 @@ class WriteSolverInputsChecks extends DatabaseSpec {
       }
     }
 
+    "inserts the default recipe list" must {
+      "type check" in {
+        check( WriteSolverInputs.statements.insertDefaultRecipeList )
+      }
+    }
+
   }
 }
