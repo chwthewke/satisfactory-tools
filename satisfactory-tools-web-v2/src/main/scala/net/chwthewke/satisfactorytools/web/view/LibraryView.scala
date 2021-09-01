@@ -3,6 +3,7 @@ package web.view
 
 import cats.syntax.show._
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import scalatags.Text.Tag
 import scalatags.Text.all._
 
@@ -37,7 +38,7 @@ object LibraryView {
             plan =>
               tr(
                 td( a( href := show"/plan/${plan.id}", planDisplayName( plan.title ).show ) ),
-                td( plan.updated.atZone( ZoneId.systemDefault() ).toString ),
+                td( plan.updated.atZone( ZoneId.systemDefault() ).format( DateTimeFormatter.RFC_1123_DATE_TIME ) ),
                 td(
                   button(
                     formaction := show"/delete/${plan.id}/",
