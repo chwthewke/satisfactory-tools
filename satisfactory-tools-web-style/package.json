@@ -1,0 +1,11 @@
+{
+  "name": "satisfactory-tools-style",
+  "private": true,
+  "scripts": {
+    "dev": "tailwindcss -c tailwind.config.js -o tw.css"
+  },
+  "devDependencies": {
+    "@tailwindcss/forms": "^0.3.3",
+    "tailwindcss": "^2.2.8"
+  }
+}
