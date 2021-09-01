@@ -99,7 +99,7 @@ val `satisfactory-tools-web-v2` = project
 
 val `satisfactory-tools-dev` = project
   .settings( compilerPlugins )
-  .dependsOn( `satisfactory-tools-app` )
+  .dependsOn( `satisfactory-tools-app`, `satisfactory-tools-web-v2` )
   .enablePlugins( ScalacPlugin )
 
 val `satisfactory-production-calculator` = project
