@@ -3,11 +3,14 @@ package web.view
 
 import cats.syntax.show._
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import scalatags.Text.Tag
 import scalatags.Text.all._
 
 import protocol.PlanHeader
 import protocol.PlanName
+//
+import StyleClass._
 
 object LibraryView {
 
@@ -24,6 +27,7 @@ object LibraryView {
           tr(
             td(
               button(
+                `class` := Seq( pad._1, bg.green._500, text.white ),
                 formaction := "/new",
                 "New plan"
               )
@@ -37,7 +41,7 @@ object LibraryView {
             plan =>
               tr(
                 td( a( href := show"/plan/${plan.id}", planDisplayName( plan.title ).show ) ),
-                td( plan.updated.atZone( ZoneId.systemDefault() ).toString ),
+                td( plan.updated.atZone( ZoneId.systemDefault() ).format( DateTimeFormatter.RFC_1123_DATE_TIME ) ),
                 td(
                   button(
                     formaction := show"/delete/${plan.id}/",

@@ -29,10 +29,20 @@ import persistence.Sessions
 import web.app.Application
 
 class Main[F[_]: Async] {
+  private val dsl = new Http4sDsl[F] {}
+  import dsl._
+
+  private val static: HttpRoutes[F] = HttpRoutes.of[F] {
+    case GET -> Root / "tw.css" =>
+      Ok(
+        fs2.io.readInputStream(
+          Async[F].delay( getClass.getClassLoader.getResourceAsStream( "tw.css" ) ),
+          32768
+        )
+      )
+  }
 
   private def shutdown( shutdownCommand: Ref[F, Boolean] ): HttpRoutes[F] = {
-    val dsl = new Http4sDsl[F] {}
-    import dsl._
 
     HttpRoutes.of[F] {
       case _ -> Root / "shutdown" => shutdownCommand.set( true ) *> Ok()
@@ -62,7 +72,7 @@ class Main[F[_]: Async] {
 
       (
         shutdownSignal,
-        AutoSlash.httpRoutes( app.routes <+> shutdown( shutdownSignal ) ).orNotFound
+        AutoSlash.httpRoutes( static <+> app.routes <+> shutdown( shutdownSignal ) ).orNotFound
       )
 
     }

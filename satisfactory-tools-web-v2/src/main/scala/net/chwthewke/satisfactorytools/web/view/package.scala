@@ -4,6 +4,9 @@ package web
 import scalatags.Text
 import scalatags.Text.Tag
 import scalatags.Text.all._
+import scalatags.text.Builder
+//
+import view.StyleClass._
 
 package object view {
 
@@ -49,8 +52,8 @@ package object view {
 
   def page( pageTitle: String, contents: Tag ): Tag =
     html(
-      head( title := pageTitle, pageStyle ),
-      body( contents )
+      head( title := pageTitle, pageStyle, link( rel := "stylesheet", href := "/tw.css" ) ),
+      body( `class` := Seq( bg.gray._800, text.yellow._50 ), contents )
     )
 
   def numCell3( value: Double ): Frag =
@@ -58,5 +61,9 @@ package object view {
 
   def numCell4( value: Double ): Frag =
     td( f"$value%4.3f", title := value.toString, textAlign.right )
+
+  implicit val styleClassAttrValue: AttrValue[Seq[StyleClass]] =
+    ( t: Builder, a: Attr, v: Seq[StyleClass] ) =>
+      t.setAttr( a.name, Builder.GenericAttrValueSource( v.map( _.name ).mkString( " " ) ) )
 
 }
