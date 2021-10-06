@@ -14,7 +14,7 @@ ThisBuild / updateSbtClassifiers / conflictManager  := ConflictManager.default
 enablePlugins( FormatPlugin, DependenciesPlugin )
 
 ThisBuild / SettingKey[Seq[String]]( "ide-base-packages" )
-  .withRank( KeyRanks.Invisible ) := Seq( "net.chwthewke.satisfactorytools" )
+  .withRank( KeyRanks.Invisible ) := Seq( "net.chwthewke.dsptools", "net.chwthewke.satisfactorytools" )
 
 val compilerPlugins = libraryDependencies ++= kindProjector ++ betterMonadicFor
 
@@ -154,4 +154,10 @@ val `satisfactory-tools-all` = project
     `satisfactory-tools-web-v2`,
     `satisfactory-production-calculator`,
     `satisfactory-tools-tests`
+  )
+
+val `dsp-tools-dev` = project
+  .settings( compilerPlugins )
+  .settings(
+    libraryDependencies ++= cats ++ kittens ++ alleycatsCore ++ mouse ++ enumeratum ++ catsEffect ++ fs2 ++ scodec
   )

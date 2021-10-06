@@ -70,6 +70,7 @@ object DependenciesPlugin extends AutoPlugin {
 
     val scodec: Deps = Seq(
       "org.scodec" %% "scodec-bits" % "1.1.27",
+      "org.scodec" %% "scodec-cats" % "1.1.0",
       "org.scodec" %% "scodec-core" % "1.11.8"
     )
 
