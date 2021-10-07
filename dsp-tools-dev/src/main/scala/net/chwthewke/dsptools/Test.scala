@@ -14,7 +14,7 @@ import scodec.bits.ByteVector
 
 object Test extends IOApp {
   override def run( args: List[String] ): IO[ExitCode] =
-    testDecodeItemProtoSet.as( ExitCode.Success )
+    testDecodeRecipeProtoSet.as( ExitCode.Success )
 
   def testDecodeStringProtoSet: IO[ProtoSet[StringProto]] =
     testDecodeProtoSet(
@@ -26,10 +26,10 @@ object Test extends IOApp {
       Path( "C:\\Users\\Chewie\\Desktop\\dsp\\ItemProtoSet.dat" )
     )
 
-//  def testDecodeRecipeProtoSet: IO[ProtoSet[RecipeProto]] =
-//    testDecodeProtoSet(
-//      Path( "C:\\Users\\Chewie\\Desktop\\dsp\\RecipeProtoSet.dat" )
-//    )
+  def testDecodeRecipeProtoSet: IO[ProtoSet[RecipeProto]] =
+    testDecodeProtoSet(
+      Path( "C:\\Users\\Chewie\\Desktop\\dsp\\RecipeProtoSet.dat" )
+    )
 
   def testDecodeTechProtoSet: IO[ProtoSet[TechProto]] =
     testDecodeProtoSet(

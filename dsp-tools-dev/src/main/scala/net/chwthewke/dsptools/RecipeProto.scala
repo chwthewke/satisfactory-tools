@@ -1,5 +1,8 @@
 package net.chwthewke.dsptools
 
+import cats.Show
+import cats.syntax.foldable._
+import cats.syntax.show._
 import scodec.codecs._
 import scodec.Decoder
 
@@ -54,5 +57,40 @@ object RecipeProto extends Decoders {
       iconPath,
       description
     )
+
+  implicit val recipeProtoShow: Show[RecipeProto] = Show.show {
+    case RecipeProto(
+        name,
+        id,
+        sId,
+        recipeType,
+        handcraft,
+        explicit,
+        timeSpend,
+        items,
+        itemCounts,
+        results,
+        resultCounts,
+        gridIndex,
+        iconPath,
+        description
+        ) =>
+      show"""ID:             $id
+            |Name:           $name
+            |sID:            $sId
+            |Recipe Type:    $recipeType
+            |handcraft:      $handcraft
+            |explicit:       $explicit
+            |time spend:     $timeSpend
+            |Items:          ${items.mkString_( ", " )}
+            |Item Counts:    ${itemCounts.mkString_( ", " )}
+            |Results:        ${results.mkString_( ", " )}
+            |Result Counts:  ${resultCounts.mkString_( ", " )}
+            |grid index:     $gridIndex
+            |icon path:      $iconPath
+            |decsription:    $description
+            |""".stripMargin
+
+  }
 
 }

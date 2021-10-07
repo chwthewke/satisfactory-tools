@@ -1,8 +1,9 @@
 package net.chwthewke.dsptools
 
 import cats.Show
-import cats.derived.semiauto
 import cats.syntax.apply._
+import cats.syntax.foldable._
+import cats.syntax.show._
 import scodec.Decoder
 import scodec.codecs._
 import scodec.interop.cats._
@@ -34,8 +35,6 @@ case class TechProto(
 )
 
 object TechProto extends Decoders {
-  implicit val techProtoShow: Show[TechProto] = semiauto.show[TechProto]
-
   implicit val decoder: Decoder[TechProto] = for {
     name             <- alignedUtf8.withLog( "tech name" )
     id               <- int32L.withLog( "tech id" )
@@ -86,4 +85,55 @@ object TechProto extends Decoders {
     position
   )
 
+  implicit val techProtoShow: Show[TechProto] = Show.show {
+    case TechProto(
+        name,
+        id,
+        sId,
+        desc,
+        conclusion,
+        published,
+        level,
+        maxLevel,
+        levelCoef1,
+        levelCoef2,
+        iconPath,
+        isLabTech,
+        preTechs,
+        preTechsImplicit,
+        items,
+        itemPoints,
+        hashNeeded,
+        unlockRecipes,
+        unlockFunctions,
+        unlockValues,
+        addItems,
+        addItemCounts,
+        position
+        ) =>
+      show"""ID:             $id
+            |Name:           $name
+            |sID:            $sId
+            |desc:           $desc
+            |conclusion:     $conclusion
+            |published:      $published
+            |level:          $level
+            |max level:      $maxLevel
+            |level coef. 1:  $levelCoef1
+            |level coef. 2:  $levelCoef2
+            |icon path:      $iconPath
+            |is lab tech:    $isLabTech
+            |pre techs:      $preTechs
+            |pre techs impl: $preTechsImplicit
+            |Items:          ${items.mkString_( ", " )}
+            |Item Points :   ${itemPoints.mkString_( ", " )}
+            |Hash Needed:    $hashNeeded
+            |Unlock Recipes: ${unlockRecipes.mkString_( ", " )}
+            |Unlock Funcs:   ${unlockFunctions.mkString_( ", " )}
+            |Unlock Values:  ${unlockValues.mkString_( ", " )}
+            |Add Items:      ${addItems.mkString_( ", " )}
+            |Add Item Cts:   ${addItemCounts.mkString_( ", " )}
+            |Position:       $position
+            |""".stripMargin
+  }
 }
