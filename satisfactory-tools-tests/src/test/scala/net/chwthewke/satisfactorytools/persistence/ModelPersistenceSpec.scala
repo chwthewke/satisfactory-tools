@@ -10,7 +10,7 @@ import model.Model
 
 class ModelPersistenceSpec extends DatabaseSpec {
 
-  import model.diff._
+  import diff._
 
   val loadModel: IO[Model] = Loader.io.loadModel
 

@@ -15,7 +15,7 @@ object GrabDocs extends IOApp {
 
   val defaultPath: String = "E:\\EpicGames\\SatisfactoryExperimental"
 
-  val destPath: Path = Paths.get( "satisfactory-tools-core", "src", "main", "resources", "Docs.json" )
+  val destPath: Path = Paths.get( "satisfactory-tools-core", "src", "main", "resources", "Docs5.json" )
 
   override def run( args: List[String] ): IO[ExitCode] = {
 

@@ -21,8 +21,10 @@ import model.Model
 
 class Loader[F[_]]( implicit val syncInstance: Sync[F] ) {
 
+  val docsName: String = "Docs.json"
+
   def docsResource: F[InputStream] =
-    syncInstance.delay( getClass.getClassLoader.getResourceAsStream( "Docs.json" ) )
+    syncInstance.delay( getClass.getClassLoader.getResourceAsStream( docsName ) )
 
   def streamDocsResource: Stream[F, Byte] =
     fs2.io.readInputStream( docsResource, 32768 )

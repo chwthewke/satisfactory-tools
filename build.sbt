@@ -112,16 +112,17 @@ val `satisfactory-production-calculator` = project
 val `satisfactory-tools-tests` = project
   .settings( compilerPlugins )
   .settings(
-    libraryDependencies ++= (
+    libraryDependencies ++=
       autoDiff ++
         autoDiffEnumeratum ++
-        autoDiffScalatest ++
-        scalatest ++
-        scalacheck ++
-        discipline ++
-        catsLaws ++
-        doobieScalatest
-    ).map( _ % "test" )
+        (
+          autoDiffScalatest ++
+            scalatest ++
+            scalacheck ++
+            discipline ++
+            catsLaws ++
+            doobieScalatest
+        ).map( _ % "test" )
   )
   .settings( Test / fork := true )
   .settings(
