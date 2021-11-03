@@ -34,6 +34,8 @@ import api.PlannerApi
 import api.SessionApi
 import model.Model
 import model.Options
+import net.chwthewke.satisfactorytools.prod.Factory
+import net.chwthewke.satisfactorytools.web.view.CompareView
 import protocol.InputTab
 import protocol.OutputTab
 import protocol.PlanHeader
@@ -87,6 +89,7 @@ class Application[F[_]](
 
     case ContextRequest( session, POST -> Root / "delete" / segment.PlanId( id ) / "cancel" ) =>
       Found( Location( uri"/" ) )
+
   }
 
   val planRoutes: ContextRoutes[Session, F] = ContextRoutes.of {
@@ -107,6 +110,23 @@ class Application[F[_]](
         ) =>
       updatePlan[inputTab.Data, outputTab.Data]( planId, inputTab, outputTab, req, rest )
 
+    case ContextRequest( session, GET -> Root / "compare" / segment.PlanId( before ) / segment.PlanId( after ) ) =>
+      comparePlans( model, before, after )
+
+  }
+
+  private def comparePlans( model: Model, before: PlanId, after: PlanId ): F[Response[F]] = {
+    def getFactory( planId: PlanId ): F[Option[Factory]] =
+      planner
+        .getPlanHeader( planId )
+        .subflatMap( header => header.solution.value )
+        .semiflatMap( solutionId => planner.getPlanResult( planId, solutionId, OutputTab.Steps ) )
+        .map( _._1 )
+        .value
+
+    ( getFactory( before ), getFactory( after ) )
+      .mapN( ( b, a ) => CompareView( model, b, a ) )
+      .flatMap( Ok( _ ) )
   }
 
   private def viewPlan( planId: PlanId, inputTab: InputTab, outputTab: OutputTab ): F[Response[F]] =
