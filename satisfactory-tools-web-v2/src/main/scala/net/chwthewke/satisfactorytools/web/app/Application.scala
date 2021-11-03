@@ -34,8 +34,7 @@ import api.PlannerApi
 import api.SessionApi
 import model.Model
 import model.Options
-import net.chwthewke.satisfactorytools.prod.Factory
-import net.chwthewke.satisfactorytools.web.view.CompareView
+import prod.Factory
 import protocol.InputTab
 import protocol.OutputTab
 import protocol.PlanHeader
@@ -43,8 +42,10 @@ import protocol.PlanId
 import protocol.PlanName
 import protocol.Session
 import protocol.SolutionHeader
+import web.forms
 import web.forms.Actions
 import web.forms.Decoders
+import web.view.CompareView
 import web.view.LibraryView
 import web.view.PlanView
 
@@ -89,6 +90,12 @@ class Application[F[_]](
 
     case ContextRequest( session, POST -> Root / "delete" / segment.PlanId( id ) / "cancel" ) =>
       Found( Location( uri"/" ) )
+
+    case ContextRequest( session, req @ POST -> Root / "compare" ) =>
+      OptionT( decode( req )( forms.Decoders.comparePlans ) )
+        .foldF( Found( Location( uri"/" ) ) ) {
+          case ( b, a ) => Found( Location( uri"/" / "compare" / show"$b" / show"$a" ) )
+        }
 
   }
 
