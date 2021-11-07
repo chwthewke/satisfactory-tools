@@ -34,6 +34,8 @@ import api.PlannerApi
 import api.SessionApi
 import model.Model
 import model.Options
+import net.chwthewke.satisfactorytools.data.Item
+import net.chwthewke.satisfactorytools.protocol.ItemIO
 import prod.Factory
 import protocol.InputTab
 import protocol.OutputTab
@@ -123,13 +125,19 @@ class Application[F[_]](
   }
 
   private def comparePlans( model: Model, before: PlanId, after: PlanId ): F[Response[F]] = {
-    def getFactory( planId: PlanId ): F[Option[Factory]] =
-      planner
+    def getFactory( planId: PlanId ): F[Option[( Factory, Map[Item, ItemIO] )]] = {
+      val solutionId = planner
         .getPlanHeader( planId )
         .subflatMap( header => header.solution.value )
-        .semiflatMap( solutionId => planner.getPlanResult( planId, solutionId, OutputTab.Steps ) )
-        .map( _._1 )
-        .value
+
+      (
+        solutionId
+          .semiflatMap( solutionId => planner.getPlanResult( planId, solutionId, OutputTab.Steps ) )
+          .map( _._1 ),
+        solutionId
+          .semiflatMap( solutionId => planner.getPlanResult( planId, solutionId, OutputTab.Items ) )
+      ).tupled.value
+    }
 
     ( getFactory( before ), getFactory( after ) )
       .mapN( ( b, a ) => CompareView( model, b, a ) )

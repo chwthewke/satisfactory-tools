@@ -17,28 +17,96 @@ import model.Model
 import model.Recipe
 import prod.ClockedRecipe
 import prod.Factory
+import protocol.ItemIO
+import protocol.ItemSrcDest
 
 object CompareView {
   import Text.all._
   import Text.tags2.details
   import Text.tags2.summary
 
-  def apply( model: Model, before: Option[Factory], after: Option[Factory] ): Tag =
+  def apply(
+      model: Model,
+      before: Option[( Factory, Map[Item, ItemIO] )],
+      after: Option[( Factory, Map[Item, ItemIO] )]
+  ): Tag =
     page(
       "Compare plans",
       ( before, after )
-        .mapN(
-          ( b, a ) =>
+        .mapN {
+          case ( ( b, bio ), ( a, aio ) ) =>
             div(
               inputOutputsDiff( b, a ),
-              recipeDiff2( b, a )
+              recipeDiff2( b, a ),
+              itemIODiff( bio, aio )
             )
-        )
+        }
         .getOrElse( div( "Missing inputs or solution(s)" ) )
     )
 
   ////////////////////////////
   // Inputs/Outputs
+
+  def itemIODiff( before: Map[Item, ItemIO], after: Map[Item, ItemIO] ): Tag = {
+    val byItem: Vector[( Item, Option[ItemIO], Option[ItemIO] )] =
+      (before.keySet ++ after.keySet).toVector.sorted
+        .map( item => ( item, before.get( item ), after.get( item ) ) )
+
+    fieldset(
+      legend( "Items I/O" ),
+      byItem.map {
+        case ( item, beforeIO, afterIO ) => fieldset( legend( item.displayName ), compareItemIO( beforeIO, afterIO ) )
+      }
+    )
+  }
+
+  def compareItemIO( before: Option[ItemIO], after: Option[ItemIO] ): Frag = {
+    def amountCells( beforeAmount: Option[Double], afterAmount: Option[Double], changeValue: ChangeValue ): Modifier = {
+      val diff = afterAmount.orEmpty - beforeAmount.orEmpty
+
+      if (diff.abs > AmountTolerance)
+        Seq[Frag](
+          td( beforeAmount.fold( "-" )( d => f"$d%.3f" ) ),
+          td( styleDiffD3( diff, changeValue ) ),
+          td( afterAmount.fold( "-" )( d => f"$d%.3f" ) )
+        )
+      else
+        td( beforeAmount.fold( "-" )( d => f"$d%.3f" ), colspan := 3 )
+    }
+
+    def diffAllIO(
+        f: ItemIO => Vector[Countable[Double, ItemSrcDest]],
+        dir: String,
+        changeValue: ChangeValue
+    ): Seq[Tag] = {
+      val allIO: Vector[ItemSrcDest] =
+        (before.foldMap( i => f( i ).map( _.item ) ) ++ after.foldMap( i => f( i ).map( _.item ) )).distinct.sorted
+
+      def amountOf( isd: ItemSrcDest, in: Option[ItemIO] ): Option[Double] =
+        in.flatMap( i => f( i ).find( _.item == isd ).map( _.amount ) )
+
+      allIO.zipWithIndex.map {
+        case ( isd, ix ) =>
+          val beforeAmount: Option[Double] = amountOf( isd, before )
+          val afterAmount: Option[Double]  = amountOf( isd, after )
+
+          tr(
+            amountCells( beforeAmount, afterAmount, changeValue ),
+            Option.when( ix == 0 )( td( rowspan := allIO.size, verticalAlign.middle, dir ) ),
+            td( ItemsView.showItemSrcDest( isd ) )
+          )
+      }
+    }
+
+    val totalBefore = before.map( i => i.sources.foldMap( _.amount ) )
+    val totalAfter  = after.map( i => i.sources.foldMap( _.amount ) )
+
+    table(
+      tr( amountCells( totalBefore, totalAfter, LowerIsBetter ), td(), td( strong( "TOTAL" ) ) ),
+      diffAllIO( _.sources, "from", LowerIsBetter ) ++
+        diffAllIO( _.destinations, "to", HigherIsBetter )
+    )
+  }
 
   def inputOutputs( factory: Factory ): ( SortedMap[Item, Double], SortedMap[Item, Double] ) = {
     val ( in, out ) =
