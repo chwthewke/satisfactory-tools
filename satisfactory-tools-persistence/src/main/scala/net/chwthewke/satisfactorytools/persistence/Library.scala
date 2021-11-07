@@ -6,7 +6,6 @@ import cats.syntax.functor._
 import cats.syntax.show._
 import doobie._
 import doobie.postgres.implicits._
-import java.time.Instant
 
 import api.LibraryApi
 import protocol.InputTab
@@ -121,22 +120,7 @@ object Library extends LibraryApi[ConnectionIO] {
           |""".stripMargin
       )
 
-    // TODO weird near-dupe, so maybe reorganize?
-    type PlanHeaderRow =
-      (
-          PlanId,
-          UserId,
-          Option[PlanName],
-          Option[PlanName],
-          Option[PlanId],
-          Instant,
-          Option[SolutionId],
-          Option[String],
-          Option[Int],
-          Option[Int]
-      )
-
-    private val fromPlanHeaderRow: PlanHeaderRow => PlanHeader = {
+    private val fromPlanHeaderRow: PlanHeader.Row => PlanHeader = {
       case (
           id,
           owner,
@@ -186,10 +170,10 @@ object Library extends LibraryApi[ConnectionIO] {
         |""".stripMargin
 
     val selectPlanHeaders: Query[UserId, PlanHeader] =
-      Query[UserId, PlanHeaderRow]( selectPlanHeadersStmt ).map( fromPlanHeaderRow )
+      Query[UserId, PlanHeader.Row]( selectPlanHeadersStmt ).map( PlanHeader.apply )
 
     val selectPlanHeadersPage: Query[( UserId, Long, Long ), PlanHeader] =
-      Query[( UserId, Long, Long ), PlanHeaderRow](
+      Query[( UserId, Long, Long ), PlanHeader.Row](
         selectPlanHeadersStmt ++
           """LIMIT ? OFFSET ?
             |""".stripMargin

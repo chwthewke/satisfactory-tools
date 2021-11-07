@@ -12,6 +12,7 @@ case class PlanHeader(
     owner: UserId,
     title: Option[PlanName],
     copy: Option[PlanId],
+    dirty: Boolean,
     updated: Instant,
     solution: SolutionHeader[SolutionId]
 ) {
@@ -49,8 +50,9 @@ object PlanHeader {
       PlanHeader(
         id,
         owner,
-        nameOpt.orElse( srcNameOpt.map( n => PlanName( n.name + " (unsaved)" ) ) ),
+        nameOpt.orElse( srcNameOpt ),
         srcIdOpt,
+        nameOpt.isEmpty,
         updated,
         ( solutionIdOpt, groupCountOpt )
           .mapN( SolutionHeader.Computed( _, _, lastGroupOpt.getOrElse( 0 ) ) )
