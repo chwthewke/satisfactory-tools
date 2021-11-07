@@ -87,7 +87,7 @@ object RecipeSelection {
       options: Options,
       resourceOpts: ResourceOptions
   ): RecipeSelection = {
-    val recipesWithCost  = recipeList.recipes.fproduct( _.power.average )
+    val recipesWithCost  = recipeList.recipes.fproduct( _.power.average / 1000000 )
     val tieredExtraction = tieredExtractionRecipes( options, resourceOpts, model.extractionRecipes )
     val extraction       = tieredExtraction.keys.toVector
     val caps             = resourceCaps( tieredExtraction )
