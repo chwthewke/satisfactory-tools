@@ -240,12 +240,14 @@ object Library extends LibraryApi[ConnectionIO] {
           |  , "recipe_id"
           |  , "amount"
           |  , "custom_group"
+          |  , "group_order"
           |  )
           |  SELECT
           |    ?
           |  , "recipe_id"
           |  , "amount"
           |  , "custom_group"
+          |  , "group_order"
           |  FROM       "solution_manufacturing_recipes" r
           |  INNER JOIN "plan_solutions" s ON r."solution_id" = s."id"
           |  WHERE s."plan_id" = ?
