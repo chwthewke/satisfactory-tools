@@ -1,8 +1,8 @@
 package net.chwthewke.satisfactorytools
 package web
 
+import scalatags.Text._
 import scalatags.Text.all._
-import scalatags.Text.Tag
 
 package object view {
 
@@ -11,7 +11,7 @@ package object view {
   def page( pageTitle: String, contents: Tag ): Tag =
     html(
       head(
-        title := pageTitle,
+        tags2.title( pageTitle ),
         link( rel := "stylesheet", href := "/style.css" )
       ),
       body(

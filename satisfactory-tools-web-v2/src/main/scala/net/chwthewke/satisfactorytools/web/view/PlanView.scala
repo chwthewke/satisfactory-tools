@@ -58,6 +58,7 @@ object PlanView {
       input(
         `type` := "text",
         fontSize.`x-large`,
+        Option.when( header.dirty )( color.gray ),
         value := header.title.fold( "" )( _.show ),
         placeholder := "Untitled plan",
         name := Keys.planTitle
