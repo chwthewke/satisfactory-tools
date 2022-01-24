@@ -13,7 +13,7 @@ import java.nio.file.StandardOpenOption._
 
 object GrabDocs extends IOApp {
 
-  val defaultPath: String = "E:\\EpicGames\\SatisfactoryExperimental"
+  val defaultPath: String = "E:\\EpicGames\\SatisfactoryEarlyAccess"
 
   val destPath: Path = Paths.get( "satisfactory-tools-core", "src", "main", "resources", "Docs.json" )
 

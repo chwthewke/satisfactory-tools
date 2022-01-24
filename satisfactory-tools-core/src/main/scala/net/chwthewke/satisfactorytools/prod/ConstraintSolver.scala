@@ -65,6 +65,18 @@ object ConstraintSolver extends Solver {
 
     val result = model.minimise()
 
+//    println( s"VALUE ${result.getValue}" )
+//
+//    recipeVars.foreach {
+//      case ( recipe, v ) =>
+//        println( s"RECIPE ${recipe.displayName} W=${v.getContributionWeight} S=${v.getValue}" )
+//    }
+//
+//    inputVars.foreach {
+//      case ( item, v ) =>
+//        println( s"INPUT ${item.displayName} W=${v.getContributionWeight} S=${v.getValue}" )
+//    }
+
     Option
       .when( result.getState.isSuccess )(
         Solution(
