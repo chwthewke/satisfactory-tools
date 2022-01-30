@@ -50,7 +50,7 @@ object Parsers {
   def listOf[A]( p: Parser[A] ): Parser[List[A]]          = char( '(' ) ~> p.sepBy( char( ',' ) ) <~ char( ')' )
   def listOf1[A]( p: Parser[A] ): Parser[NonEmptyList[A]] = char( '(' ) ~> p.sepBy1( char( ',' ) ) <~ char( ')' )
 
-  def enum[A <: EnumEntry]( e: Enum[A] ): Parser[A] =
+  def `enum`[A <: EnumEntry]( e: Enum[A] ): Parser[A] =
     e.values.foldLeft(
       err[A]( e.values.map( _.entryName ).mkString( s"Not one of: <", ", ", ">" ) )
     )( ( p, a ) => p | string( a.entryName ).as( a ) )

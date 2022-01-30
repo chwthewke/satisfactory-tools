@@ -18,8 +18,6 @@ import org.http4s.HttpRoutes
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.dsl.Http4sDsl
 import org.http4s.server.middleware.AutoSlash
-import org.http4s.syntax.kleisli._
-import scala.concurrent.ExecutionContext
 
 import loader.Loader
 import model.Bill
@@ -52,10 +50,9 @@ object WebApp {
           .of[F, ExitCode]( ExitCode.Success )
           .flatMap(
             exitRef =>
-              BlazeServerBuilder[F]( ExecutionContext.global )
+              BlazeServerBuilder[F]
                 .withHttpApp( app )
                 .bindHttp( port = 7284 )
-                .withWebSockets( false )
                 .withLengthLimits( 65536, 65536 )
                 .serveWhile( signal, exitRef )
                 .compile

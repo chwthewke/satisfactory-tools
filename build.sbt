@@ -5,7 +5,7 @@ import sbt.Keys._
 
 ThisBuild / organization       := "net.chwthewke"
 ThisBuild / scalaOrganization  := "org.scala-lang"
-ThisBuild / scalaVersion       := "2.13.6"
+ThisBuild / scalaVersion       := "2.13.8"
 // TODO when I can make sense of lm-coursier
 ThisBuild / conflictManager                         := ConflictManager.strict
 ThisBuild / updateSbtClassifiers / conflictManager  := ConflictManager.default
@@ -17,6 +17,21 @@ ThisBuild / SettingKey[Seq[String]]( "ide-base-packages" )
   .withRank( KeyRanks.Invisible ) := Seq( "net.chwthewke.dsptools", "net.chwthewke.satisfactorytools" )
 
 val compilerPlugins = libraryDependencies ++= kindProjector ++ betterMonadicFor
+
+val testDependencies =
+  autoDiff ++
+    autoDiffEnumeratum ++
+    autoDiffScalatest ++
+    scalatest ++
+    scalacheck ++
+    discipline ++
+    catsLaws
+
+val noPublish: Seq[Def.Setting[_]] = Seq(
+  publish := {},
+  publishLocal := {},
+  publishArtifact := false
+)
 
 val `satisfactory-tools-core` = project
   .settings( compilerPlugins )
@@ -142,9 +157,87 @@ val `satisfactory-tools-tests` = project
   )
   .enablePlugins( ScalacPlugin )
 
+val `factory-tools` = project
+  .in( file( "common/factory-tools" ) )
+  .settings( compilerPlugins )
+  .settings(
+    libraryDependencies ++=
+      cats ++
+        alleycatsCore ++
+        mouse ++
+        kittens ++
+        catsTime ++
+        enumeratum ++
+        ojAlgo
+  )
+  .enablePlugins( ScalacPlugin )
+
+val `factory-tools-tests` = project
+  .in( file( "common/factoy-tools-test" ) )
+  .settings( compilerPlugins )
+  .settings( libraryDependencies ++= testDependencies )
+  .dependsOn( `factory-tools` )
+  .enablePlugins( ScalacPlugin )
+
+val `factory-tools-all` = project
+  .in( file( "common" ) )
+  .aggregate(
+    `factory-tools`,
+    `factory-tools-tests`
+  )
+  .settings( noPublish )
+
+val `dsp-tools-core` = project
+  .in( file( "dsp/dsp-tools-core" ) )
+  .settings( compilerPlugins )
+  .settings(
+    libraryDependencies ++= cats ++ kittens ++ alleycatsCore ++ mouse ++ enumeratum ++ scodec ++ spire
+  )
+  .dependsOn( `factory-tools` )
+  .enablePlugins( ScalacPlugin )
+
+val `dsp-tools-app` = project
+  .in( file( "dsp/dsp-tools-app" ) )
+  .settings( compilerPlugins )
+  .settings( libraryDependencies ++= catsEffect ++ fs2 )
+  .dependsOn( `dsp-tools-core` )
+  .enablePlugins( ScalacPlugin )
+
+val `dsp-tools-dev` = project
+  .in( file( "dsp/dsp-tools-dev" ) )
+  .settings( compilerPlugins )
+  .settings( libraryDependencies ++= fs2Scodec )
+  .dependsOn( `dsp-tools-app` )
+  .enablePlugins( ScalacPlugin )
+
+val `dsp-tools-cli` = project
+  .in( file( "dsp/dsp-tools-cli" ) )
+  .settings( compilerPlugins )
+  .settings( libraryDependencies ++= pureconfig ++ pureconfigCatsEffect )
+  .dependsOn( `dsp-tools-app` )
+  .enablePlugins( ScalacPlugin )
+
+val `dsp-tools-tests` = project
+  .in( file( "dsp/dsp-tools-tests" ) )
+  .settings( compilerPlugins )
+  .settings( libraryDependencies ++= testDependencies )
+  .dependsOn( `dsp-tools-dev` )
+  .enablePlugins( ScalacPlugin )
+
+val `dsp-tools-all` = project
+  .in( file( "dsp" ) )
+  .aggregate(
+    `dsp-tools-core`,
+    `dsp-tools-app`,
+    `dsp-tools-cli`,
+    `dsp-tools-dev`,
+    `dsp-tools-tests`
+  )
+
 val `satisfactory-tools-all` = project
   .in( file( "." ) )
   .aggregate(
+    `factory-tools-all`,
     `satisfactory-tools-core`,
     `satisfactory-tools-app`,
     `satisfactory-tools-api`,
@@ -153,11 +246,6 @@ val `satisfactory-tools-all` = project
     `satisfactory-tools-web`,
     `satisfactory-tools-web-v2`,
     `satisfactory-production-calculator`,
-    `satisfactory-tools-tests`
-  )
-
-val `dsp-tools-dev` = project
-  .settings( compilerPlugins )
-  .settings(
-    libraryDependencies ++= cats ++ kittens ++ alleycatsCore ++ mouse ++ enumeratum ++ catsEffect ++ fs2 ++ scodec
+    `satisfactory-tools-tests`,
+    `dsp-tools-all`
   )
