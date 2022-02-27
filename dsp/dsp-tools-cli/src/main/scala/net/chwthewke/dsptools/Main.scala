@@ -192,7 +192,7 @@ object Main extends IOApp {
       37, // Crystal silicon
       38, // Plane filter
       39, // Miniature particle collider
-      40, // Deuterium
+//      40, // Deuterium
       41, // Deuteron fuel rod
       42, // Annihilation constraint sphere
       43, // Artificial star
@@ -288,73 +288,6 @@ object Main extends IOApp {
       case RecipeType.Research    => 0.48d
     }
 
-  def bill1 = // 30/min Small carrier rocket
-    Vector(
-      ( 1503, 30d )
-    )
-
-  def bill2 = // 6/min Graviton lens
-    Vector(
-      ( 1290, 6d )
-    )
-
-  def bill3 = // Prol mk3 for 7 blue belts
-    Vector(
-      ( 1143, 240d )
-    )
-
-  def bill4 = // Structure matrix 180/min
-    Vector(
-      ( 6003, 180d )
-    )
-
-  def bill5 = // Mall tier3
-    Vector(
-      ( 2105, 0.2d ), // orb coll
-      ( 2104, 0.1d ), // IP log st
-      ( 2103, 0.1d ), // P log st
-      ( 2206, 1d ),   // Accu
-      ( 5002, 1d ),   // Log vessel
-      ( 5001, 3d ),   // Log drone
-      ( 2310, 0.2d ), // MPC
-      ( 2211, 0.2d ), // Mini fusion
-      ( 2209, 0.1d ), // EExch
-      ( 2314, 0.5d ), // Fractio
-      ( 2212, 0.5d ), // Satellite Subst
-      ( 2202, 1d ),   // Wireless Pow tow
-      ( 2201, 4d ),   // Tesla
-      ( 2003, 6d ),   // convey 3
-      ( 2003, 10d ),  // convey 2
-      ( 2003, 20d ),  // convey 1
-      ( 2013, 2d ),   // sorter 3
-      ( 2012, 4d ),   // sorter 2
-      ( 2011, 5d ),   // sorter 1
-      ( 2304, 1d ),   // assmach 2
-      ( 2303, 1d ),   // assmach 1
-      ( 2040, 1d ),   // piler
-      ( 2313, 1d ),   // spray
-      ( 2030, 1d ),   // traffic mon
-      ( 2205, 8d ),   // solar
-      ( 2309, 1d ),   // chem pl
-      ( 2308, 1d ),   // oil refinery
-      ( 2307, 1d ),   // oil extr
-      ( 2901, 1d ),   // mat lab
-      ( 2213, 1d ),   // geo power
-      ( 2203, 4d ),   // wind turb
-      ( 2204, 2d ),   // thermal power
-      ( 2106, 1d ),   // stor tank
-      ( 2102, 1d ),   // stor 2
-      ( 2101, 1d ),   // stor 1
-      ( 2020, 1d ),   // splitter
-      ( 2301, 2d ),   // miner
-      ( 2306, 1d ),   // water pump
-      ( 2302, 4d ),   // arc smelter
-      ( 1125, 2d ),   // frame mat
-      ( 1205, 12d ),  // extra procs
-      ( 1303, 12d ),  // extra supermags
-      ( 1142, 1d )    // prol mk2 for the extras
-    )
-
   def productiveRecipes(
       weightedRecipe: ( Recipe, Double ),
       productivityItems: Vector[Item],
@@ -391,11 +324,11 @@ object Main extends IOApp {
 
   def solve(
       model: Model,
-      bill: Vector[( Int, Double )],
-      maxProd: Int
+      plan: Plan
   ): Either[String, ( Vector[Countable[Double, Item]], Solution )] = {
+
     val request: Vector[Countable[Double, Item]] =
-      bill
+      plan.bill
         .flatMap {
           case ( itemId, amount ) =>
             model.items.find( _.id == itemId ).map( Countable( _, amount ) )
@@ -421,14 +354,14 @@ object Main extends IOApp {
 
     val allowedRecipes: Vector[( Recipe, Double )] =
       (
-        recipes
+        plan.recipes
           .flatMap( id => model.recipes.find( _.id == id ) )
           ++ chargeAcc
       ).fproduct( recipeWeight )
-        .flatMap( productiveRecipes( _, model.items, maxProd ) )
+        .flatMap( productiveRecipes( _, model.items, plan.maxProductivity ) )
 
     val allowedInputs: Map[Item, Double] =
-      input.flatMap {
+      plan.inputs.flatMap {
         case ( id, weight ) =>
           model.items.find( _.id == id ).tupleRight( weight.toDouble )
       }.toMap
@@ -444,11 +377,13 @@ object Main extends IOApp {
 
   }
 
+  import Plan._
+
   override def run( args: List[String] ): IO[ExitCode] =
     Loader.io.loadModel
       .map(
         model =>
-          solve( model, bill5, 2 ).map {
+          solve( model, plan12LensesWarpers ).map {
             case ( requested, solution ) =>
               SolutionTable( model, requested, solution )
           }.merge

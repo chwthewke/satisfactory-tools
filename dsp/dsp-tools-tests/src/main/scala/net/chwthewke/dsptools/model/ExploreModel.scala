@@ -13,7 +13,8 @@ object ExploreModel extends IOApp {
   override def run( args: List[String] ): IO[ExitCode] =
     Loader.io.loadModel
       .map(
-        model => Vector( "ITEMS" ) ++ productiveItems( model ) ++ Vector( "", "RECIPES" ) ++ productiveRecipes( model )
+        _.recipes
+//        model => Vector( "ITEMS" ) ++ productiveItems( model ) ++ Vector( "", "RECIPES" ) ++ productiveRecipes( model )
       )
       .flatMap(
         _.traverse_( x => IO.println( x.show ) )
