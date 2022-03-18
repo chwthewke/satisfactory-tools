@@ -127,7 +127,7 @@ object Recipes {
   val defaultRecipes: Vector[Int] = allRecipes.except( 40, 58, 115 )
 
   val recipes1Rocket2: Vector[Int]    = defaultRecipes.except( 28, 99 )
-  val recipes2LensWarper: Vector[Int] = allRecipes.except( 40, 115, 29, 100, 35 )
+  val recipes2LensWarper: Vector[Int] = allRecipes.except( 40, 115, 29, 100 )
 
   implicit class RecipesOps( private val self: Vector[Int] ) extends AnyVal {
     def except( ids: Int* ): Vector[Int] = self.filterNot( ids.toSet )

@@ -12,7 +12,7 @@ import loader.Loader
 
 object TestGameData extends IOApp {
   override def run( args: List[String] ): IO[ExitCode] =
-    testDecodeItemProtoSet.as( ExitCode.Success )
+    testDecodeRecipeProtoSet.as( ExitCode.Success )
 
   def testDecodeStringProtoSet: IO[ProtoSet[StringProto]] =
     testDecodeProtoSet( "StringProtoSet.dat" )

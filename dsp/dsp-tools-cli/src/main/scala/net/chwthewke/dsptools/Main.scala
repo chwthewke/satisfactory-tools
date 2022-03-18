@@ -383,7 +383,7 @@ object Main extends IOApp {
     Loader.io.loadModel
       .map(
         model =>
-          solve( model, plan12LensesWarpers ).map {
+          solve( model, plan13MallPlanet ).map {
             case ( requested, solution ) =>
               SolutionTable( model, requested, solution )
           }.merge

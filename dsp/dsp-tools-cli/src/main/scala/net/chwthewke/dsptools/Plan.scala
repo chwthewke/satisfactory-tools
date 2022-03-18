@@ -48,4 +48,13 @@ object Plan {
   val plan12LensesWarpers: Plan =
     Plan( inputs7AllSpecialsRaw.except( 1012, 1120 ), bill11, recipes2LensWarper, 4 )
 
+  val plan12BisLensesOnly: Plan =
+    Plan( inputs7AllSpecialsRaw.except( 1012, 1120 ), bill11a, recipes2LensWarper, 4 )
+
+  val plan12TerWarpersOnly: Plan =
+    Plan( inputs7AllSpecialsRaw.except( 1012, 1120 ), bill11b, recipes2LensWarper, 4 )
+
+  val plan13MallPlanet: Plan =
+    Plan( inputs7AllSpecialsRaw, bill12, defaultRecipes, 4 )
+
 }

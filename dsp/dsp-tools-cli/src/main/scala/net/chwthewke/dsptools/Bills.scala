@@ -128,6 +128,71 @@ object Bills {
     Vector(
       ( 1209, 720d ),
       ( 1210, 720d ),
-      ( 1120, 4792.32d )
+      ( 1120, 4792.32d ),
+      ( 1143, 12d ) // proliferator for lenses
+    )
+
+  val bill11a = // lens only
+    Vector(
+      ( 1209, 720d ),
+      ( 1120, 4608d ),
+      ( 1143, 12d ) // proliferator for lenses
+    )
+
+  val bill11b = // warpers only
+    Vector(
+      ( 1210, 720d ),
+      ( 1120, 184.32d )
+    )
+
+  val bill12 = // Mall planet
+    Vector(
+      ( 5001, 20d ),  // Logistics drone
+      ( 5002, 5d ),   // Logistics vessel
+      ( 1131, 120d ), // Foundation
+      ( 2001, 30d ),  // Conveyor belt MK.I
+      ( 2002, 30d ),  // Conveyor belt MK.II
+      ( 2003, 30d ),  // Conveyor belt MK.III
+      ( 2011, 10d ),  // Sorter MK.I
+      ( 2012, 10d ),  // Sorter MK.II
+      ( 2013, 6d ),   // Sorter MK.III
+      ( 2020, 4d ),   // Splitter
+      ( 2040, 2d ),   // Automatic piler
+      ( 2030, 1d ),   // 流速监测器
+      ( 2313, 4d ),   // Spray coater
+      ( 2101, 2d ),   // Storage MK.I
+      ( 2102, 2d ),   // Storage MK.II
+      ( 2106, 2d ),   // Storage tank
+      ( 2303, 1d ),   // Assembling machine Mk.I
+      ( 2304, 1d ),   // Assembling machine Mk.II
+      ( 2305, 4d ),   // Assembling machine Mk.III
+      ( 2201, 8d ),   // Tesla tower
+      ( 2202, 2d ),   // Wireless power tower
+      ( 2212, 2d ),   // Satellite substation
+      ( 2203, 5d ),   // Wind turbine
+      ( 2204, 2d ),   // Thermal power plant
+      ( 2211, 2d ),   // Mini fusion power plant
+      ( 2213, 4d ),   // Geothermal power station
+      ( 2301, 1d ),   // Mining machine
+      ( 2316, 2d ),   // Advanced mining machine
+      ( 2306, 1d ),   // Water pump
+      ( 2302, 1d ),   // Arc Smelter
+      ( 2315, 4d ),   // Plane Smelter
+      ( 2307, 2d ),   // Oil extractor
+      ( 2308, 4d ),   // Oil refinery
+      ( 2309, 4d ),   // Chemical plant
+      ( 2314, 2d ),   // Fractionator
+      ( 2205, 40d ),  // Solar panel
+      ( 2206, 10d ),  // Accumulator
+      ( 2311, 4d ),   // EM-Rail Ejector
+      ( 2208, 2d ),   // Ray receiver
+      ( 2312, 1d ),   // Vertical launching silo
+      ( 2209, 1d ),   // Energy exchanger
+      ( 2310, 2d ),   // Miniature particle collider
+      ( 2210, 1d ),   // Artificial star
+      ( 2103, 1d ),   // Planetary Logistics Station
+      ( 2104, 1d ),   // Interstellar Logistics Station
+      ( 2105, 4d ),   // Orbital Collector
+      ( 2901, 2d )    // Matrix lab
     )
 }
