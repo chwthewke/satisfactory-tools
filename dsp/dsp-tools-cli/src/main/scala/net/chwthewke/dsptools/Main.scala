@@ -268,8 +268,9 @@ object Main extends IOApp {
     Loader.io.loadModel
       .map(
         model =>
-          solve( model, plan13MallPlanet ).map {
           MainSolve
+            .solve( model, plan14BigScience )
+            .map {
               case ( requested, solution ) =>
                 SolutionTable( model, requested, solution )
             }

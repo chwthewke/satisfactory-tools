@@ -129,4 +129,7 @@ object Inputs {
   val inputs8AllSpecialsPhotons: Vector[( Int, Int )] =
     inputs6AllSpecialsProl :+ ((1208 -> 10))
 
+  val inputs9AllSpecialsRawPhotons: Vector[( Int, Int )] =
+    inputs7AllSpecialsRaw :+ ((1208 -> 10))
+
 }
