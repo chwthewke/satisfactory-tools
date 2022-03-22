@@ -4,7 +4,8 @@ case class Plan(
     inputs: Vector[( Int, Int )],
     bill: Vector[( Int, Double )],
     recipes: Vector[Int],
-    maxProductivity: Int
+    maxProductivity: Int,
+    sprayIntermediates: Boolean = false
 )
 
 object Plan {
@@ -55,6 +56,8 @@ object Plan {
     Plan( inputs7AllSpecialsRaw.except( 1012, 1120 ), bill11b, recipes2LensWarper, 4 )
 
   val plan13MallPlanet: Plan =
-    Plan( inputs7AllSpecialsRaw, bill12, defaultRecipes, 4 )
+    Plan( inputs7AllSpecialsRaw, bill12, defaultRecipes.except( 28, 99 ), 4, true )
 
+  val plan14BigScience: Plan =
+    Plan( inputs9AllSpecialsRawPhotons, bill13, allRecipes.except(25, 40, 54, 58, 99, 115 ), 4 )
 }

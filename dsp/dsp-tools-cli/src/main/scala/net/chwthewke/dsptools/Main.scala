@@ -1,24 +1,12 @@
 package net.chwthewke.dsptools
 
-import cats.data.NonEmptyVector
+import cats.Semigroup
 import cats.effect.ExitCode
 import cats.effect.IO
 import cats.effect.IOApp
-import cats.syntax.apply._
-import cats.syntax.functor._
-import scala.concurrent.duration._
-import spire.compat._
-import spire.math.Rational
 
-import net.chwthewke.factory.data.Countable
-import gamedata.RecipeType
 import loader.Loader
 import model.Item
-import model.Model
-import model.Productivity
-import model.Recipe
-import prod.solver.Solution
-import prod.solver.Solver
 
 object Main extends IOApp {
   val input =
@@ -274,109 +262,6 @@ object Main extends IOApp {
       120  // Automatic piler
     )
 
-  def recipeWeight( recipe: Recipe ): Double =
-    recipe.recipeType match {
-      case RecipeType.None        => 10d
-      case RecipeType.Smelt       => 0.36d
-      case RecipeType.Chemical    => 0.72d
-      case RecipeType.Refine      => 0.96d
-      case RecipeType.Assemble    => 0.54d
-      case RecipeType.Particle    => 12d
-      case RecipeType.Exchange    => 45d
-      case RecipeType.PhotonStore => 200d
-      case RecipeType.Fractionate => 0.72d
-      case RecipeType.Research    => 0.48d
-    }
-
-  def productiveRecipes(
-      weightedRecipe: ( Recipe, Double ),
-      productivityItems: Vector[Item],
-      maxProd: Int
-  ): Vector[( Recipe, Double )] = {
-    val recipe = weightedRecipe._1
-    val weight = weightedRecipe._2
-
-    weightedRecipe +: productivityItems
-      .filter(
-        item => item.productivityLevel > 0 && item.productivityLevel <= maxProd && recipe.productive
-      )
-      .map { item =>
-        val reqProductivityItems: Rational = recipe.ingredients.map( _.amount ).sum / item.productivityUses
-
-        val newIngredients =
-          (recipe.ingredients :+ Countable( item, reqProductivityItems )).gather
-
-        val productivity = Productivity( item.productivityLevel )
-
-        val newProducts = recipe.products.map( _.mapAmount( _ * productivity.productIncrease ) )
-
-        Recipe(
-          recipe.id + item.id << 16,
-          s"${recipe.displayName} (${item.displayName})",
-          newIngredients,
-          newProducts,
-          recipe.recipeType,
-          recipe.duration,
-          recipe.productive
-        ) -> (weight * productivity.powerIncrease)
-      }
-  }
-
-  def solve(
-      model: Model,
-      plan: Plan
-  ): Either[String, ( Vector[Countable[Double, Item]], Solution )] = {
-
-    val request: Vector[Countable[Double, Item]] =
-      plan.bill
-        .flatMap {
-          case ( itemId, amount ) =>
-            model.items.find( _.id == itemId ).map( Countable( _, amount ) )
-        }
-
-    val chargeAcc: Option[Recipe] = {
-      (
-        model.items.find( _.id == 2206 ),
-        model.items.find( _.id == 2207 )
-      ).mapN(
-        ( acc, accFull ) =>
-          Recipe(
-            201,
-            "Charge accumulator",
-            Vector( Countable( acc, 1 ) ),
-            NonEmptyVector.of( Countable( accFull, 1 ) ),
-            RecipeType.Exchange,
-            6.seconds,
-            recipeProductive = false
-          )
-      )
-    }
-
-    val allowedRecipes: Vector[( Recipe, Double )] =
-      (
-        plan.recipes
-          .flatMap( id => model.recipes.find( _.id == id ) )
-          ++ chargeAcc
-      ).fproduct( recipeWeight )
-        .flatMap( productiveRecipes( _, model.items, plan.maxProductivity ) )
-
-    val allowedInputs: Map[Item, Double] =
-      plan.inputs.flatMap {
-        case ( id, weight ) =>
-          model.items.find( _.id == id ).tupleRight( weight.toDouble )
-      }.toMap
-
-    Solver
-      .solve(
-        request,
-        allowedRecipes,
-        allowedInputs,
-        Map.empty
-      )
-      .tupleLeft( request )
-
-  }
-
   import Plan._
 
   override def run( args: List[String] ): IO[ExitCode] =
@@ -384,10 +269,19 @@ object Main extends IOApp {
       .map(
         model =>
           solve( model, plan13MallPlanet ).map {
-            case ( requested, solution ) =>
-              SolutionTable( model, requested, solution )
-          }.merge
+          MainSolve
+              case ( requested, solution ) =>
+                SolutionTable( model, requested, solution )
+            }
+            .merge
       )
       .flatTap( IO.println )
       .as( ExitCode.Success )
+
+  case class ProdItem( item: Item ) extends AnyVal
+  object ProdItem {
+    implicit val prodItemSemigroup: Semigroup[ProdItem] =
+      ( x, y ) => Vector( x, y ).minBy( _.item.productivityLevel )
+  }
+
 }

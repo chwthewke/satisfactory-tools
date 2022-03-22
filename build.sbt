@@ -221,7 +221,7 @@ val `dsp-tools-tests` = project
   .in( file( "dsp/dsp-tools-tests" ) )
   .settings( compilerPlugins )
   .settings( libraryDependencies ++= testDependencies )
-  .dependsOn( `dsp-tools-dev` )
+  .dependsOn( `dsp-tools-dev`, `dsp-tools-cli` )
   .enablePlugins( ScalacPlugin )
 
 val `dsp-tools-all` = project

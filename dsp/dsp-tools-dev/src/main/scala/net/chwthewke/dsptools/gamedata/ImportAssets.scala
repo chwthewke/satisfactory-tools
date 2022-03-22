@@ -106,7 +106,6 @@ abstract class ImportAssets[F[_]: Sync]( implicit files: Files[F] ) extends Unit
   private def streamFrom( readCursor: ReadCursor[F] ): Stream[F, Byte] = {
     def go( c: ReadCursor[F] ): Pull[F, Byte, Unit] = c.readPull( 512 ).flatMap {
       case Some( ( curs, chunk ) ) =>
-        println( s"Got chunk size ${chunk.size}" )
         Pull.output( chunk ) >> go( curs )
       case None =>
         println( "End of file" )

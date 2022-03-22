@@ -3,6 +3,7 @@ package prod
 
 import cats.Show
 import cats.syntax.foldable._
+import cats.syntax.traverse._
 import cats.syntax.show._
 import org.ojalgo.optimisation.ExpressionsBasedModel
 import org.ojalgo.optimisation.Variable
@@ -11,6 +12,8 @@ import mouse.option._
 import org.ojalgo.optimisation.Expression
 
 import data.Countable
+import net.chwthewke.factory.prod.Direction.Provide
+import net.chwthewke.factory.prod.Direction.Receive
 
 trait SolverModule {
   type ItemId
@@ -24,7 +27,8 @@ trait SolverModule {
 
   case class Solution(
       recipes: Vector[Countable[Double, RecipeT]],
-      inputs: Vector[Countable[Double, ItemT]]
+      inputs: Vector[Countable[Double, ItemT]],
+      flows: Vector[( ItemT, Vector[( Direction, RecipeT, Double )] )]
   )
 
   class GenericSolver( implicit itemIdShow: Show[ItemId], recipeIdShow: Show[RecipeId] ) {
@@ -102,16 +106,36 @@ trait SolverModule {
 //      println( model )
 
       Option
-        .when( result.getState.isSuccess )(
-          Solution(
+        .when( result.getState.isSuccess ) {
+          val recipes: Vector[Countable[Double, RecipeT]] =
             recipeVars.flatMap {
               case ( recipe, v ) =>
                 val amount = v.getValue.doubleValue
                 Option.when( amount != 0d )( Countable( recipe, amount ) )
-            }.toVector,
+            }.toVector
+
+          val inputs: Vector[Countable[Double, ItemT]] =
             inputVars.map { case ( item, v ) => Countable( item, v.getValue.doubleValue ) }.toVector
+
+          val flows: Vector[( ItemT, Vector[( Direction, RecipeT, Double )] )] =
+            recipes
+              .foldMap { recipe =>
+                recipe.flatTraverse( itemsPerMinute ).foldMap {
+                  case Countable( item, amount ) =>
+                    Map( item -> Map( ( recipe.item, if (amount < 0) Provide else Receive ) -> amount ) )
+                }
+              }
+              .map {
+                case ( item, byRecipe ) => ( item, byRecipe.map { case ( ( r, d ), a ) => ( d, r, a ) }.toVector )
+              }
+              .toVector
+
+          Solution(
+            recipes,
+            inputs,
+            flows
           )
-        )
+        }
         .toRight( s"Solver state: ${result.getState}" )
     }
 

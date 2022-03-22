@@ -1,7 +1,6 @@
 package net.chwthewke.dsptools
 
 import cats.Id
-import cats.Order
 import cats.Order.catsKernelOrderingForOrder
 import cats.data.ZipVector
 import cats.syntax.apply._
@@ -13,12 +12,13 @@ import cats.syntax.show._
 import cats.syntax.traverse._
 import enumeratum.Enum
 import enumeratum.EnumEntry
-import scala.collection.immutable.SortedSet
 
 import net.chwthewke.factory.data.Countable
+import net.chwthewke.factory.prod.Direction
 import model.Item
 import model.Model
 import model.Recipe
+import prod.solver.ModifiedRecipe
 import prod.solver.Solution
 
 object SolutionTable {
@@ -33,27 +33,16 @@ object SolutionTable {
     override val values: IndexedSeq[Alignment] = findValues
   }
 
-  sealed abstract class Direction( val arrow: String ) extends EnumEntry
-
-  object Direction extends Enum[Direction] {
-    object Provide extends Direction( "->" )
-    object Receive extends Direction( "<-" )
-
-    override val values: IndexedSeq[Direction] = findValues
-
-    implicit val directionOrder: Order[Direction] = Order.by( _.arrow )
-  }
-
   import Alignment.AlignLeft
   import Alignment.AlignRight
-  import Direction.Receive
   import Direction.Provide
+  import Direction.Receive
 
   val Tolerance: Double = 1e-4
 
   val sep = " | "
 
-  def columnsForRecipe( recipe: Countable[Double, Recipe] ): Vector[String] =
+  def columnsForRecipe( recipe: Countable[Double, ModifiedRecipe] ): Vector[String] =
     Vector(
       fmtCeilD3( recipe.amount ),
       sep,
@@ -141,10 +130,19 @@ object SolutionTable {
         .filter( _.amount > Tolerance )
         .sortBy( recipe => recipe.item.products.map( item => itemOrder.indexWhere( _._1 == item.item ) ).maximum )
 
-    Solution( sortedRecipes, solution.inputs.filter( _.amount.abs > Tolerance ) )
+    val sortedFlows =
+      solution.flows
+        .map {
+          case ( item, flows ) =>
+            ( item, flows.filter( _._3.abs > Tolerance ).sorted )
+        }
+        .filter( _._2.nonEmpty )
+        .sortBy( _._1.displayName )
+
+    Solution( sortedRecipes, solution.inputs.filter( _.amount.abs > Tolerance ), sortedFlows )
   }
 
-  def blocksTable( recipes: Vector[Countable[Double, Recipe]] ): String = {
+  def blocksTable( recipes: Vector[Countable[Double, ModifiedRecipe]] ): String = {
     val tableRows = recipes.map( columnsForRecipe )
     val columnWidths: Vector[( Int, Alignment )] =
       tableRows
@@ -179,7 +177,7 @@ object SolutionTable {
       .map( it => s"${fmtAmountD5( it.amount )} ${it.item.displayName}" )
       .intercalate( "\n" )
 
-  def inputOutput( solution: Solution ): Map[Item, Map[( Recipe, Direction ), Double]] =
+  def inputOutput( solution: Solution ): Map[Item, Map[( ModifiedRecipe, Direction ), Double]] =
     solution.recipes.filter( _.amount > Tolerance ).foldMap { recipe =>
       recipe.flatTraverse( _.itemsPerMinute ).foldMap {
         case Countable( item, amount ) =>
@@ -191,12 +189,12 @@ object SolutionTable {
       item: Item,
       input: Option[Double],
       request: Option[Double],
-      flows: SortedSet[( Direction, Recipe, Double )]
+      flows: Vector[( Direction, ModifiedRecipe, Double )]
   ): String = {
     def fmtFlow( desc: String, dir: Direction, amount: Double ): String =
       s"  ${AlignRight.pad( fmtAmountD5( amount.abs ), 10 )} ${dir.arrow} $desc"
 
-    def destLineRecipe( recipe: Recipe, direction: Direction, amount: Double ): String =
+    def destLineRecipe( recipe: ModifiedRecipe, direction: Direction, amount: Double ): String =
       fmtFlow( recipe.displayName, direction, amount )
 
     val destLineInput: Vector[String] =
@@ -207,7 +205,7 @@ object SolutionTable {
         .foldMap { case ( direction, recipe, amount ) => Vector( destLineRecipe( recipe, direction, amount ) ) }
 
     val destLinesReq: Vector[String] = {
-      val inOut  = flows.toVector.map( _._3 ) ++ input
+      val inOut  = flows.map( _._3 ) ++ input
       val output = inOut.combineAll.abs
       if (output < Tolerance)
         Vector.empty
@@ -234,13 +232,7 @@ object SolutionTable {
         .filter( _.amount.abs > Tolerance )
         .foldMap { case Countable( item, amount ) => Map( item -> amount ) }
 
-    inputOutput( solution )
-      .map {
-        case ( item, flows ) =>
-          ( item, flows.map { case ( ( recOpt, dir ), amt ) => ( dir, recOpt, amt ) }.to( SortedSet ) )
-      }
-      .toVector
-      .sortBy( _._1.displayName )
+    solution.flows
       .map {
         case ( item, flows ) =>
           showInputOutputs(
