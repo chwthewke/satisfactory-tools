@@ -48,6 +48,12 @@ object Plans extends PlannerApi[ConnectionIO] {
   override def setRecipeList( planId: PlanId, recipeList: RecipeList ): ConnectionIO[Unit] =
     plans.WriteSolverInputs.updateRecipeList( planId, recipeList )
 
+  override def addAllAlternatesToRecipeList( planId: PlanId ): ConnectionIO[Unit] =
+    plans.WriteSolverInputs.addAllAlternatesToRecipeList( planId )
+
+  override def removeAllAlternatesFromRecipeList( planId: PlanId ): ConnectionIO[Unit] =
+    plans.WriteSolverInputs.removeAllAlternatesFromRecipeList( planId )
+
   override def setOptions( planId: PlanId, options: Options ): ConnectionIO[Unit] =
     plans.WriteSolverInputs.updateOptions( planId, options )
 

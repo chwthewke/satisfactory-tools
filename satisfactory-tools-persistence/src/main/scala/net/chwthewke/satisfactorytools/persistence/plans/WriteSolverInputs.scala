@@ -8,6 +8,7 @@ import cats.syntax.functor._
 import cats.syntax.functorFilter._
 import cats.syntax.traverse._
 import doobie._
+import doobie.implicits._
 
 import data.ClassName
 import data.Countable
@@ -50,7 +51,13 @@ object WriteSolverInputs {
     }.void
 
   def setDefaultRecipeList( planId: PlanId ): ConnectionIO[Unit] =
-    statements.insertDefaultRecipeList.run( planId ).void
+    statements.insertDefaultRecipeList( planId ).run.void
+
+  def addAllAlternatesToRecipeList( planId: PlanId ): ConnectionIO[Unit] =
+    statements.insertAllAlternatesToRecipeList( planId ).run.void
+
+  def removeAllAlternatesFromRecipeList( planId: PlanId ): ConnectionIO[Unit] =
+    statements.deleteAllAlternatesFromRecipeList( planId ).run.void
 
   def updateOptions( planId: PlanId, options: Options ): ConnectionIO[Unit] =
     statements.upsertOptions.run( ( planId, options ) ).void
@@ -199,21 +206,49 @@ object WriteSolverInputs {
           |""".stripMargin
       )
 
-    val insertDefaultRecipeList: Update[PlanId] =
-      Update(
-        // language=SQL
-        """INSERT INTO "recipe_lists"
-          |  ( "plan_id", "recipe_id" )
-          |  SELECT
-          |      p."id"
-          |    , r."id"
-          |  FROM       "plans"              p
-          |  INNER JOIN "recipes"            r ON r."model_version_id" = p."model_version_id"
-          |  LEFT  JOIN "extraction_recipes" x on r."id" = x."recipe_id"
-          |  WHERE p."id" = ?
-          |    AND x."recipe_id" IS NULL
-          |""".stripMargin
-      )
+    private def insertAllRecipes( conditions: Fragment* ): Update0 =
+      // language=SQL
+      sql"""INSERT INTO "recipe_lists"
+           |  ( "plan_id", "recipe_id" )
+           |  SELECT
+           |      p."id"
+           |    , r."id"
+           |  FROM       "plans"              p
+           |  INNER JOIN "recipes"            r ON r."model_version_id" = p."model_version_id"
+           |  LEFT  JOIN "extraction_recipes" x on r."id" = x."recipe_id"
+           |  ${Fragments.whereAnd( conditions: _* )}
+           |ON CONFLICT ON CONSTRAINT "recipe_list_unique"
+           |DO NOTHING
+           |""".stripMargin //
+      .update
+
+    private def withPlanId( planId: PlanId ): Fragment =
+      // language=SQL
+      fr0"""p."id" = $planId"""
+
+    private val notExtractionRecipe: Fragment =
+      // language=SQL
+      fr0"""x."recipe_id" IS NULL"""
+
+    private val isAlternate: Fragment =
+      // language=SQL
+      fr0"""r."display_name" ILIKE 'alternate:%'"""
+
+    def insertDefaultRecipeList( planId: PlanId ): Update0 =
+      insertAllRecipes( withPlanId( planId ), notExtractionRecipe )
+
+    def insertAllAlternatesToRecipeList( planId: PlanId ): Update0 =
+      insertAllRecipes( withPlanId( planId ), notExtractionRecipe, isAlternate )
+
+    def deleteAllAlternatesFromRecipeList( planId: PlanId ): Update0 =
+      // language=SQL
+      sql"""DELETE FROM "recipe_lists" l
+           |USING "recipes" r
+           |WHERE l."plan_id" = $planId
+           |  AND r."id" = l."recipe_id"
+           |  AND $isAlternate
+           |""".stripMargin //
+      .update
 
   }
 }

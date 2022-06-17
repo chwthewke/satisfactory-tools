@@ -109,6 +109,9 @@ object forms {
           )
     }
 
+    val addAlts: String    = "add_alts"
+    val removeAlts: String = "remove_alts"
+
     val compute: String     = "compute"
     val addGroup: String    = "group_inc"
     val removeGroup: String = "group_dec"

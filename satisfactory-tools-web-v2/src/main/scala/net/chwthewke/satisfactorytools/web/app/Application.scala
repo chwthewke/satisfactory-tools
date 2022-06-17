@@ -196,7 +196,7 @@ class Application[F[_]](
     getHeaderAndModel( planId ).semiflatMap {
       case ( header, model ) =>
         for {
-          changes  <- collectAllChanges( planId, model, inputTab, outputTab, request ).value
+          changes  <- collectAllChanges( planId, model, inputTab, outputTab, request, actionPath ).value
           targetId <- targetPlanId( header, request, changes.isDefined, actionPath )
           _        <- changes.traverse_( act => act( targetId ) )
           _ <- planner
@@ -279,9 +279,12 @@ class Application[F[_]](
       model: Model,
       inputTab: InputTab,
       outputTab: OutputTab,
-      request: Request[F]
+      request: Request[F],
+      actionPath: Uri.Path
   ): OptionT[F, PlanId => F[Unit]] =
-    collectInputChanges( planId, model, inputTab, request ) |+| collectOutputChanges( planId, outputTab, request )
+    collectInputChanges( planId, model, inputTab, request ) |+|
+      collectOutputChanges( planId, outputTab, request ) |+|
+      collectActionChanges( actionPath )
 
   private def collectInputChanges(
       planId: PlanId,
@@ -347,6 +350,15 @@ class Application[F[_]](
         case ( newValue, oldValue ) =>
           OptionT.when( newValue =!= oldValue )( writeValue( _, newValue ) )
       }
+
+  private def collectActionChanges( actionPath: Uri.Path ): OptionT[F, PlanId => F[Unit]] =
+    actionPath match {
+      case Actions.addAlts /: _ =>
+        OptionT.pure[F]( planner.addAllAlternatesToRecipeList( _ ) )
+      case Actions.removeAlts /: _ =>
+        OptionT.pure[F]( planner.removeAllAlternatesFromRecipeList( _ ) )
+      case _ => OptionT.none
+    }
 
   private def decode[A]( request: Request[F] )( implicit formDataDecoder: FormDataDecoder[A] ): F[A] = {
     import FormDataDecoder.formEntityDecoder

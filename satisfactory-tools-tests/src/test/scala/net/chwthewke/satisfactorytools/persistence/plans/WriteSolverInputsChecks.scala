@@ -2,6 +2,8 @@ package net.chwthewke.satisfactorytools
 package persistence
 package plans
 
+import protocol.PlanId
+
 class WriteSolverInputsChecks extends DatabaseSpec {
   "the statement" which {
 
@@ -55,7 +57,19 @@ class WriteSolverInputsChecks extends DatabaseSpec {
 
     "inserts the default recipe list" must {
       "type check" in {
-        check( WriteSolverInputs.statements.insertDefaultRecipeList )
+        check( WriteSolverInputs.statements.insertDefaultRecipeList( PlanId( 1 ) ) )
+      }
+    }
+
+    "adds all alternates to the recipe list" must {
+      "type check" in {
+        check( WriteSolverInputs.statements.insertAllAlternatesToRecipeList( PlanId( 1 ) ) )
+      }
+    }
+
+    "removes all alternates from the recipe list" must {
+      "type check" in {
+        check( WriteSolverInputs.statements.deleteAllAlternatesFromRecipeList( PlanId( 1 ) ) )
       }
     }
 
