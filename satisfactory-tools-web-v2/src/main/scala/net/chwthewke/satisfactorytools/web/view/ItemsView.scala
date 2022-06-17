@@ -34,20 +34,23 @@ object ItemsView extends ( ( Map[Item, ItemIO], Int ) => Tag ) {
           itemIO.sources.isEmpty && itemIO.destinations.isEmpty
       }
 
+  def showItemSrcDest( isd: ItemSrcDest ): Modifier =
+    isd match {
+      case ItemSrcDest.Step( recipe ) =>
+        Seq[Modifier]( title := RecipesView.describeRecipe( recipe ), recipe.displayName )
+      case ItemSrcDest.Input     => "INPUT"
+      case ItemSrcDest.Output    => "OUTPUT"
+      case ItemSrcDest.Byproduct => "BYPRODUCT"
+      case ItemSrcDest.Requested => "REQUESTED"
+    }
+
   private def itemIORows( dir: String, rows: Vector[Countable[Double, ItemSrcDest]] ): Frag =
     rows.zipWithIndex.map {
       case ( Countable( srcDest, amount ), ix ) =>
         tr(
           numCell4( amount ),
           Option.when( ix == 0 )( td( rowspan := rows.size, verticalAlign.middle, dir ) ),
-          td( srcDest match {
-            case ItemSrcDest.Step( recipe ) =>
-              Seq[Modifier]( title := RecipesView.describeRecipe( recipe ), recipe.displayName )
-            case ItemSrcDest.Input     => "INPUT"
-            case ItemSrcDest.Output    => "OUTPUT"
-            case ItemSrcDest.Byproduct => "BYPRODUCT"
-            case ItemSrcDest.Requested => "REQUESTED"
-          } )
+          td( showItemSrcDest( srcDest ) )
         )
     }
 

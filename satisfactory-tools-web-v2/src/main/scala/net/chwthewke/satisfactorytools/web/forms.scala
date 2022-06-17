@@ -31,6 +31,7 @@ import model.ResourcePurity
 import model.ResourceWeights
 import protocol.InputTab
 import protocol.OutputTab
+import protocol.PlanId
 import protocol.PlanName
 
 object forms {
@@ -222,6 +223,12 @@ object forms {
             }.toMap
           )
       )
+
+    val comparePlans: FormDataDecoder[Option[( PlanId, PlanId )]] =
+      (
+        FormDataDecoder.fieldOptional[Int]( Keys.compareBefore ),
+        FormDataDecoder.fieldOptional[Int]( Keys.compareAfter )
+      ).mapN( ( bo, ao ) => ( bo, ao ).mapN( ( b, a ) => ( PlanId( b ), PlanId( a ) ) ) )
 
   }
 }

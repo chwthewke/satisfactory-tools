@@ -9,9 +9,9 @@ import cats.syntax.traverse._
 import scala.collection.immutable.SortedMap
 import scalatags.Text
 
+import data.Countable
 import data.Item
 import model.Model
-import net.chwthewke.satisfactorytools.data.Countable
 import prod.Factory
 import web.protocol.Forms
 import web.state.PageState

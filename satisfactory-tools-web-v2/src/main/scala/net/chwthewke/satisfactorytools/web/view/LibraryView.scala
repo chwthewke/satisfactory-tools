@@ -9,6 +9,7 @@ import scalatags.Text.all._
 
 import protocol.PlanHeader
 import protocol.PlanName
+import web.forms
 
 object LibraryView {
 
@@ -32,8 +33,17 @@ object LibraryView {
               )
             ),
             td(
+              colspan := 2,
               textAlign.left,
               show"${plans.size} plan${if (plans.size != 1) "s" else ""}"
+            ),
+            td(
+              colspan := 2,
+              button(
+                `class` := "button is-info",
+                formaction := "/compare",
+                "Compare"
+              )
             )
           ),
           plans.map(
@@ -47,7 +57,9 @@ object LibraryView {
                     formaction := show"/delete/${plan.id}/",
                     "Delete"
                   )
-                )
+                ),
+                td( input( `type` := "radio", name := forms.Keys.compareBefore, value := show"${plan.id}" ) ),
+                td( input( `type` := "radio", name := forms.Keys.compareAfter, value := show"${plan.id}" ) )
               )
           )
         )
