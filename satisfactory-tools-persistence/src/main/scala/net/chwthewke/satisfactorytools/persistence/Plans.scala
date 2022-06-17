@@ -13,6 +13,7 @@ import model.ResourceOptions
 import prod.Calculator
 import prod.ConstraintSolver
 import protocol.InputTab
+import protocol.ModelVersionId
 import protocol.OutputTab
 import protocol.PlanHeader
 import protocol.PlanId
@@ -28,10 +29,9 @@ object Plans extends PlannerApi[ConnectionIO] {
 
   override def newPlan(
       userId: UserId,
-      options: Options,
-      resourceOptions: ResourceOptions
+      modelVersion: ModelVersionId
   ): ConnectionIO[PlanId] =
-    plans.Headers.writeNewPlan( userId, options, resourceOptions )
+    plans.Headers.writeNewPlan( userId, modelVersion )
 
   override def addCustomGroup( planId: PlanId ): ConnectionIO[Boolean] =
     plans.CustomGroups.updateGroupCountIncrement( planId )
@@ -52,8 +52,15 @@ object Plans extends PlannerApi[ConnectionIO] {
     plans.WriteSolverInputs.updateOptions( planId, options )
 
   override def setResourceOptions( planId: PlanId, resourceOptions: ResourceOptions ): ConnectionIO[Unit] =
-    ReadModel.readItemIds
-      .flatMap( plans.WriteSolverInputs.updateResourceOptions( planId, _, resourceOptions ) )
+    plans.Headers
+      .readPlanHeader( planId )
+      .semiflatMap(
+        header =>
+          ReadModel
+            .readItemIds( header.modelVersionId )
+            .flatMap( plans.WriteSolverInputs.updateResourceOptions( planId, _, resourceOptions ) )
+      )
+      .getOrElse( () )
 
   override def setCustomGroupSelection( planId: PlanId, groups: Map[ClassName, Int] ): ConnectionIO[Unit] =
     plans.CustomGroups.updateCustomGroupSelection( planId, groups )
@@ -78,11 +85,17 @@ object Plans extends PlannerApi[ConnectionIO] {
     plans.CustomGroups.writeCustomGroupOrder( planId, group, groupRow )
 
   override def computePlan( planId: PlanId ): ConnectionIO[Unit] =
-    for {
-      model        <- ReadModel.readModel( ModelVersion ) // TODO actually uses only extraction recipes
-      solverInputs <- plans.ReadSolverInputs.getSolverInputs( planId )
-      _ <- plans.WriteSolution
-            .writeSolution( planId, Calculator.computeFactory( model, solverInputs, ConstraintSolver ) )
-    } yield ()
+    plans.Headers
+      .readPlanHeader( planId )
+      .semiflatMap(
+        header =>
+          for {
+            model        <- ReadModel.readModel( header.modelVersionId ) // TODO actually uses only extraction recipes
+            solverInputs <- plans.ReadSolverInputs.getSolverInputs( planId )
+            _ <- plans.WriteSolution
+                  .writeSolution( planId, Calculator.computeFactory( model, solverInputs, ConstraintSolver ) )
+          } yield ()
+      )
+      .getOrElse( () )
 
 }

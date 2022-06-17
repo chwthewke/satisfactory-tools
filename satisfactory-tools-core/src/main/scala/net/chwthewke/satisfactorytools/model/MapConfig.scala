@@ -1,6 +1,7 @@
 package net.chwthewke.satisfactorytools
 package model
 
+import cats.Show
 import cats.syntax.apply._
 import cats.syntax.functor._
 import cats.syntax.traverse._
@@ -41,4 +42,33 @@ object MapConfig {
 
   implicit val mapConfigReader: ConfigReader[MapConfig] =
     semiauto.deriveReader[MapConfig]
+
+  implicit val mapConfigShow: Show[MapConfig] = cats.derived.semiauto.show[MapConfig]
+
+}
+
+case class MapConfigSet( configs: Map[Int, MapConfig] )
+
+object MapConfigSet {
+  implicit val mapConfigSetShow: Show[MapConfigSet] = cats.derived.semiauto.show[MapConfigSet]
+  implicit val mapConfigSetReader: ConfigReader[MapConfigSet] = {
+    implicit val versionedMapConfigReader: ConfigReader[( Int, MapConfig )] =
+      ConfigReader.fromCursor(
+        cc =>
+          (
+            cc.fluent.at( "version" ).asInt,
+            ConfigReader[MapConfig].from( cc )
+          ).tupled
+      )
+
+    ConfigReader.fromCursor(
+      cc =>
+        cc.fluent
+          .at( "configs" )
+          .cursor
+          .flatMap( ConfigReader[Vector[( Int, MapConfig )]].from( _ ) )
+          .map( cfgs => MapConfigSet( cfgs.toMap ) )
+    )
+  }
+
 }

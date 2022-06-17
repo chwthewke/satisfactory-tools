@@ -7,11 +7,12 @@ import scalatags.Text.Tag
 import scalatags.Text.all._
 
 import model.Model
-import web.forms._
+import model.ModelVersion
 import protocol.InputTab
 import protocol.OutputTab
 import protocol.PlanHeader
 import protocol.SolutionHeader
+import web.forms._
 
 object PlanView {
   def apply[I, O](
@@ -26,7 +27,7 @@ object PlanView {
     form(
       method := "POST",
       enctype := "application/x-www-form-urlencoded",
-      documentHeader( header ),
+      documentHeader( header, model.version ),
       div(
         id := "main",
         div(
@@ -48,7 +49,7 @@ object PlanView {
     )
   )
 
-  private def documentHeader( header: PlanHeader ): Tag =
+  private def documentHeader( header: PlanHeader, modelVersion: ModelVersion ): Tag =
     div(
       id := "header",
       display.flex,
@@ -72,7 +73,9 @@ object PlanView {
         `class` := "button is-info is-medium",
         formaction := "copy",
         "Copy"
-      )
+      ),
+      div( flexGrow := "1" ),
+      div( color.gray, modelVersion.name )
     )
 
   private def inputTabs( selected: InputTab ): Tag =

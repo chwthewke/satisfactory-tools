@@ -17,7 +17,7 @@ import model.ResourcePurity
 
 package object persistence {
 
-  val ModelVersion: Int = 1
+  // val ModelVersion: Int = 1
 
   private def enumMeta[A <: EnumEntry: TypeName]( pgEnumName: String )( implicit E: Enum[A] ): Meta[A] =
     pgEnumStringOpt( pgEnumName, E.withNameOption, _.entryName )

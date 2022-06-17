@@ -3,29 +3,36 @@ package persistence
 
 import cats.Order.catsKernelOrderingForOrder
 import cats.data.NonEmptyList
+import cats.data.OptionT
+import cats.syntax.applicativeError._
 import cats.syntax.apply._
 import cats.syntax.foldable._
 import cats.syntax.functor._
 import cats.syntax.traverse._
 import doobie._
 import doobie.implicits._
+import doobie.util.invariant.UnexpectedContinuation
+import doobie.util.invariant.UnexpectedEnd
 import scala.collection.immutable.SortedMap
 import scala.concurrent.duration.FiniteDuration
 
+import api.ModelApi
 import data.ClassName
 import data.Countable
 import data.Item
 import model.ExtractorType
 import model.Machine
 import model.Model
+import model.ModelVersion
 import model.Power
 import model.Recipe
 import model.ResourceDistrib
 import model.ResourceOptions
 import model.ResourcePurity
 import model.ResourceWeights
+import protocol.ModelVersionId
 
-object ReadModel {
+object ReadModel extends ModelApi[ConnectionIO] {
 
   private implicit val powerRead: Read[Power] =
     Read[( Double, Option[Double] )].map {
@@ -35,7 +42,7 @@ object ReadModel {
 
   private[persistence] object statements {
 
-    def selectItems( version: Int ): Query0[( ItemId, Item )] =
+    def selectItems( version: ModelVersionId ): Query0[( ItemId, Item )] =
       // language=SQL
       sql"""SELECT 
            |    "id"
@@ -45,11 +52,11 @@ object ReadModel {
            |  , "energy_value"
            |  , "sink_points"
            |FROM "items"
-           |WHERE "data_version" = $version
+           |WHERE "model_version_id" = $version
            |""".stripMargin //
       .query
 
-    def selectMachines( version: Int ): Query0[( MachineId, Machine )] =
+    def selectMachines( version: ModelVersionId ): Query0[( MachineId, Machine )] =
       // language=SQL
       sql"""SELECT
            |    "id"
@@ -58,13 +65,13 @@ object ReadModel {
            |  , "machine_type"
            |  , "power_consumption"
            |FROM "machines"
-           |WHERE "data_version" = $version
+           |WHERE "model_version_id" = $version
            |""".stripMargin //
       .query
 
     type RecipeRow = ( RecipeId, ( ClassName, String, FiniteDuration, MachineId, Power ), Countable[Double, ItemId] )
 
-    def selectRecipes( version: Int ): Query0[RecipeRow] =
+    def selectRecipes( version: ModelVersionId ): Query0[RecipeRow] =
       // language=SQL
       sql"""SELECT
            |    r."id"
@@ -78,12 +85,12 @@ object ReadModel {
            |  , p."amount"
            |FROM         "recipes"          r
            |  INNER JOIN "recipe_products"  p  ON r."id" = p."recipe_id"
-           |WHERE r."data_version" = $version
+           |WHERE r."model_version_id" = $version
            |ORDER BY r."id", p."id"
            |""".stripMargin //
       .query
 
-    def selectRecipeIngredients( version: Int ): Query0[( RecipeId, Countable[Double, ItemId] )] =
+    def selectRecipeIngredients( version: ModelVersionId ): Query0[( RecipeId, Countable[Double, ItemId] )] =
       // language=SQL
       sql"""SELECT
            |    i."recipe_id"
@@ -91,12 +98,12 @@ object ReadModel {
            |  , i."amount"
            |FROM          "recipe_ingredients"  i
            |  INNER JOIN  "recipes"             r  ON i."recipe_id" = r."id"
-           |WHERE  r."data_version" = $version
+           |WHERE  r."model_version_id" = $version
            |ORDER BY i."recipe_id", i."id"
            |""".stripMargin //
       .query
 
-    def selectExtractionRecipes( version: Int ): Query0[( ItemId, ResourcePurity, RecipeId )] =
+    def selectExtractionRecipes( version: ModelVersionId ): Query0[( ItemId, ResourcePurity, RecipeId )] =
       // language=SQL
       sql"""SELECT
            |    "item_id"
@@ -104,12 +111,12 @@ object ReadModel {
            |  , "recipe_id"
            |FROM "extraction_recipes" x
            |INNER JOIN "recipes" r on x."recipe_id" = r."id"
-           |WHERE r."data_version" = $version
+           |WHERE r."model_version_id" = $version
            |ORDER BY "item_id"
            |""".stripMargin //
       .query
 
-    def selectResourceNodes( version: Int ): Query0[( ExtractorType, ( ItemId, ResourceDistrib ) )] =
+    def selectResourceNodes( version: ModelVersionId ): Query0[( ExtractorType, ( ItemId, ResourceDistrib ) )] =
       // language=SQL
       sql"""SELECT
            |    "extractor_type"
@@ -118,24 +125,42 @@ object ReadModel {
            |  , "normal"
            |  , "pure"
            |FROM "resource_nodes"
-           |WHERE "data_version" = $version
+           |WHERE "model_version_id" = $version
            |ORDER BY "extractor_type"
            |""".stripMargin //
       .query
 
-    def selectItemIds( modelVersion: Int ): Query0[( ClassName, ItemId )] =
+    def selectItemIds( version: ModelVersionId ): Query0[( ClassName, ItemId )] =
       // language=SQL
       sql"""SELECT "class_name", "id"
            |FROM "items"
-           |WHERE "data_version" = $modelVersion
+           |WHERE "model_version_id" = $version
            |""".stripMargin //
       .query
 
-    def selectRecipeIds( modelVersion: Int ): Query0[( ClassName, RecipeId )] =
+    def selectRecipeIds( version: ModelVersionId ): Query0[( ClassName, RecipeId )] =
       // language=SQL
       sql"""SELECT "class_name", "id"
            |FROM "recipes"
-           |WHERE "data_version" = $modelVersion
+           |WHERE "model_version_id" = $version
+           |""".stripMargin //
+      .query
+
+    def selectModelVersion( version: ModelVersionId ): Query0[ModelVersion] =
+      // language=SQL
+      sql"""SELECT "version", "description"
+           |FROM "model_versions"
+           |WHERE "family" = 'SATISFACTORY' :: T_MODEL_FAMILY
+           |  AND "id" = $version 
+           |""".stripMargin //
+      .query
+
+    val selectModelVersions: Query0[( ModelVersionId, ModelVersion )] =
+      // language=SQL
+      sql"""SELECT "id", "version", "description"
+           |FROM "model_versions"
+           |WHERE "family" = 'SATISFACTORY' :: T_MODEL_FAMILY
+           |ORDER BY "version"
            |""".stripMargin //
       .query
   }
@@ -145,7 +170,7 @@ object ReadModel {
   private def buildRecipes(
       itemsById: Map[ItemId, Item],
       machinesById: Map[MachineId, Machine],
-      version: Int
+      version: ModelVersionId
   ): ConnectionIO[Vector[( RecipeId, Recipe )]] =
     for {
       rows <- Streams.groupAdjacentRows( selectRecipes( version ).stream ).compile.toVector
@@ -178,7 +203,7 @@ object ReadModel {
   private def readExtractionRecipes(
       itemsById: Map[ItemId, Item],
       recipesById: Map[RecipeId, Recipe],
-      version: Int
+      version: ModelVersionId
   ): ConnectionIO[Vector[( Item, ResourcePurity, Recipe )]] = {
 
     selectExtractionRecipes( version ).stream
@@ -193,7 +218,7 @@ object ReadModel {
 
   private def readResourceNodes(
       itemsById: Map[ItemId, Item],
-      version: Int
+      version: ModelVersionId
   ): ConnectionIO[Map[ExtractorType, Map[Item, ResourceDistrib]]] =
     Streams
       .groupAdjacentByFirstNev( selectResourceNodes( version ).stream )
@@ -207,8 +232,13 @@ object ReadModel {
       .compile
       .to( Map )
 
-  def readModel( version: Int ): ConnectionIO[Model] =
+  def readModel( version: ModelVersionId ): ConnectionIO[Model] =
     for {
+      modelVersion <- selectModelVersion( version ).unique
+                       .adaptErr {
+                         case UnexpectedEnd          => Error( s"No model version $version" )
+                         case UnexpectedContinuation => Error( s"Multiple model versions $version" )
+                       }
       itemsById         <- selectItems( version ).toMap
       machinesById      <- selectMachines( version ).toMap
       recipesById       <- buildRecipes( itemsById, machinesById, version ).map( _.to( SortedMap ) )
@@ -225,6 +255,7 @@ object ReadModel {
         extractionRecipes.map( _._1 ).distinctBy( _.className )
 
       Model(
+        modelVersion,
         manufacturingRecipes,
         itemsById.values.map( it => ( it.className, it ) ).to( SortedMap ),
         extractedItems,
@@ -233,20 +264,40 @@ object ReadModel {
       )
     }
 
-  def readItemIds: ConnectionIO[Map[ClassName, ItemId]] =
-    selectItemIds( ModelVersion ).toMap
+  override def getModelVersions: ConnectionIO[Vector[( ModelVersionId, ModelVersion )]] =
+    selectModelVersions.to[Vector]
 
-  def readItems: ConnectionIO[Map[ItemId, Item]] =
-    selectItems( ModelVersion ).toMap
+  override def getModel( version: ModelVersionId ): OptionT[ConnectionIO, Model] =
+    OptionT
+      .liftF( readModel( version ) )
+      .filter(
+        model =>
+          model.manufacturingRecipes.nonEmpty &&
+            model.items.nonEmpty &&
+            model.extractedItems.nonEmpty &&
+            model.extractionRecipes.nonEmpty
+      )
 
-  def readRecipeIds: ConnectionIO[Map[ClassName, RecipeId]] =
-    selectRecipeIds( ModelVersion ).toMap
+  def readItemIds( version: ModelVersionId ): ConnectionIO[Map[ClassName, ItemId]] =
+    selectItemIds( version ).toMap
 
-  def readRecipes: ConnectionIO[Map[RecipeId, Recipe]] =
+  def readItems( version: ModelVersionId ): ConnectionIO[Map[ItemId, Item]] =
+    selectItems( version ).toMap
+
+  def readRecipeIds( version: ModelVersionId ): ConnectionIO[Map[ClassName, RecipeId]] =
+    selectRecipeIds( version ).toMap
+
+  def readRecipes( version: ModelVersionId ): ConnectionIO[Map[RecipeId, Recipe]] =
     for {
-      itemsById    <- readItems
-      machinesById <- selectMachines( ModelVersion ).toMap
-      recipes      <- buildRecipes( itemsById, machinesById, ModelVersion )
+      itemsById    <- readItems( version )
+      machinesById <- selectMachines( version ).toMap
+      recipes      <- buildRecipes( itemsById, machinesById, version )
     } yield recipes.toMap
+
+  def readDefaultResourceOptions( version: ModelVersionId ): ConnectionIO[ResourceOptions] =
+    for {
+      itemsById     <- readItems( version )
+      resourceNodes <- readResourceNodes( itemsById, version )
+    } yield ResourceOptions( resourceNodes, ResourceWeights.default )
 
 }

@@ -47,16 +47,18 @@ object GameData {
 
   def modelClassDecoder( nativeClass: NativeClass ): Decoder[GameData] =
     nativeClass match {
-      case NativeClass.`partDescClass` | NativeClass.`consumableDescClass` | NativeClass.`nuclearFuelDescClass` |
-          NativeClass.`equipmentDescClass` | NativeClass.`biomassDescClass` | NativeClass.`resourceDescClass` =>
+      case NativeClass.partDescClass | NativeClass.consumableDescClass | NativeClass.nuclearFuelDescClass |
+          NativeClass.equipmentDescClass | NativeClass.biomassDescClass | NativeClass.resourceDescClass |
+          NativeClass.ammoInstantDescClass | NativeClass.ammoInstantClassU6 | NativeClass.ammoProjDescClass |
+          NativeClass.ammoProjClassU6 | NativeClass.ammoSpreadClassU6 | NativeClass.ammoColorDescClass =>
         decodeMap( Decoder[Item] )( _.className ).map( GameData.items )
-      case NativeClass.`manufacturerClass` | NativeClass.`colliderClass` =>
+      case NativeClass.manufacturerClass | NativeClass.colliderClass =>
         decodeMap( Decoder[Manufacturer] )( _.className ).map( GameData.manufacturers )
-      case NativeClass.`resourceExtractorClass` | NativeClass.`waterPumpClass` | NativeClass.`frackingExtractorClass` =>
+      case NativeClass.resourceExtractorClass | NativeClass.waterPumpClass | NativeClass.frackingExtractorClass =>
         decodeMap( Decoder[Extractor] )( _.className ).map( GameData.extractors )
-      case NativeClass.`recipeClass` =>
+      case NativeClass.recipeClass =>
         Decoder[Vector[GameRecipe]].map( GameData.recipes )
-      case NativeClass.`nuclearGeneratorClass` =>
+      case NativeClass.nuclearGeneratorClass =>
         decodeMap( Decoder[NuclearGenerator] )( _.className ).map( GameData.nuclearGenerators )
       case _ => Decoder.const( GameData.empty )
     }
@@ -71,7 +73,7 @@ object GameData {
                 )
     } yield model
 
-  implicit val protoModelShow: Show[GameData] = Show(
+  implicit val gameDataShow: Show[GameData] = Show(
     model => show"""Recipes:
                    |
                    |${model.recipes.map( _.show ).intercalate( "\n" )}

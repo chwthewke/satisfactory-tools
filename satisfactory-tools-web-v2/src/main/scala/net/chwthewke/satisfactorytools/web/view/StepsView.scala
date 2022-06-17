@@ -72,10 +72,8 @@ object StepsView extends ( ( ( Factory, Map[ClassName, Int] ), Int ) => Tag ) {
             )
         },
         tr(
-          Option.when( radios >= CustomGroupsRadios.Placeholder )(
-            td( colspan := (1 + groupCount) )
-          ),
-          td( colspan := 8, textAlign.right, "Total Power" ),
+          td( colspan := (if (radios >= CustomGroupsRadios.Placeholder) groupCount else 1) ),
+          td( colspan := 9, textAlign.right, "Total Power" ),
           td( textAlign.right, factory.allRecipes.foldMap( _.power ).show ),
           td( textAlign.left, "MW" )
         )

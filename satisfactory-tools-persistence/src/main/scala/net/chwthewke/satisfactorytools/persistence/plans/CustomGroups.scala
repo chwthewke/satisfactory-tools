@@ -2,6 +2,7 @@ package net.chwthewke.satisfactorytools
 package persistence
 package plans
 
+import cats.data.OptionT
 import cats.syntax.apply._
 import cats.syntax.functor._
 import cats.syntax.functorFilter._
@@ -10,6 +11,7 @@ import doobie.implicits._
 
 import data.ClassName
 import data.Countable
+import protocol.PlanHeader
 import protocol.PlanId
 import protocol.SolutionHeader
 import protocol.SolutionId
@@ -17,21 +19,26 @@ import protocol.SolutionId
 object CustomGroups {
 
   def readCustomGroupSelection( planId: PlanId ): ConnectionIO[Map[ClassName, Int]] =
-    (
-      readPlanCustomGroups( planId ),
-      ReadModel.readRecipes
-    ).mapN {
-      case ( groups, recipes ) =>
-        groups.assignments
-          .flatMap {
-            case ( recipeId, ix ) => recipes.get( recipeId ).map( _.className ).tupleRight( ix )
-          }
-    }
-
-  private[plans] def readPlanCustomGroups( planId: PlanId ): ConnectionIO[CustomGroupLists] =
     Headers
       .readPlanHeader( planId )
-      .subflatMap( _.solution.valueAndCount )
+      .semiflatMap(
+        header =>
+          (
+            readPlanCustomGroups( header ),
+            ReadModel.readRecipes( header.modelVersionId )
+          ).mapN {
+            case ( groups, recipes ) =>
+              groups.assignments
+                .flatMap {
+                  case ( recipeId, ix ) => recipes.get( recipeId ).map( _.className ).tupleRight( ix )
+                }
+          }
+      )
+      .getOrElse( Map.empty )
+
+  private[plans] def readPlanCustomGroups( header: PlanHeader ): ConnectionIO[CustomGroupLists] =
+    OptionT
+      .fromOption[ConnectionIO]( header.solution.valueAndCount )
       .semiflatMap { case ( solutionId, groupCount ) => readCustomGroups( solutionId, groupCount ) }
       .getOrElse( CustomGroupLists.empty( SolutionHeader.DefaultCustomGroups ) )
 
@@ -50,14 +57,17 @@ object CustomGroups {
       }
       .map( CustomGroupLists( _ ) )
 
-  def updateCustomGroupSelection( planId: PlanId, groups: Map[ClassName, Int] ): ConnectionIO[Unit] =
+  def updateCustomGroupSelection(
+      planId: PlanId,
+      groups: Map[ClassName, Int]
+  ): ConnectionIO[Unit] =
     Headers
       .readPlanHeader( planId )
-      .subflatMap( _.solution.valueAndCount )
+      .subflatMap( h => h.solution.valueAndCount.tupleLeft( h.modelVersionId ) )
       .semiflatMap {
-        case ( solutionId, groupCount ) =>
+        case ( modelVersion, ( solutionId, groupCount ) ) =>
           for {
-            recipeIds <- ReadModel.readRecipeIds
+            recipeIds <- ReadModel.readRecipeIds( modelVersion )
             assignments = groups.flatMap { case ( cn, ix ) => recipeIds.get( cn ).tupleRight( ix ) }
             // TODO reading same table twice (with different ORDER BY clauses, but not using order in 2nd case)...
             // TODO also an opportunity to avoid the read/diff/write from Application

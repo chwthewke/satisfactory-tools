@@ -13,7 +13,8 @@ import model.Recipe
 object PrintConfigStub extends IOApp {
 
   override def run( args: List[String] ): IO[ExitCode] =
-    Loader.io.loadModel
+    Loader.io
+      .loadModel( DataVersionStorage.Update5 )
       .flatMap( model => IO.println( configStub( model ) ) )
       .as( ExitCode.Success )
 
@@ -28,7 +29,6 @@ object PrintConfigStub extends IOApp {
     recipes
       .sortBy( r => ( r.products.head.item.displayName, r.isAlternate, r.displayName ) )
       .map( recipeLine( _, w ) )
-
   }
 
   def itemLine( item: Item, w: Int, defaultValue: String ): String = {

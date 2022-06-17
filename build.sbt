@@ -36,17 +36,6 @@ val `satisfactory-tools-core` = project
   )
   .enablePlugins( SbtBuildInfo, ScalacPlugin )
 
-val `satisfactory-tools-app` = project
-  .settings( compilerPlugins )
-  .settings(
-    libraryDependencies ++=
-      catsEffect ++
-        pureconfigCatsEffect ++
-        fs2 // ++ circeFs2
-  )
-  .dependsOn( `satisfactory-tools-core` )
-  .enablePlugins( ScalacPlugin )
-
 val `satisfactory-tools-api` = project
   .settings( compilerPlugins )
   .settings(
@@ -68,7 +57,13 @@ val `satisfactory-tools-persistence` = project
         http4sBlazeServer ++
         logging
   )
-  .dependsOn( `satisfactory-tools-app`, `satisfactory-tools-api` )
+  .dependsOn( `satisfactory-tools-api` )
+  .enablePlugins( ScalacPlugin )
+
+val `satisfactory-tools-dev` = project
+  .settings( compilerPlugins )
+  .settings( libraryDependencies ++= circeFs2 ++ pureconfigCatsEffect )
+  .dependsOn( `satisfactory-tools-persistence` )
   .enablePlugins( ScalacPlugin )
 
 val `satisfactory-tools-web` = project
@@ -81,7 +76,7 @@ val `satisfactory-tools-web` = project
         scalatags ++
         logging
   )
-  .dependsOn( `satisfactory-tools-app`, `satisfactory-tools-api` )
+  .dependsOn( `satisfactory-tools-dev`, `satisfactory-tools-api` )
   .enablePlugins( ScalacPlugin )
 
 val `satisfactory-tools-web-v2` = project
@@ -92,21 +87,17 @@ val `satisfactory-tools-web-v2` = project
         http4sBlazeServer ++
         scodec ++
         scalatags ++
-        logging
+        logging ++
+        pureconfigCatsEffect
   )
   .dependsOn( `satisfactory-tools-api`, `satisfactory-tools-persistence` )
-  .enablePlugins( ScalacPlugin )
-
-val `satisfactory-tools-dev` = project
-  .settings( compilerPlugins )
-  .dependsOn( `satisfactory-tools-app` )
   .enablePlugins( ScalacPlugin )
 
 val `satisfactory-production-calculator` = project
   .settings( compilerPlugins )
   .settings( mainClass.withRank( KeyRanks.Invisible ) := Some( "net.chwthewke.satisfactory.ProdCalculator" ) )
-  .settings( libraryDependencies ++= decline )
-  .dependsOn( `satisfactory-tools-app` )
+  .settings( libraryDependencies ++= decline ++ pureconfigCatsEffect )
+  .dependsOn( `satisfactory-tools-dev` )
   .enablePlugins( ScalacPlugin )
 
 val `satisfactory-tools-tests` = project
@@ -146,7 +137,6 @@ val `satisfactory-tools-all` = project
   .in( file( "." ) )
   .aggregate(
     `satisfactory-tools-core`,
-    `satisfactory-tools-app`,
     `satisfactory-tools-api`,
     `satisfactory-tools-persistence`,
     `satisfactory-tools-dev`,

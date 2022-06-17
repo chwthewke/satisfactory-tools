@@ -4,6 +4,7 @@ package web.app
 import cats.Apply
 import cats.Eq
 import cats.Semigroup
+import cats.data.EitherT
 import cats.data.OptionT
 import cats.effect.Async
 import cats.syntax.applicative._
@@ -30,11 +31,11 @@ import org.http4s.server.ContextMiddleware
 import org.http4s.syntax.literals._
 
 import api.LibraryApi
+import api.ModelApi
 import api.PlannerApi
 import api.SessionApi
 import data.Item
 import model.Model
-import model.Options
 import prod.Factory
 import protocol.InputTab
 import protocol.ItemIO
@@ -52,7 +53,7 @@ import web.view.LibraryView
 import web.view.PlanView
 
 class Application[F[_]](
-    val model: Model,
+    val models: ModelApi[F],
     val library: LibraryApi[F],
     val planner: PlannerApi[F],
     val sessionMiddleware: ContextMiddleware[F, Session]
@@ -67,12 +68,18 @@ class Application[F[_]](
 
   val libraryRoutes: ContextRoutes[Session, F] = ContextRoutes.of[Session, F] {
     case ContextRequest( session, GET -> Root ) =>
-      library.getAllPlans( session.userId ).flatMap( plans => Ok( LibraryView.viewAllPlans( plans ) ) )
+      for {
+        plans         <- library.getAllPlans( session.userId )
+        modelVersions <- models.getModelVersions
+        response      <- Ok( LibraryView.viewAllPlans( plans, modelVersions.reverse ) )
+      } yield response
 
-    case ContextRequest( session, POST -> Root / "new" ) =>
-      planner
-        .newPlan( session.userId, Options.default, model.defaultResourceOptions )
-        .flatMap( redirect( _, InputTab.Bill, OutputTab.Steps ) )
+    case ContextRequest( session, req @ POST -> Root / "new" ) =>
+      for {
+        modelVersion <- decode( req )( forms.Decoders.modelVersion )
+        planId       <- planner.newPlan( session.userId, modelVersion )
+        response     <- redirect( planId, InputTab.Bill, OutputTab.Steps )
+      } yield response
 
     case ContextRequest( session, POST -> Root / "library" ) =>
       Found( Location( uri"/" ) )
@@ -120,29 +127,47 @@ class Application[F[_]](
       updatePlan[inputTab.Data, outputTab.Data]( planId, inputTab, outputTab, req, rest )
 
     case ContextRequest( session, GET -> Root / "compare" / segment.PlanId( before ) / segment.PlanId( after ) ) =>
-      comparePlans( model, before, after )
+      comparePlans( before, after )
 
   }
 
-  private def comparePlans( model: Model, before: PlanId, after: PlanId ): F[Response[F]] = {
-    def getFactory( planId: PlanId ): F[Option[( Factory, Map[Item, ItemIO] )]] = {
-      val solutionId = planner
+  private type CompareFactory = ( Factory, Map[Item, ItemIO] )
+
+  private def comparePlans( before: PlanId, after: PlanId ): F[Response[F]] = {
+    def getFactory( planId: PlanId ): OptionT[F, CompareFactory] =
+      planner
         .getPlanHeader( planId )
         .subflatMap( header => header.solution.value )
+        .semiflatMap(
+          solutionId =>
+            (
+              planner.getPlanResult( planId, solutionId, OutputTab.Steps ).map( _._1 ),
+              planner.getPlanResult( planId, solutionId, OutputTab.Items )
+            ).tupled
+        )
 
-      (
-        solutionId
-          .semiflatMap( solutionId => planner.getPlanResult( planId, solutionId, OutputTab.Steps ) )
-          .map( _._1 ),
-        solutionId
-          .semiflatMap( solutionId => planner.getPlanResult( planId, solutionId, OutputTab.Items ) )
-      ).tupled.value
-    }
+    val compareOrError: EitherT[F, String, ( CompareFactory, CompareFactory )] = for {
+      headerBefore  <- planner.getPlanHeader( before ).toRight( "Missing header before" )
+      headerAfter   <- planner.getPlanHeader( after ).toRight( "Missing header after" )
+      _             <- EitherT.cond( headerBefore.modelVersionId == headerAfter.modelVersionId, (), "differing model versions" )
+      factoryBefore <- getFactory( before ).toRight( "Missing solution before" )
+      factoryAfter  <- getFactory( after ).toRight( "Missing solution after" )
+    } yield ( factoryBefore, factoryAfter )
 
-    ( getFactory( before ), getFactory( after ) )
-      .mapN( ( b, a ) => CompareView( model, b, a ) )
-      .flatMap( Ok( _ ) )
+    Ok(
+      compareOrError.fold(
+        err => CompareView( err ),
+        facs => CompareView( facs._1, facs._2 )
+      )
+    )
+
   }
+
+  private def getHeaderAndModel( planId: PlanId ): EitherT[F, Response[F], ( PlanHeader, Model )] =
+    planner
+      .getPlanHeader( planId )
+      .toRightF( NotFound() )
+      .mproduct( header => models.getModel( header.modelVersionId ).toRightF( NotFound() ) )
 
   private def viewPlan( planId: PlanId, inputTab: InputTab, outputTab: OutputTab ): F[Response[F]] =
     viewPlanAux[inputTab.Data, outputTab.Data]( planId, inputTab, outputTab )
@@ -151,20 +176,15 @@ class Application[F[_]](
       planId: PlanId,
       inputTab: InputTab.Aux[I],
       outputTab: OutputTab.Aux[O]
-  ): F[Response[F]] = {
-    planner
-      .getPlanHeader( planId )
-      .toRightF( NotFound() )
-      .semiflatMap(
-        header =>
-          for {
-            inputData  <- planner.getPlanQuery( planId, inputTab )
-            outputData <- header.solution.traverse( planner.getPlanResult( planId, _, outputTab ) )
-            response   <- Ok( PlanView( model, header, inputTab, inputData, outputTab, outputData ) )
-          } yield response
-      )
-      .merge
-  }
+  ): F[Response[F]] =
+    getHeaderAndModel( planId ).semiflatMap {
+      case ( header, model ) =>
+        for {
+          inputData  <- planner.getPlanQuery( planId, inputTab )
+          outputData <- header.solution.traverse( planner.getPlanResult( planId, _, outputTab ) )
+          response   <- Ok( PlanView( model, header, inputTab, inputData, outputTab, outputData ) )
+        } yield response
+    }.merge
 
   private def updatePlan[I, O](
       planId: PlanId,
@@ -173,30 +193,26 @@ class Application[F[_]](
       request: Request[F],
       actionPath: Uri.Path
   ): F[Response[F]] =
-    planner
-      .getPlanHeader( planId )
-      .toRightF( NotFound() )
-      .semiflatMap(
-        header =>
-          for {
-            changes  <- collectAllChanges( planId, inputTab, outputTab, request ).value
-            targetId <- targetPlanId( header, request, changes.isDefined, actionPath )
-            _        <- changes.traverse_( act => act( targetId ) )
-            _ <- planner
-                  .computePlan( targetId )
-                  .whenA( computeAction( changes.isDefined, header.solution, actionPath ) )
-            _ <- planner
-                  .addCustomGroup( targetId )
-                  .whenA( addCustomGroup( actionPath ) )
-            _ <- planner
-                  .removeCustomGroup( targetId )
-                  .whenA( removeCustomGroup( actionPath ) )
-            _ <- reorderGroup( targetId, changes.isDefined, outputTab, actionPath )
-            ( nextInputTab, nextOutputTab ) = destination( inputTab, outputTab, actionPath )
-            response <- redirect( targetId, nextInputTab, nextOutputTab )
-          } yield response
-      )
-      .merge
+    getHeaderAndModel( planId ).semiflatMap {
+      case ( header, model ) =>
+        for {
+          changes  <- collectAllChanges( planId, model, inputTab, outputTab, request ).value
+          targetId <- targetPlanId( header, request, changes.isDefined, actionPath )
+          _        <- changes.traverse_( act => act( targetId ) )
+          _ <- planner
+                .computePlan( targetId )
+                .whenA( computeAction( changes.isDefined, header.solution, actionPath ) )
+          _ <- planner
+                .addCustomGroup( targetId )
+                .whenA( addCustomGroup( actionPath ) )
+          _ <- planner
+                .removeCustomGroup( targetId )
+                .whenA( removeCustomGroup( actionPath ) )
+          _ <- reorderGroup( targetId, changes.isDefined, outputTab, actionPath )
+          ( nextInputTab, nextOutputTab ) = destination( inputTab, outputTab, actionPath )
+          response <- redirect( targetId, nextInputTab, nextOutputTab )
+        } yield response
+    }.merge
 
   private def targetPlanId(
       header: PlanHeader,
@@ -260,14 +276,16 @@ class Application[F[_]](
 
   private def collectAllChanges(
       planId: PlanId,
+      model: Model,
       inputTab: InputTab,
       outputTab: OutputTab,
       request: Request[F]
   ): OptionT[F, PlanId => F[Unit]] =
-    collectInputChanges( planId, inputTab, request ) |+| collectOutputChanges( planId, outputTab, request )
+    collectInputChanges( planId, model, inputTab, request ) |+| collectOutputChanges( planId, outputTab, request )
 
   private def collectInputChanges(
       planId: PlanId,
+      model: Model,
       inputTab: InputTab,
       request: Request[F]
   ): OptionT[F, PlanId => F[Unit]] = inputTab match {
@@ -349,12 +367,12 @@ class Application[F[_]](
 object Application {
 
   def apply[F[_]: Async](
-      model: Model,
+      modelApi: ModelApi[F],
       sessionApi: SessionApi[F],
       libraryApi: LibraryApi[F],
       plannerApi: PlannerApi[F]
   ): Application[F] =
-    new Application[F]( model, libraryApi, plannerApi, SessionMiddleware[F]( sessionApi ) )
+    new Application[F]( modelApi, libraryApi, plannerApi, SessionMiddleware[F]( sessionApi ) )
 
   val cookieSessionIdKey = "session-id"
 

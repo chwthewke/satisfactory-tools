@@ -65,7 +65,8 @@ object WebApp {
   }
 
   def loadAll[F[_]: Sync]: F[( Model, SolverInputs )] =
-    Loader[F].loadModel
+    Loader[F]
+      .loadModel( DataVersionStorage.Update4 )
       .fproduct(
         model =>
           SolverInputs(

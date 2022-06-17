@@ -1,10 +1,12 @@
 package net.chwthewke.satisfactorytools
 package persistence.plans
 
+import cats.syntax.applicativeError._
 import cats.syntax.functor._
 import cats.syntax.functorFilter._
 import cats.syntax.traverse._
 import doobie._
+import doobie.util.invariant.UnexpectedEnd
 
 import data.ClassName
 import data.Countable
@@ -16,6 +18,7 @@ import persistence.RecipeId
 import persistence.plans
 import prod.ClockedRecipe
 import prod.Factory
+import protocol.ModelVersionId
 import protocol.PlanId
 import protocol.SolutionId
 
@@ -24,24 +27,31 @@ object WriteSolution {
   def clearSolution( planId: PlanId ): doobie.ConnectionIO[Unit] = statements.deleteSolution.run( planId ).void
 
   def writeSolution( planId: PlanId, solution: Either[String, Factory] ): ConnectionIO[Unit] =
-    for {
-      customGroups <- plans.CustomGroups.readPlanCustomGroups( planId )
-      _            <- clearSolution( planId )
-      _ <- solution.fold(
-            err => statements.insertSolutionError.run( ( planId, err ) ),
-            factory => writeSolutionWithGroups( planId, factory, customGroups )
-          )
-    } yield ()
+    Headers
+      .readPlanHeader( planId )
+      .semiflatMap(
+        header =>
+          for {
+            customGroups <- plans.CustomGroups.readPlanCustomGroups( header )
+            _            <- clearSolution( planId )
+            _ <- solution.fold(
+                  err => statements.insertSolutionError.run( ( planId, err ) ),
+                  factory => writeSolutionWithGroups( planId, header.modelVersionId, factory, customGroups )
+                )
+          } yield ()
+      )
+      .getOrElse( () )
 
   private def writeSolutionWithGroups(
       planId: PlanId,
+      modelVersionId: ModelVersionId,
       factory: Factory,
       customGroups: CustomGroupLists
   ): ConnectionIO[Unit] =
     for {
       solutionId <- writeSolutionHeader( planId, customGroups.count )
-      itemIds    <- ReadModel.readItemIds
-      recipeIds  <- ReadModel.readRecipeIds
+      itemIds    <- ReadModel.readItemIds( modelVersionId )
+      recipeIds  <- ReadModel.readRecipeIds( modelVersionId )
       _          <- writeExtractionRecipes( solutionId, recipeIds, factory.extraction )
       _          <- writeManufacturingRecipes( solutionId, customGroups, factory.manufacturing, recipeIds )
       _          <- writeExtraInputs( solutionId, itemIds, factory.extraInputs )
@@ -51,6 +61,9 @@ object WriteSolution {
   private def writeSolutionHeader( planId: PlanId, customGroupCount: Int ): ConnectionIO[SolutionId] =
     statements.insertSolution
       .withUniqueGeneratedKeys[SolutionId]( "id" )( ( planId, customGroupCount ) )
+      .adaptErr {
+        case UnexpectedEnd => Error( s"Unable to create solution for plan #$planId" )
+      }
 
   private def writeExtractionRecipes(
       solutionId: SolutionId,

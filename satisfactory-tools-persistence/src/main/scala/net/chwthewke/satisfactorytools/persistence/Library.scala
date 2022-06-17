@@ -2,13 +2,17 @@ package net.chwthewke.satisfactorytools
 package persistence
 
 import cats.data.OptionT
+import cats.syntax.applicativeError._
 import cats.syntax.functor._
 import cats.syntax.show._
 import doobie._
+import doobie.implicits._
 import doobie.postgres.implicits._
+import doobie.util.invariant.UnexpectedEnd
 
 import api.LibraryApi
 import protocol.InputTab
+import protocol.ModelVersionId
 import protocol.Page
 import protocol.PageQuery
 import protocol.PlanHeader
@@ -26,7 +30,7 @@ object Library extends LibraryApi[ConnectionIO] {
       title: PlanName
   ): ConnectionIO[PlanId] =
     OptionT( statements.selectPlanByName.option( ( userId, title ) ) )
-      .orElse( OptionT.fromOption( srcIdOpt ) )
+      .orElse( OptionT.fromOption[ConnectionIO]( srcIdOpt ).filter( _ != planId ) ) // scrId == planId should not happen but it does???
       .foldF(
         statements.updatePlanName.run( ( title, planId ) ).as( planId )
       )(
@@ -40,7 +44,10 @@ object Library extends LibraryApi[ConnectionIO] {
 
   override def editPlan( userId: UserId, planId: PlanId ): ConnectionIO[PlanId] =
     for {
-      newId <- createPlan( userId, Some( planId ), None )
+      header <- Plans
+                 .getPlanHeader( planId )
+                 .getOrElseF( FC.raiseError( new IllegalArgumentException( show"Unknown plan #$planId" ) ) )
+      newId <- createPlan( userId, header.modelVersionId, Some( planId ), None )
       _     <- copyPlanParts( planId, newId )
     } yield newId
 
@@ -49,7 +56,7 @@ object Library extends LibraryApi[ConnectionIO] {
       header <- Plans
                  .getPlanHeader( planId )
                  .getOrElseF( FC.raiseError( new IllegalArgumentException( show"Unknown plan #$planId" ) ) )
-      newId <- createPlan( userId, None, header.title.map( _.copy ) )
+      newId <- createPlan( userId, header.modelVersionId, None, header.title.map( _.copy ) )
       _     <- copyPlanParts( planId, newId )
     } yield newId
 
@@ -57,11 +64,11 @@ object Library extends LibraryApi[ConnectionIO] {
     statements.deletePlan.run( planId ).void
 
   override def getAllPlans( userId: UserId ): ConnectionIO[Vector[PlanHeader]] =
-    statements.selectPlanHeaders.toQuery0( userId ).to[Vector]
+    statements.selectPlanHeaders( userId ).to[Vector]
 
   override def getPlans( userId: UserId, page: PageQuery ): ConnectionIO[Page[PlanHeader]] =
-    statements.selectPlanHeadersPage
-      .toQuery0( ( userId, page.limit + 1L, page.offset ) )
+    statements
+      .selectPlanHeadersPage( userId, page.limit + 1L, page.offset )
       .to[Vector]
       .map { plans =>
         Page(
@@ -72,8 +79,18 @@ object Library extends LibraryApi[ConnectionIO] {
         )
       }
 
-  private def createPlan( userId: UserId, srcId: Option[PlanId], name: Option[PlanName] ): ConnectionIO[PlanId] =
-    statements.insertPlan.withUniqueGeneratedKeys[PlanId]( "id" )( ( userId, srcId, name ) )
+  private def createPlan(
+      userId: UserId,
+      modelVersionId: ModelVersionId,
+      srcId: Option[PlanId],
+      name: Option[PlanName]
+  ): ConnectionIO[PlanId] =
+    statements.insertPlan
+      .withUniqueGeneratedKeys[PlanId]( "id" )( ( userId, modelVersionId, srcId, name ) )
+      .adaptErr {
+        case UnexpectedEnd =>
+          Error( s"Unable to createPlan $name from $srcId for user #$userId, model $modelVersionId" )
+      }
 
   private def copyPlanParts( from: PlanId, to: PlanId ): ConnectionIO[Unit] =
     for {
@@ -92,10 +109,11 @@ object Library extends LibraryApi[ConnectionIO] {
     } yield ()
 
   private def copySolution( from: PlanId, to: PlanId ): ConnectionIO[Unit] =
-    for {
-      newId <- statements.copyPlanSolution.withUniqueGeneratedKeys[SolutionId]( "id" )( ( to, from ) )
-      _     <- copySolutionItems( from, newId )
-    } yield ()
+    statements.copyPlanSolution
+      .withGeneratedKeys[SolutionId]( "id" )( ( to, from ) )
+      .evalTap( copySolutionItems( from, _ ) )
+      .compile
+      .drain
 
   private def copySolutionItems( from: PlanId, to: SolutionId ): ConnectionIO[Unit] =
     for {
@@ -107,77 +125,52 @@ object Library extends LibraryApi[ConnectionIO] {
 
   private[persistence] object statements {
 
-    val insertPlan: Update[( UserId, Option[PlanId], Option[PlanName] )] =
+    val insertPlan: Update[( UserId, ModelVersionId, Option[PlanId], Option[PlanName] )] =
       Update(
         // language=SQL
         """INSERT INTO "plans"
           |  ( "user_id"
+          |  , "model_version_id"
           |  , "src_id"
           |  , "name"
           |  )
           |VALUES
-          |  ( ?, ?, ? )
+          |  ( ?, ?, ?, ? )
           |""".stripMargin
       )
 
-    private val fromPlanHeaderRow: PlanHeader.Row => PlanHeader = {
-      case (
-          id,
-          owner,
-          nameOpt,
-          srcNameOpt,
-          srcIdOpt,
-          updated,
-          solutionIdOpt,
-          solutionErrorOpt,
-          groupCountOpt,
-          lastGroupOpt
-          ) =>
-        PlanHeader(
-          id,
-          owner,
-          nameOpt,
-          srcNameOpt,
-          srcIdOpt,
-          updated,
-          solutionIdOpt,
-          solutionErrorOpt,
-          groupCountOpt,
-          lastGroupOpt
-        )
-    }
-
-    private val selectPlanHeadersStmt: String =
+    private def selectPlanHeadersStmt( userId: UserId ): Fragment =
       // language=SQL
-      """SELECT
-        |    p."id"
-        |  , p."user_id"  
-        |  , p."name"
-        |  , q."name"
-        |  , p."src_id"
-        |  , p."updated"
-        |  , s."id"
-        |  , s."error_message"
-        |  , s."custom_groups"
-        |  , MAX( r."custom_group" )
-        |FROM        "plans"                          p
-        |LEFT JOIN   "plans"                          q ON q."id" = p."src_id"
-        |LEFT JOIN   "plan_solutions"                 s ON p."id" = s."plan_id"
-        |LEFT JOIN   "solution_manufacturing_recipes" r ON s."id" = r."solution_id"
-        |WHERE p."user_id" = ?
-        |GROUP BY p."id", p."updated", q."name", s."id"
-        |ORDER BY p."updated" DESC
-        |""".stripMargin
+      sql"""SELECT
+           |    p."id"
+           |  , p."model_version_id"
+           |  , p."user_id"  
+           |  , p."name"
+           |  , q."name"
+           |  , p."src_id"
+           |  , p."updated"
+           |  , s."id"
+           |  , s."error_message"
+           |  , s."custom_groups"
+           |  , MAX( r."custom_group" )
+           |FROM        "plans"                          p
+           |LEFT JOIN   "plans"                          q ON q."id" = p."src_id"
+           |LEFT JOIN   "plan_solutions"                 s ON p."id" = s."plan_id"
+           |LEFT JOIN   "solution_manufacturing_recipes" r ON s."id" = r."solution_id"
+           |WHERE p."user_id" = $userId
+           |GROUP BY p."id", p."updated", q."name", s."id"
+           |ORDER BY p."updated" DESC
+           |""".stripMargin
 
-    val selectPlanHeaders: Query[UserId, PlanHeader] =
-      Query[UserId, PlanHeader.Row]( selectPlanHeadersStmt ).map( PlanHeader.apply )
+    def selectPlanHeaders( userId: UserId ): Query0[PlanHeader] =
+      selectPlanHeadersStmt( userId ).query[PlanHeader.Row].map( PlanHeader.apply )
 
-    val selectPlanHeadersPage: Query[( UserId, Long, Long ), PlanHeader] =
-      Query[( UserId, Long, Long ), PlanHeader.Row](
-        selectPlanHeadersStmt ++
-          """LIMIT ? OFFSET ?
-            |""".stripMargin
-      ).map( fromPlanHeaderRow )
+    def selectPlanHeadersPage( userId: UserId, count: Long, offset: Long ): Query0[PlanHeader] =
+      sql"""${selectPlanHeadersStmt( userId )}
+           |LIMIT $count OFFSET $offset
+           |""".stripMargin //
+        .query[PlanHeader.Row]
+        .map( PlanHeader.apply )
 
     val copyPlanSolution: Update[( PlanId, PlanId )] =
       Update(

@@ -10,6 +10,7 @@ import model.Options
 import model.RecipeList
 import model.ResourceOptions
 import protocol.InputTab
+import protocol.ModelVersionId
 import protocol.OutputTab
 import protocol.PlanHeader
 import protocol.PlanId
@@ -18,7 +19,7 @@ import protocol.UserId
 
 trait PlannerApi[F[_]] { self =>
 
-  def newPlan( userId: UserId, options: Options, resourceOptions: ResourceOptions ): F[PlanId]
+  def newPlan( userId: UserId, modelVersion: ModelVersionId ): F[PlanId]
 
   def addCustomGroup( planId: PlanId ): F[Boolean]
 
@@ -48,8 +49,8 @@ trait PlannerApi[F[_]] { self =>
 
   def mapK[G[_]]( f: F ~> G ): PlannerApi[G] = new PlannerApi[G] {
 
-    override def newPlan( userId: UserId, options: Options, resourceOptions: ResourceOptions ): G[PlanId] =
-      f( self.newPlan( userId, options, resourceOptions ) )
+    override def newPlan( userId: UserId, modelVersion: ModelVersionId ): G[PlanId] =
+      f( self.newPlan( userId, modelVersion ) )
 
     override def addCustomGroup( planId: PlanId ): G[Boolean] =
       f( self.addCustomGroup( planId ) )
