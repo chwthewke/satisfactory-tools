@@ -23,6 +23,18 @@ object RecipesView extends ( ( Model, RecipeList ) => Tag ) {
   override def apply( model: Model, list: RecipeList ): Tag =
     fieldset(
       legend( "Allowed recipes" ),
+      div(
+        button(
+          `class` := "button is-info",
+          formaction := Actions.addAlts,
+          "+ ALL ALTS"
+        ),
+        button(
+          `class` := "button is-info",
+          formaction := Actions.removeAlts,
+          "- ALL ALTS"
+        )
+      ),
       recipeFieldSets( model.manufacturingRecipes, list.recipes.toSet )
     )
 
