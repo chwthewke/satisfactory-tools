@@ -1,16 +1,12 @@
 package net.chwthewke.satisfactorytools
 package model
 
-import alleycats.std.map._
 import cats.Eq
 import cats.Show
 import cats.syntax.foldable._
-import cats.syntax.functor._
 import cats.syntax.option._
 import cats.syntax.show._
-import cats.syntax.traverse._
 
-import data.ClassName
 import data.Item
 
 case class ResourceOptions(
@@ -22,19 +18,6 @@ case class ResourceOptions(
 }
 
 object ResourceOptions {
-  def init( modelItems: Map[ClassName, Item], config: MapConfig ): Either[String, ResourceOptions] =
-    config.resourceNodes
-      .traverse(
-        _.toVector
-          .traverse {
-            case ( itemClass, distrib ) =>
-              modelItems.get( itemClass ).toValidNel( itemClass ).tupleRight( distrib )
-          }
-          .map( _.toMap )
-      )
-      .map( ResourceOptions( _, ResourceWeights.default ) )
-      .leftMap( _.mkString_( "Unknown items in resource nodes config: ", ", ", "" ) )
-      .toEither
 
   implicit val resourceOptionsShow: Show[ResourceOptions] = {
     def showItem( item: Item, distrib: ResourceDistrib ): String =

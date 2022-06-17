@@ -2,6 +2,7 @@ package net.chwthewke.satisfactorytools
 package persistence
 
 import cats.effect.IO
+import cats.syntax.flatMap._
 import doobie.implicits._
 import fr.thomasdufour.autodiff.extra.scalatest.AutodiffMatchers.~=
 
@@ -12,19 +13,24 @@ class ModelPersistenceSpec extends DatabaseSpec {
 
   import model.diff._
 
-  val loadModel: IO[Model] = Loader.io.loadModel
+  val loadModel: IO[Model] = Loader.io.loadModel( DataVersionStorage.Update4 )
 
   "storing and reading the model" must {
     "return it as-is" in {
       // setup
-      val expected = loadModel.flatTap( WriteModel.writeModel( _, 1 ).transact( transactor ) ).unsafeRunSync()
+      val ( expected, versionId ) =
+        loadModel
+          .mproduct( WriteModel.writeModel( _, DataVersionStorage.Update4.modelVersion ).transact( transactor ) )
+          .unsafeRunSync()
 
       // exercise
-      val actual = ReadModel.readModel( 1 ).transact( transactor ).unsafeRunSync()
+      val actual = ReadModel.readModel( versionId ).transact( transactor ).unsafeRunSync()
 
       // verify
       actual must ~=( expected )
     }
   }
+
+  // TODO model updates
 
 }

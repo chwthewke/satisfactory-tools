@@ -3,7 +3,6 @@ package web.view
 
 import cats.Order.catsKernelOrderingForOrder
 import cats.data.Ior
-import cats.syntax.apply._
 import cats.syntax.foldable._
 import cats.syntax.option._
 import cats.syntax.semigroup._
@@ -26,23 +25,23 @@ object CompareView {
   import Text.tags2.summary
 
   def apply(
-      model: Model,
-      before: Option[( Factory, Map[Item, ItemIO] )],
-      after: Option[( Factory, Map[Item, ItemIO] )]
+      before: ( Factory, Map[Item, ItemIO] ),
+      after: ( Factory, Map[Item, ItemIO] )
   ): Tag =
     page(
       "Compare plans",
-      ( before, after )
-        .mapN {
-          case ( ( b, bio ), ( a, aio ) ) =>
-            div(
-              inputOutputsDiff( b, a ),
-              recipeDiff2( b, a ),
-              itemIODiff( bio, aio )
-            )
-        }
-        .getOrElse( div( "Missing inputs or solution(s)" ) )
+      ( before, after ) match {
+        case ( ( b, bio ), ( a, aio ) ) =>
+          div(
+            inputOutputsDiff( b, a ),
+            recipeDiff2( b, a ),
+            itemIODiff( bio, aio )
+          )
+      }
     )
+
+  def apply( errorMessage: String ): Tag =
+    div( errorMessage )
 
   ////////////////////////////
   // Inputs/Outputs

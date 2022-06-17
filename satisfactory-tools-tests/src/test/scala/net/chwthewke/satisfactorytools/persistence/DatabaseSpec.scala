@@ -27,7 +27,8 @@ abstract class DatabaseSpec
   protected implicit val ioRuntime: IORuntime = IORuntime.global
 
   private val resetP: ConnectionIO[Unit] =
-    sql"""TRUNCATE TABLE "items", "machines"
+    // language=SQL
+    sql"""TRUNCATE TABLE "model_versions", "users"
          |  RESTART IDENTITY
          |  CASCADE
          |""".stripMargin.update.run.void

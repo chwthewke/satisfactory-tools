@@ -23,8 +23,8 @@ import pureconfig.module.catseffect.syntax._
 import scala.concurrent.ExecutionContext
 
 import persistence.Library
-import persistence.PersistentLoader
 import persistence.Plans
+import persistence.ReadModel
 import persistence.Sessions
 import web.app.Application
 
@@ -61,10 +61,9 @@ class Main[F[_]: Async] {
     for {
       shutdownSignal <- mkShutdownSignal
       xa             <- mkTransactor
-      model          <- Resource.eval( PersistentLoader.Doobie.mapK( xa.trans ).loadModel )
     } yield {
       val app = Application[F](
-        model,
+        ReadModel.mapK( xa.trans ),
         Sessions.mapK( xa.trans ),
         Library.mapK( xa.trans ),
         Plans.mapK( xa.trans )

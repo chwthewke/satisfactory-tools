@@ -10,7 +10,8 @@ import loader.Loader
 
 object ExploreGameData extends IOApp {
   override def run( args: List[String] ): IO[ExitCode] =
-    Loader.io.loadGameData
+    Loader.io
+      .loadGameData( DataVersionStorage.Update6 )
       .flatMap( printRecipes )
       .as( ExitCode.Success )
 

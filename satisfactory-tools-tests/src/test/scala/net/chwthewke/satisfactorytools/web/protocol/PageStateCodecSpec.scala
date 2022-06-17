@@ -1,12 +1,10 @@
 package net.chwthewke.satisfactorytools
 package web.protocol
 
-import cats.effect.unsafe.implicits._
 import cats.syntax.functor._
 import cats.syntax.traverse._
 import fr.thomasdufour.autodiff.Diff
 import fr.thomasdufour.autodiff.derived
-import fr.thomasdufour.autodiff.extra.enumeratum._
 import fr.thomasdufour.autodiff.extra.scalatest.AutodiffMatchers.~=
 import org.scalacheck.Gen
 import org.scalacheck.cats.implicits._
@@ -21,8 +19,6 @@ import scodec.Codec
 import scodec.DecodeResult
 import scodec.bits.BitVector
 
-import loader.Loader
-import model.Model
 import model.Recipe
 import web.state.CustomGroupSelection
 import web.state.InputTab
@@ -39,8 +35,6 @@ class PageStateCodecSpec
 
   override implicit val generatorDrivenConfig: PropertyCheckConfiguration =
     PropertyCheckConfiguration( minSuccessful = 100 )
-
-  val model: Model = Loader.io.loadModel.unsafeRunSync()
 
   import prod.Generators.Loaded._
 

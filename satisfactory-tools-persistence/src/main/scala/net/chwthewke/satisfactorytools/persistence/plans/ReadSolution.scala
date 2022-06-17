@@ -36,46 +36,48 @@ object ReadSolution {
       outputTab: OutputTab.Aux[D]
   ): ConnectionIO[D] =
     outputTab match {
-      case OutputTab.CustomGroup( ix ) => getGroupResult( solutionId, ix )
-      case OutputTab.Steps             => getSolution( solutionId )
+      case OutputTab.CustomGroup( ix ) => getGroupResult( planId, solutionId, ix )
+      case OutputTab.Steps             => getSolution( planId, solutionId )
       case OutputTab.Items             => getItems( planId, solutionId )
-      case OutputTab.Machines          => getMachines( solutionId )
-      case OutputTab.Inputs            => getRawInputs( solutionId )
+      case OutputTab.Machines          => getMachines( planId, solutionId )
+      case OutputTab.Inputs            => getRawInputs( planId, solutionId )
     }
 
-  private def getGroupResult( solutionId: SolutionId, group: Int ): ConnectionIO[CustomGroupResult] =
-    ( ReadModel.readRecipes, statements.selectGroupManufacturingRecipes.toQuery0( ( solutionId, group ) ).to[Vector] )
-      .mapN {
-        case ( recipesById, groupRecipes ) =>
-          val recipes: Vector[Countable[Double, Recipe]] =
-            groupRecipes.mapFilter( _.traverse( recipesById.get ) )
-
-          val external = recipes
-            .foldMap( _.flatTraverse( _.itemsPerMinute ) )
-            .gather
-
-          val ( input, output ) = external.partition( _.amount < 0 )
-
-          val factory = Factory(
-            Vector.empty,
-            recipes,
-            Countable( input, -1d ).flatSequence,
-            output
-          )
-
-          CustomGroupResult(
-            group,
-            factory,
-            extractItemIO( Bill.empty, factory, ItemSrcDest.Output ),
-            extractMachines( factory )
-          )
-
-      }
-
-  private def getSolution( solutionId: SolutionId ): ConnectionIO[( Factory, Map[ClassName, Int] )] =
+  private def getGroupResult( planId: PlanId, solutionId: SolutionId, group: Int ): ConnectionIO[CustomGroupResult] =
     (
-      ReadModel.readItems,
-      ReadModel.readRecipes,
+      readModelIds( planId, ReadModel.readRecipes ),
+      statements.selectGroupManufacturingRecipes.toQuery0( ( solutionId, group ) ).to[Vector]
+    ).mapN {
+      case ( recipesById, groupRecipes ) =>
+        val recipes: Vector[Countable[Double, Recipe]] =
+          groupRecipes.mapFilter( _.traverse( recipesById.get ) )
+
+        val external = recipes
+          .foldMap( _.flatTraverse( _.itemsPerMinute ) )
+          .gather
+
+        val ( input, output ) = external.partition( _.amount < 0 )
+
+        val factory = Factory(
+          Vector.empty,
+          recipes,
+          Countable( input, -1d ).flatSequence,
+          output
+        )
+
+        CustomGroupResult(
+          group,
+          factory,
+          extractItemIO( Bill.empty, factory, ItemSrcDest.Output ),
+          extractMachines( factory )
+        )
+
+    }
+
+  private def getSolution( planId: PlanId, solutionId: SolutionId ): ConnectionIO[( Factory, Map[ClassName, Int] )] =
+    (
+      readModelIds( planId, ReadModel.readItems ),
+      readModelIds( planId, ReadModel.readRecipes ),
       statements.selectExtractionRecipes.toQuery0( solutionId ).to[Vector],
       statements.selectManufacturingRecipes.toQuery0( solutionId ).to[Vector],
       statements.selectExtraInputs.toQuery0( solutionId ).to[Vector],
@@ -119,7 +121,7 @@ object ReadSolution {
   private def getItems( planId: PlanId, solutionId: SolutionId ): ConnectionIO[Map[Item, ItemIO]] =
     (
       ReadSolverInputs.getBill( planId ),
-      getSolution( solutionId ).map( _._1 )
+      getSolution( planId, solutionId ).map( _._1 )
     ).mapN( extractItemIO( _, _, ItemSrcDest.Byproduct ) )
 
   private def extractItemIO( bill: Bill, factory: Factory, extraOutput: ItemSrcDest ): Map[Item, ItemIO] =
@@ -147,8 +149,8 @@ object ReadSolution {
   ): Map[Item, ItemIO] =
     items.foldMap( c => Map( c.item -> ItemIO.out( key, c.amount ) ) )
 
-  private def getMachines( solutionId: SolutionId ): ConnectionIO[Vector[Countable[Int, Machine]]] =
-    getSolution( solutionId )
+  private def getMachines( planId: PlanId, solutionId: SolutionId ): ConnectionIO[Vector[Countable[Int, Machine]]] =
+    getSolution( planId, solutionId )
       .map( _._1 )
       .map( extractMachines )
 
@@ -158,8 +160,8 @@ object ReadSolution {
       .gather
       .sortBy( m => ( m.item.machineType, m.item.powerConsumption ) )
 
-  private def getRawInputs( solutionId: SolutionId ): ConnectionIO[Vector[Countable[Double, Item]]] =
-    getSolution( solutionId )
+  private def getRawInputs( planId: PlanId, solutionId: SolutionId ): ConnectionIO[Vector[Countable[Double, Item]]] =
+    getSolution( planId, solutionId )
       .map( _._1 )
       .map( extractRawInputs )
 

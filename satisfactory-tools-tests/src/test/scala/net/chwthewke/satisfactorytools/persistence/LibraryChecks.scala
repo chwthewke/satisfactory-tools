@@ -1,6 +1,8 @@
 package net.chwthewke.satisfactorytools
 package persistence
 
+import protocol.UserId
+
 class LibraryChecks extends DatabaseSpec {
 
   "the statement" which {
@@ -12,13 +14,13 @@ class LibraryChecks extends DatabaseSpec {
 
     "selects plan headers (unlimited)" must {
       "type check" in {
-        check( Library.statements.selectPlanHeaders )
+        check( Library.statements.selectPlanHeaders( UserId( 1 ) ) )
       }
     }
 
     "selects plan headers (limited)" must {
       "type check" in {
-        check( Library.statements.selectPlanHeadersPage )
+        check( Library.statements.selectPlanHeadersPage( UserId( 1 ), 10L, 10L ) )
       }
     }
 

@@ -2,10 +2,13 @@ package net.chwthewke.satisfactorytools
 package persistence
 package plans
 
+import cats.syntax.applicativeError._
 import cats.syntax.apply._
 import cats.syntax.functorFilter._
 import cats.syntax.traverse._
 import doobie._
+import doobie.util.invariant.UnexpectedContinuation
+import doobie.util.invariant.UnexpectedEnd
 
 import data.Countable
 import model.Bill
@@ -30,15 +33,21 @@ object ReadSolverInputs {
     }
 
   def getBill( planId: PlanId ): ConnectionIO[Bill] =
-    ( ReadModel.readItems, statements.selectBillItems.toQuery0( planId ).to[Vector] )
+    ( readModelIds( planId, ReadModel.readItems ), statements.selectBillItems.toQuery0( planId ).to[Vector] )
       .mapN( ( items, billRows ) => Bill( billRows.mapFilter( _.traverse( items.get ) ) ) )
 
   def getRecipeList( planId: PlanId ): ConnectionIO[RecipeList] =
-    ( ReadModel.readRecipes, statements.selectRecipeListItems.toQuery0( planId ).to[Vector] )
+    ( readModelIds( planId, ReadModel.readRecipes ), statements.selectRecipeListItems.toQuery0( planId ).to[Vector] )
       .mapN( ( recipes, recipeList ) => RecipeList( recipeList.mapFilter( recipes.get ) ) )
 
   def getOptions( planId: PlanId ): ConnectionIO[Options] =
-    statements.selectOptions.toQuery0( planId ).unique
+    statements.selectOptions
+      .toQuery0( planId )
+      .unique
+      .adaptErr {
+        case UnexpectedEnd          => Error( s"No plan options for plan #$planId" )
+        case UnexpectedContinuation => Error( s"Multiple plan options for plan #$planId" )
+      }
 
   private def translateMapKeys[I, K, A]( iMap: Map[I, A], kMap: Map[I, K] ): Map[K, A] =
     for {
@@ -48,7 +57,7 @@ object ReadSolverInputs {
 
   def getResourceOptions( planId: PlanId ): ConnectionIO[ResourceOptions] =
     (
-      ReadModel.readItems,
+      readModelIds( planId, ReadModel.readItems ),
       statements.selectResourceNodes.toQuery0( planId ).stream.compile.foldMonoid,
       statements.selectResourceWeights.toQuery0( planId ).stream.compile.foldMonoid
     ).mapN(

@@ -26,7 +26,7 @@ object ProdCalculator
     Program.configOpt.map(
       cfg =>
         for {
-          model      <- Loader.io.loadModel
+          model      <- Loader.io.loadModel( DataVersionStorage.Update5 )
           prodConfig <- cfg.loadF[IO, ProductionConfig]()
           bill       <- prodConfig.mkBill( model ).leftMap( Error( _ ) ).liftTo[IO]
           recipeList <- prodConfig.mkRecipeList( model ).leftMap( Error( _ ) ).liftTo[IO]

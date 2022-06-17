@@ -7,6 +7,8 @@ import java.time.format.DateTimeFormatter
 import scalatags.Text.Tag
 import scalatags.Text.all._
 
+import model.ModelVersion
+import protocol.ModelVersionId
 import protocol.PlanHeader
 import protocol.PlanName
 import web.forms
@@ -16,7 +18,7 @@ object LibraryView {
   private def planDisplayName( title: Option[PlanName] ): PlanName =
     title.getOrElse( PlanName( "(Untitled plan)" ) )
 
-  def viewAllPlans( plans: Vector[PlanHeader] ): Tag =
+  def viewAllPlans( plans: Vector[PlanHeader], modelVersions: Vector[( ModelVersionId, ModelVersion )] ): Tag =
     page(
       "Satisfactory Planner",
       form(
@@ -25,17 +27,23 @@ object LibraryView {
           id := "library",
           `class` := "table is-striped",
           tr(
+            td( colspan := 5, textAlign.left, show"${plans.size} plan${if (plans.size != 1) "s" else ""}" )
+          ),
+          tr(
             td(
+              colspan := 3,
+              select(
+                name := forms.Keys.modelVersion,
+                modelVersions.map {
+                  case ( id, ModelVersion( _, name ) ) =>
+                    option( value := id.show, name )
+                }
+              ),
               button(
                 `class` := "button is-success",
                 formaction := "/new",
                 "New plan"
               )
-            ),
-            td(
-              colspan := 2,
-              textAlign.left,
-              show"${plans.size} plan${if (plans.size != 1) "s" else ""}"
             ),
             td(
               colspan := 2,

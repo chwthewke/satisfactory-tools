@@ -30,6 +30,7 @@ import model.ResourceOptions
 import model.ResourcePurity
 import model.ResourceWeights
 import protocol.InputTab
+import protocol.ModelVersionId
 import protocol.OutputTab
 import protocol.PlanId
 import protocol.PlanName
@@ -71,6 +72,7 @@ object forms {
     val compareBefore: String = "cmp_before"
     val compareAfter: String  = "cmp_after"
 
+    val modelVersion: String = "model_version"
   }
 
   object Actions {
@@ -130,6 +132,9 @@ object forms {
     def enumSetFormDataDecoder[E <: EnumEntry]( key: String )( implicit E: Enum[E] ): FormDataDecoder[Set[E]] =
       FormDataDecoder( fd => Valid( fd.getOrElse( key, Chain.empty ) ) )
         .mapValidated( strs => strs.traverse( validateEnum[E] ).map( _.toVector.toSet ) )
+
+    val modelVersion: FormDataDecoder[ModelVersionId] =
+      FormDataDecoder.field[Int]( Keys.modelVersion ).map( ModelVersionId( _ ) )
 
     val title: FormDataDecoder[Option[PlanName]] =
       FormDataDecoder.fieldOptional[String]( Keys.planTitle ).map( _.filterNot( _.isEmpty ).map( PlanName( _ ) ) )

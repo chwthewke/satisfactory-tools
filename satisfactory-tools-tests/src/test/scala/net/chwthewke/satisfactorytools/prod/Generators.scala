@@ -56,7 +56,8 @@ trait Generators extends model.Generators {
 object Generators {
 
   object Loaded extends Generators {
-    override val model: Model = Loader.io.loadModel.unsafeRunSync()( IORuntime.global )
+    override lazy val model: Model =
+      Loader.io.loadModel( DataVersionStorage.Update4 ).unsafeRunSync()( IORuntime.global )
   }
 
 }

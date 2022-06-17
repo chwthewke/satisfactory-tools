@@ -42,7 +42,9 @@ object BillView extends ( ( Model, Bill ) => Tag ) {
     val elId      = show"input_$inputName"
 
     tr(
-      td( label( `for` := elId, item.item.displayName ) ),
+      td(
+        label( `for` := elId, item.item.displayName, Option.when( item.amount > AmountTolerance )( fontWeight.bold ) )
+      ),
       td(
         input(
           `type` := "number",

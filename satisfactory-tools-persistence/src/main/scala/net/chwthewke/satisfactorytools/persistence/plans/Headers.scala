@@ -3,11 +3,13 @@ package persistence
 package plans
 
 import cats.data.OptionT
+import cats.syntax.applicativeError._
 import doobie._
 import doobie.postgres.implicits._
+import doobie.util.invariant.UnexpectedEnd
 
 import model.Options
-import model.ResourceOptions
+import protocol.ModelVersionId
 import protocol.PlanHeader
 import protocol.PlanId
 import protocol.UserId
@@ -15,15 +17,20 @@ import protocol.UserId
 object Headers {
   def writeNewPlan(
       userId: UserId,
-      options: Options,
-      resourceOptions: ResourceOptions
+      modelVersion: ModelVersionId
   ): ConnectionIO[PlanId] =
     for {
-      planId  <- statements.insertUnnamedPlan.withUniqueGeneratedKeys[PlanId]( "id" )( userId )
-      itemIds <- ReadModel.readItemIds
-      _       <- WriteSolverInputs.setDefaultRecipeList( planId )
-      _       <- WriteSolverInputs.updateOptions( planId, options )
-      _       <- WriteSolverInputs.updateResourceOptions( planId, itemIds, resourceOptions )
+      planId <- statements.insertUnnamedPlan
+                 .withUniqueGeneratedKeys[PlanId]( "id" )( ( userId, modelVersion ) )
+                 .adaptErr {
+                   case UnexpectedEnd =>
+                     Error( s"Unable to create unnamed plan for user #$userId, model version $modelVersion" )
+                 }
+      itemIds         <- ReadModel.readItemIds( modelVersion )
+      resourceOptions <- ReadModel.readDefaultResourceOptions( modelVersion )
+      _               <- WriteSolverInputs.setDefaultRecipeList( planId )
+      _               <- WriteSolverInputs.updateOptions( planId, Options.default )
+      _               <- WriteSolverInputs.updateResourceOptions( planId, itemIds, resourceOptions )
     } yield planId
 
   def readPlanHeader( planId: PlanId ): OptionT[ConnectionIO, PlanHeader] =
@@ -31,13 +38,13 @@ object Headers {
 
   private[plans] object statements {
 
-    val insertUnnamedPlan: Update[UserId] =
+    val insertUnnamedPlan: Update[( UserId, ModelVersionId )] =
       Update(
         // language=SQL
         """INSERT INTO "plans"
-          |  ( "user_id" )
+          |  ( "user_id", "model_version_id" )
           |VALUES
-          |  ( ? )
+          |  ( ?, ? )
           |""".stripMargin
       )
 
@@ -46,6 +53,7 @@ object Headers {
         // language=SQL
         """SELECT
           |    p."id"
+          |  , p."model_version_id"  
           |  , p."user_id"
           |  , p."name"
           |  , q."name"

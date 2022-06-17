@@ -11,7 +11,8 @@ import model.Model
 
 object ExploreModel extends IOApp {
   override def run( args: List[String] ): IO[ExitCode] =
-    Loader.io.loadModel
+    Loader.io
+      .loadModel( DataVersionStorage.Update6 )
       .flatMap( model => IO.println( model ) )
       .as( ExitCode.Success )
 

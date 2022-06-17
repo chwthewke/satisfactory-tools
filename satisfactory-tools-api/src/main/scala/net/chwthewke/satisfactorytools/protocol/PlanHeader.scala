@@ -9,6 +9,7 @@ import java.time.Instant
 
 case class PlanHeader(
     id: PlanId,
+    modelVersionId: ModelVersionId,
     owner: UserId,
     title: Option[PlanName],
     copy: Option[PlanId],
@@ -23,6 +24,7 @@ object PlanHeader {
   type Row =
     (
         PlanId,
+        ModelVersionId,
         UserId,
         Option[PlanName],
         Option[PlanName],
@@ -37,6 +39,7 @@ object PlanHeader {
   def apply( row: Row ): PlanHeader = row match {
     case (
         id,
+        modelVersionId,
         owner,
         nameOpt,
         srcNameOpt,
@@ -49,44 +52,21 @@ object PlanHeader {
         ) =>
       PlanHeader(
         id,
+        modelVersionId,
         owner,
         nameOpt.orElse( srcNameOpt ),
         srcIdOpt,
         nameOpt.isEmpty,
         updated,
-        ( solutionIdOpt, groupCountOpt )
-          .mapN( SolutionHeader.Computed( _, _, lastGroupOpt.getOrElse( 0 ) ) )
-          .orElse( solutionErrorOpt.map( SolutionHeader.PlanError ) )
+        solutionErrorOpt
+          .map( SolutionHeader.PlanError )
+          .orElse(
+            ( solutionIdOpt, groupCountOpt )
+              .mapN( SolutionHeader.Computed( _, _, lastGroupOpt.getOrElse( 0 ) ) )
+          )
           .getOrElse( SolutionHeader.NotComputed )
       )
   }
-
-  def apply(
-      id: PlanId,
-      owner: UserId,
-      nameOpt: Option[PlanName],
-      srcNameOpt: Option[PlanName],
-      srcIdOpt: Option[PlanId],
-      updated: Instant,
-      solutionIdOpt: Option[SolutionId],
-      solutionErrorOpt: Option[String],
-      groupCountOpt: Option[Int],
-      lastGroupOpt: Option[Int]
-  ): PlanHeader =
-    apply(
-      (
-        id,
-        owner,
-        nameOpt,
-        srcNameOpt,
-        srcIdOpt,
-        updated,
-        solutionIdOpt,
-        solutionErrorOpt,
-        groupCountOpt,
-        lastGroupOpt
-      )
-    )
 
   implicit val planHeaderShow: Show[PlanHeader] = semiauto.show[PlanHeader]
 }

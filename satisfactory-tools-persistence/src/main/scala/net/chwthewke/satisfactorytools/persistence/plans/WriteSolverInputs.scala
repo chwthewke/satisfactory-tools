@@ -28,7 +28,7 @@ object WriteSolverInputs {
     statements.deleteBill.run( planId ) *> insertBill( planId, bill )
 
   private def insertBill( planId: PlanId, bill: Bill ): ConnectionIO[Unit] =
-    ReadModel.readItemIds.flatMap { itemIds =>
+    readModelIds( planId, ReadModel.readItemIds ).flatMap { itemIds =>
       val rows = bill.items
         .mapFilter( _.traverse( it => itemIds.get( it.className ) ) )
         .tupleLeft( planId )
@@ -40,7 +40,7 @@ object WriteSolverInputs {
     statements.deleteRecipeList.run( planId ) *> insertRecipeList( planId, recipeList )
 
   private def insertRecipeList( planId: PlanId, recipeList: RecipeList ): ConnectionIO[Unit] =
-    ReadModel.readRecipeIds.flatMap { recipeIds =>
+    readModelIds( planId, ReadModel.readRecipeIds ).flatMap { recipeIds =>
       val rows: Vector[( PlanId, RecipeId )] =
         recipeList.recipes
           .mapFilter( re => recipeIds.get( re.className ) )
@@ -200,17 +200,20 @@ object WriteSolverInputs {
       )
 
     val insertDefaultRecipeList: Update[PlanId] =
-      Update[( PlanId, Int )](
+      Update(
         // language=SQL
         """INSERT INTO "recipe_lists"
           |  ( "plan_id", "recipe_id" )
           |  SELECT
-          |      ?
-          |    , "id"
-          |  FROM "recipes"
-          |  WHERE "data_version" = ?
+          |      p."id"
+          |    , r."id"
+          |  FROM       "plans"              p
+          |  INNER JOIN "recipes"            r ON r."model_version_id" = p."model_version_id"
+          |  LEFT  JOIN "extraction_recipes" x on r."id" = x."recipe_id"
+          |  WHERE p."id" = ?
+          |    AND x."recipe_id" IS NULL
           |""".stripMargin
-      ).contramap( ( _, ModelVersion ) )
+      )
 
   }
 }

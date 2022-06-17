@@ -26,12 +26,15 @@ object Item {
       "mForm",
       "mEnergyValue",
       "mResourceSinkPoints"
-    )( ( cn: ClassName, dn: String, fm: Form, ev: Double, pts: Int ) => Item( cn, dn, fm, ev, pts ) )(
+    )(
+      ( cn: ClassName, dn: String, fm: Form, ev: Double, pts: Option[Int] ) =>
+        Item( cn, dn, fm, ev, pts.getOrElse( 0 ) )
+    )(
       Decoder[ClassName],
       Decoder[String],
       Decoder[Form],
       Decoders.doubleStringDecoder,
-      Decoders.intStringDecoder
+      Decoder.decodeOption( Decoders.intStringDecoder )
     )
 
   implicit val showItem: Show[Item] = Show.show( item => show"""${item.displayName} # ${item.className}

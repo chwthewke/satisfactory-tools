@@ -10,7 +10,7 @@ import cats.syntax.option._
 import cats.syntax.show._
 import io.circe.Json
 import io.circe.JsonObject
-import net.chwthewke.vendor.io.circe.fs2.byteArrayParser
+import io.circe.fs2.byteArrayParser
 import scala.collection.immutable.SortedMap
 import scala.collection.immutable.SortedSet
 
@@ -20,7 +20,8 @@ import loader.Loader
 object ExploreJson extends IOApp {
 
   def loadJson: IO[Vector[Json]] =
-    Loader.io.streamDocsResource
+    Loader.io
+      .streamDocsResource( DataVersionStorage.Update6 )
       .through( byteArrayParser )
       .compile
       .toVector
