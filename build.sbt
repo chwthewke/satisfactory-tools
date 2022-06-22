@@ -66,22 +66,10 @@ val `satisfactory-tools-dev` = project
   .dependsOn( `satisfactory-tools-persistence` )
   .enablePlugins( ScalacPlugin )
 
-val `satisfactory-tools-web` = project
-  .settings( compilerPlugins )
-  .settings(
-    libraryDependencies ++=
-      http4s ++
-        http4sBlazeServer ++
-        scodec ++
-        scalatags ++
-        logging
-  )
-  .dependsOn( `satisfactory-tools-dev`, `satisfactory-tools-api` )
-  .enablePlugins( ScalacPlugin )
-
 val `satisfactory-tools-web-v2` = project
-  .settings( compilerPlugins )
   .settings(
+    compilerPlugins,
+    Compile / run / fork := true,
     libraryDependencies ++=
       http4s ++
         http4sBlazeServer ++
@@ -128,7 +116,6 @@ val `satisfactory-tools-tests` = project
   .dependsOn(
     `satisfactory-production-calculator`,
     `satisfactory-tools-persistence`,
-    `satisfactory-tools-web`,
     `satisfactory-tools-web-v2`
   )
   .enablePlugins( ScalacPlugin )
@@ -140,7 +127,6 @@ val `satisfactory-tools-all` = project
     `satisfactory-tools-api`,
     `satisfactory-tools-persistence`,
     `satisfactory-tools-dev`,
-    `satisfactory-tools-web`,
     `satisfactory-tools-web-v2`,
     `satisfactory-production-calculator`,
     `satisfactory-tools-tests`
