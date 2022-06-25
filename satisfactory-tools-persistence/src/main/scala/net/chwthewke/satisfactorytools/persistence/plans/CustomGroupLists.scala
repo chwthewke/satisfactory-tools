@@ -13,7 +13,7 @@ case class CustomGroupLists( groups: Vector[Vector[RecipeId]] ) {
   // TBT:
   // - update( newAssignments ).groups.flatten [has the same elements as] newAssignments.keys
   // - update( newAssignments ).groupIndex( recipeId ).map( _._1 ) === newAssignments.get( recipeId ) [forall recipeId]
-  // - update( newAssignemnts ).assignments === newAssignments
+  // - update( newAssignments ).assignments === newAssignments
   def update( newAssignments: Map[RecipeId, Int] ): CustomGroupLists = CustomGroupLists(
     groups.zipWithIndex.map {
       case ( g, ix ) =>
@@ -22,6 +22,9 @@ case class CustomGroupLists( groups: Vector[Vector[RecipeId]] ) {
         kept ++ added
     }
   )
+
+  def filter( hasRecipe: RecipeId => Boolean ): CustomGroupLists =
+    CustomGroupLists( groups.map( _.filter( hasRecipe ) ) )
 
   def assignments: Map[RecipeId, Int] =
     groups.zipWithIndex.flatMap { case ( g, ix ) => g.map( ( _, ix + 1 ) ) }.toMap

@@ -96,8 +96,10 @@ object WriteSolution {
       customGroups: CustomGroupLists,
       recipes: Vector[Countable[Double, RecipeId]]
   ): ConnectionIO[Int] = {
+    val filteredCustomGroups: CustomGroupLists = customGroups.filter( recipes.map( _.item ).toSet )
+
     val rows: Vector[( SolutionId, Countable[Double, RecipeId], Option[( Int, Int )] )] =
-      recipes.map( recipeId => ( solutionId, recipeId, customGroups.groupIndex( recipeId.item ) ) )
+      recipes.map( recipeId => ( solutionId, recipeId, filteredCustomGroups.groupIndex( recipeId.item ) ) )
 
     statements.insertSolutionManufacturingRecipe.updateMany( rows )
   }
