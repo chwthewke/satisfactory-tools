@@ -26,7 +26,6 @@ import org.http4s.Response
 import org.http4s.Uri
 import org.http4s.dsl.Http4sDsl
 import org.http4s.headers.Location
-import org.http4s.scalatags._
 import org.http4s.server.ContextMiddleware
 import org.http4s.syntax.literals._
 

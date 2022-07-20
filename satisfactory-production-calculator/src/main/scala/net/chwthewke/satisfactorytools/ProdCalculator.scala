@@ -12,7 +12,7 @@ import loader.Loader
 import model.ExtractorType
 import model.Options
 import prod.Calculator
-import prod.ConstraintSolver
+import prod.ojsolver.ConstraintSolver
 import prod.SolverInputs
 
 object ProdCalculator

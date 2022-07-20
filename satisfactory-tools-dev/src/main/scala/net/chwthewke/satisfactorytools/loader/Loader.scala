@@ -19,6 +19,7 @@ import cats.syntax.option._
 import cats.syntax.show._
 import cats.syntax.traverse._
 import cats.syntax.traverseFilter._
+import cats.syntax.unorderedFoldable._
 import cats.syntax.validated._
 import fs2.Stream
 import io.circe.Decoder
@@ -41,8 +42,6 @@ import model.ExtractorType
 import model.Machine
 import model.MachineType
 import model.ManufacturerType
-import model.MapConfig
-import model.MapConfigSet
 import model.Model
 import model.ModelVersion
 import model.Power

@@ -11,7 +11,7 @@ import model.Options
 import model.RecipeList
 import model.ResourceOptions
 import prod.Calculator
-import prod.ConstraintSolver
+import prod.ojsolver.ConstraintSolver
 import protocol.InputTab
 import protocol.ModelVersionId
 import protocol.OutputTab

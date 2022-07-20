@@ -51,6 +51,7 @@ final case class ProductionConfig(
 object ProductionConfig {
 
   implicit val productionConfigReader: ConfigReader[ProductionConfig] = {
+    import loader.classNameMapReader
 
     implicit val classNameReader: ConfigReader[ClassName] = ConfigReader[String].map( ClassName( _ ) )
     implicit val itemsReader: ConfigReader[Vector[Countable[Double, ClassName]]] =

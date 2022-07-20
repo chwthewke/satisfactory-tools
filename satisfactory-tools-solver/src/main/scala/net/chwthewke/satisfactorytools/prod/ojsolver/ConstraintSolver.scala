@@ -1,5 +1,6 @@
 package net.chwthewke.satisfactorytools
 package prod
+package ojsolver
 
 import cats.syntax.foldable._
 import cats.syntax.functor._

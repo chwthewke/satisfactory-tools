@@ -4,8 +4,8 @@ package protocol
 import cats.Show
 import cats.derived.semiauto
 import cats.syntax.apply._
-import io.chrisdavenport.cats.time.instances.instant._
 import java.time.Instant
+import org.typelevel.cats.time.instances.instant._
 
 case class PlanHeader(
     id: PlanId,

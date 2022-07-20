@@ -17,10 +17,8 @@ import org.http4s.HttpRoutes
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.dsl.Http4sDsl
 import org.http4s.server.middleware.AutoSlash
-import org.http4s.syntax.kleisli._
 import pureconfig.ConfigSource
 import pureconfig.module.catseffect.syntax._
-import scala.concurrent.ExecutionContext
 
 import persistence.Library
 import persistence.Plans
@@ -86,10 +84,9 @@ object Main extends IOApp {
           .of( ExitCode.Success )
           .flatMap(
             exitRef =>
-              BlazeServerBuilder[IO]( ExecutionContext.global )
+              BlazeServerBuilder[IO]
                 .withHttpApp( app )
                 .bindHttp( port = 7282 )
-                .withWebSockets( false )
                 .serveWhile( signal, exitRef )
                 .compile
                 .lastOrError
