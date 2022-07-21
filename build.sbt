@@ -6,9 +6,6 @@ import sbt.Keys._
 ThisBuild / organization       := "net.chwthewke"
 ThisBuild / scalaOrganization  := "org.scala-lang"
 ThisBuild / scalaVersion       := "2.13.8"
-// TODO when I can make sense of lm-coursier
-ThisBuild / conflictManager                         := ConflictManager.strict
-ThisBuild / updateSbtClassifiers / conflictManager  := ConflictManager.default
 // format: on
 
 enablePlugins( FormatPlugin, PlatformDepsPlugin )
@@ -16,12 +13,35 @@ enablePlugins( FormatPlugin, PlatformDepsPlugin )
 ThisBuild / SettingKey[Seq[String]]( "ide-base-packages" )
   .withRank( KeyRanks.Invisible ) := Seq( "net.chwthewke.satisfactorytools" )
 
-val compilerPlugins = libraryDependencies ++= kindProjector ++ betterMonadicFor
+val commonSettings = Seq(
+  libraryDependencies ++= kindProjector ++ betterMonadicFor,
+  conflictManager := ConflictManager.strict,
+  updateSbtClassifiers / conflictManager := ConflictManager.default // this is for IntelliJ
+)
+
+val crossModuleDependencyOverrides: Def.Setting[Seq[ModuleID]] =
+  dependencyOverrides ++= Seq(
+    "org.typelevel" %%% "cats-core"      % catsVersion,
+    "org.typelevel" %%% "alleycats-core" % catsVersion,
+    "org.typelevel" %%% "cats-effect"    % catsEffectVersion,
+    "io.circe"      %%% "circe-core"     % circeVersion,
+    "com.chuusai"   %%% "shapeless"      % "2.3.9"
+  )
+
+val jsModuleDependencyOverrides: Def.Setting[Seq[ModuleID]] =
+  dependencyOverrides ++= Seq( "org.scala-js" %% "scalajs-library" % "1.10.1" )
+
+def addJSCommandAliases( module: String, prefix: String ): Seq[Def.Setting[State => State]] =
+  addCommandAlias( s"$prefix-prod", s"$module / fullOptJS / webpack" ) ++
+    addCommandAlias( s"$prefix-dev", s"$prefix-devInit; $prefix-devWatchAll; $prefix-devDestroy" ) ++
+    addCommandAlias( s"$prefix-devInit", s"; $module / fastOptJS / startWebpackDevServer" ) ++
+    addCommandAlias( s"$prefix-devWatchAll", s"~; $module / fastOptJS / webpack" ) ++
+    addCommandAlias( s"$prefix-devDestroy", s"$module / fastOptJS / stopWebpackDevServer" )
 
 val core =
   crossProject( JVMPlatform, JSPlatform )
     .crossType( CrossType.Pure )
-    .settings( compilerPlugins )
+    .settings( commonSettings )
     .settings(
       libraryDependencies ++= Seq(
         "org.typelevel" %%% "cats-core"        % catsVersion,
@@ -36,38 +56,34 @@ val core =
         "com.beachape"  %%% "enumeratum-cats"  % enumeratumVersion,
         "com.beachape"  %%% "enumeratum-circe" % enumeratumVersion
       ),
-      dependencyOverrides ++= Seq(
-        "org.typelevel" %%% "cats-core"      % catsVersion,
-        "org.typelevel" %%% "alleycats-core" % catsVersion,
-        "io.circe"      %%% "circe-core"     % circeVersion,
-        "com.chuusai"   %%% "shapeless"      % "2.3.9"
-      )
+      crossModuleDependencyOverrides
     )
-    .jsSettings(
-      dependencyOverrides ++= Seq( "org.scala-js" %% "scalajs-library" % "1.10.1" )
-    )
+    .jsSettings( jsModuleDependencyOverrides )
     .enablePlugins( SbtBuildInfo, ScalacPlugin )
 
+val `core-jvm` = core.jvm
+val `core-js`  = core.js
+
 val solver = project
-  .settings( compilerPlugins )
+  .settings( commonSettings )
   .settings( libraryDependencies ++= ojAlgo )
-  .dependsOn( core.jvm )
+  .dependsOn( `core-jvm` )
   .enablePlugins( ScalacPlugin, DependenciesPlugin )
 
 val api = project
-  .settings( compilerPlugins )
+  .settings( commonSettings )
   .settings( libraryDependencies ++= catsTime ++ circe )
   .dependsOn( core.jvm )
   .enablePlugins( ScalacPlugin, DependenciesPlugin )
 
 val assets = project
-  .settings( compilerPlugins )
+  .settings( commonSettings )
   .settings( libraryDependencies ++= catsEffect ++ pureconfig )
-  .dependsOn( core.jvm )
+  .dependsOn( `core-jvm` )
   .enablePlugins( ScalacPlugin, DependenciesPlugin )
 
 val persistence = project
-  .settings( compilerPlugins )
+  .settings( commonSettings )
   .settings(
     libraryDependencies ++=
       doobie ++
@@ -84,14 +100,14 @@ val persistence = project
   .enablePlugins( ScalacPlugin, DependenciesPlugin )
 
 val `dev-tools` = project
-  .settings( compilerPlugins )
+  .settings( commonSettings )
   .settings( libraryDependencies ++= circeFs2 ++ pureconfigCatsEffect ++ pureconfigFs2 )
   .dependsOn( persistence, assets )
   .enablePlugins( ScalacPlugin, DependenciesPlugin )
 
 val `web-v2` = project
   .settings(
-    compilerPlugins,
+    commonSettings,
     Compile / run / fork := true,
     libraryDependencies ++=
       http4s ++
@@ -105,14 +121,50 @@ val `web-v2` = project
   .enablePlugins( ScalacPlugin, DependenciesPlugin )
 
 val `production-calculator` = project
-  .settings( compilerPlugins )
+  .settings( commonSettings )
   .settings( mainClass.withRank( KeyRanks.Invisible ) := Some( "net.chwthewke.satisfactory.ProdCalculator" ) )
   .settings( libraryDependencies ++= decline ++ pureconfigCatsEffect )
   .dependsOn( `dev-tools` )
   .enablePlugins( ScalacPlugin, DependenciesPlugin )
 
-val `tests` = project
-  .settings( compilerPlugins )
+val `web-front` = project
+  .enablePlugins( ScalacPlugin, ScalaJSPlugin, ScalaJSBundlerPlugin )
+  .settings(
+    commonSettings,
+    libraryDependencies ++= Seq(
+      "org.scala-js"         %%% "scala-js-macrotask-executor" % "1.0.0",
+      "io.github.outwatch"   %%% "outwatch"                    % "1.0.0-RC8",
+      "com.github.cornerman" %%% "colibri"                     % "0.6.0",
+      "com.github.cornerman" %%% "colibri-fs2"                 % "0.6.0"
+    ),
+    crossModuleDependencyOverrides,
+    jsModuleDependencyOverrides,
+    dependencyOverrides ++= Seq(
+      "org.scala-js"         %%% "scalajs-dom" % "2.2.0",
+      "com.github.cornerman" %%% "colibri"     % "0.6.0"
+    ),
+    // ScalaJS settings
+    useYarn := true,
+    Compile / npmDevDependencies ++= Seq( "@fun-stack/fun-pack" -> "0.2.0" ),
+    scalaJSLinkerConfig ~= (_.withModuleKind( ModuleKind.CommonJSModule ) ),
+    scalaJSUseMainModuleInitializer := true,
+    webpack / version := "4.46.0",
+    startWebpackDevServer / version := "3.11.3",
+    webpackDevServerPort := 7284,
+    webpackDevServerExtraArgs := Seq( "--color" ),
+    fullOptJS / webpackEmitSourceMaps := true,
+    fullOptJS / webpackConfigFile := Some( baseDirectory.value / "webpack.config.prod.js" ),
+    fastOptJS / webpackBundlingMode := BundlingMode.LibraryOnly(),
+    fastOptJS / webpackConfigFile := Some( baseDirectory.value / "webpack.config.dev.js" ),
+    Test / requireJsDomEnv := true
+    //
+  )
+  .dependsOn( `core-js` )
+
+addJSCommandAliases( module = "web-front", prefix = "web" )
+
+val tests = project
+  .settings( commonSettings )
   .settings(
     libraryDependencies ++= (
       autoDiff ++
@@ -149,14 +201,15 @@ val `tests` = project
 val `satisfactory-tools` = project
   .in( file( "." ) )
   .aggregate(
-    core.jvm,
-    core.js,
+    `core-jvm`,
+    `core-js`,
     api,
     assets,
     solver,
     persistence,
     `dev-tools`,
     `web-v2`,
+    `web-front`,
     `production-calculator`,
     `tests`
   )
