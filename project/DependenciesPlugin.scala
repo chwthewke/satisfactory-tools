@@ -45,11 +45,14 @@ object DependenciesPlugin extends AutoPlugin {
     val alleycatsCore: Deps = Seq( "org.typelevel" %% "alleycats-core" % catsVersion )
     val catsTime: Deps      = Seq( "org.typelevel" %% "cats-time" % "0.5.0" )
 
-    val catsEffect: Deps = "org.typelevel" %% Seq( "cats-effect", "cats-effect-kernel", "cats-effect-std" ) % "3.3.12"
+    val catsEffectVersion = "3.3.12"
+    val catsEffect: Deps =
+      "org.typelevel" %% Seq( "cats-effect", "cats-effect-kernel", "cats-effect-std" ) % catsEffectVersion
 
     val fs2: Deps = "co.fs2" %% Seq( "fs2-core", "fs2-io" ) % "3.2.10"
 
     val http4s: Deps            = "org.http4s" %% Seq( "http4s-core", "http4s-dsl" ) % "0.23.13"
+    val http4sCirce: Deps       = "org.http4s" %% Seq( "http4s-circe" ) % "0.23.13"
     val http4sBlazeServer: Deps = Seq( "org.http4s" %% "http4s-blaze-server" % "0.23.12" )
     val http4sBlazeClient: Deps = Seq( "org.http4s" %% "http4s-blaze-client" % "0.23.12" )
 
