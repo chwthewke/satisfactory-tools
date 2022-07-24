@@ -10,14 +10,15 @@ ThisBuild / scalaVersion       := "2.13.8"
 
 enablePlugins( FormatPlugin, PlatformDepsPlugin )
 
-ThisBuild / SettingKey[Seq[String]]( "ide-base-packages" )
-  .withRank( KeyRanks.Invisible ) := Seq( "net.chwthewke.satisfactorytools" )
-
 val commonSettings = Seq(
   libraryDependencies ++= kindProjector ++ betterMonadicFor,
   conflictManager := ConflictManager.strict,
-  updateSbtClassifiers / conflictManager := ConflictManager.default // this is for IntelliJ
+  updateSbtClassifiers / conflictManager := ConflictManager.default, // this is for IntelliJ
+  SettingKey[Seq[String]]( "ide-base-packages" )
+    .withRank( KeyRanks.Invisible ) := Seq( "net.chwthewke.satisfactorytools" )
 )
+
+val jsResources = TaskKey[Seq[File]]( "js-resources" )
 
 val crossModuleDependencyOverrides: Def.Setting[Seq[ModuleID]] =
   dependencyOverrides ++= Seq(
@@ -29,7 +30,19 @@ val crossModuleDependencyOverrides: Def.Setting[Seq[ModuleID]] =
   )
 
 val jsModuleDependencyOverrides: Def.Setting[Seq[ModuleID]] =
-  dependencyOverrides ++= Seq( "org.scala-js" %% "scalajs-library" % "1.10.1" )
+  dependencyOverrides ++=
+    Seq(
+      "org.scala-js"         %% "scalajs-library"         % "1.10.1",
+      "org.scala-js"         %%% "scalajs-dom"            % "2.2.0",
+      "com.github.cornerman" %%% "colibri"                % "0.6.0",
+      "org.http4s"           %%% "http4s-core"            % http4sVersion,
+      "org.http4s"           %%% "http4s-client"          % http4sVersion,
+      "org.scodec"           %%% "scodec-bits"            % "1.1.34",
+      "co.fs2"               %%% "fs2-core"               % fs2Version,
+      "co.fs2"               %%% "fs2-io"                 % fs2Version,
+      "org.typelevel"        %%% "cats-effect-kernel"     % catsEffectVersion,
+      "org.portable-scala"   %%% "portable-scala-reflect" % "1.1.2"
+    )
 
 def addJSCommandAliases( module: String, prefix: String ): Seq[Def.Setting[State => State]] =
   addCommandAlias( s"$prefix-prod", s"$module / fullOptJS / webpack" ) ++
@@ -70,10 +83,19 @@ val solver = project
   .dependsOn( `core-jvm` )
   .enablePlugins( ScalacPlugin, DependenciesPlugin )
 
+// Protocol types (e.g. DB IDs) which are common to web-v2 and SPA
+val protocol = crossProject( JVMPlatform, JSPlatform )
+  .crossType( CrossType.Pure )
+  .enablePlugins( SbtBuildInfo, ScalacPlugin )
+  .settings( commonSettings )
+  .settings( crossModuleDependencyOverrides )
+  .jsSettings( jsModuleDependencyOverrides )
+  .dependsOn( core )
+
 val api = project
   .settings( commonSettings )
-  .settings( libraryDependencies ++= catsTime ++ circe )
-  .dependsOn( core.jvm )
+  .settings( libraryDependencies ++= catsTime )
+  .dependsOn( core.jvm, protocol.jvm )
   .enablePlugins( ScalacPlugin, DependenciesPlugin )
 
 val assets = project
@@ -127,6 +149,23 @@ val `production-calculator` = project
   .dependsOn( `dev-tools` )
   .enablePlugins( ScalacPlugin, DependenciesPlugin )
 
+val `web-api` = crossProject( JVMPlatform, JSPlatform )
+  .crossType( CrossType.Pure )
+  .enablePlugins( SbtBuildInfo, ScalacPlugin )
+  .settings( commonSettings )
+  .settings( crossModuleDependencyOverrides )
+  .jsSettings( jsModuleDependencyOverrides )
+  .settings(
+    libraryDependencies ++= Seq(
+      "org.http4s" %%% "http4s-circe" % http4sVersion,
+      "org.http4s" %%% "http4s-dsl"   % http4sVersion
+    )
+  )
+  .dependsOn( protocol )
+
+val `web-api-jvm` = `web-api`.jvm
+val `web-api-js`  = `web-api`.js
+
 val `web-front` = project
   .enablePlugins( ScalacPlugin, ScalaJSPlugin, ScalaJSBundlerPlugin )
   .settings(
@@ -135,14 +174,11 @@ val `web-front` = project
       "org.scala-js"         %%% "scala-js-macrotask-executor" % "1.0.0",
       "io.github.outwatch"   %%% "outwatch"                    % "1.0.0-RC8",
       "com.github.cornerman" %%% "colibri"                     % "0.6.0",
-      "com.github.cornerman" %%% "colibri-fs2"                 % "0.6.0"
+      "com.github.cornerman" %%% "colibri-fs2"                 % "0.6.0",
+      "org.http4s"           %%% "http4s-dom"                  % "0.2.3"
     ),
     crossModuleDependencyOverrides,
     jsModuleDependencyOverrides,
-    dependencyOverrides ++= Seq(
-      "org.scala-js"         %%% "scalajs-dom" % "2.2.0",
-      "com.github.cornerman" %%% "colibri"     % "0.6.0"
-    ),
     // ScalaJS settings
     useYarn := true,
     Compile / npmDevDependencies ++= Seq( "@fun-stack/fun-pack" -> "0.2.0" ),
@@ -159,9 +195,41 @@ val `web-front` = project
     Test / requireJsDomEnv := true
     //
   )
-  .dependsOn( `core-js` )
+  .dependsOn( `web-api-js` )
 
 addJSCommandAliases( module = "web-front", prefix = "web" )
+
+val `web-server` = project
+  .enablePlugins( ScalacPlugin, DependenciesPlugin, BuildInfoPlugin )
+  .settings(
+    libraryDependencies ++=
+      http4s ++ http4sBlazeServer ++ http4sCirce ++
+        logging ++
+        scalatags ++
+        pureconfigCatsEffect
+  )
+  .settings(
+    // js interop
+    jsResources := (`web-front` / Compile / fullOptJS / webpack).value.map( _.data ),
+    Compile / resources ++= jsResources.value,
+    buildInfoObject := "WebServerBuildInfo",
+    buildInfoPackage := "net.chwthewke.satisfactorytools.web.server",
+    buildInfoKeys ++= Seq[BuildInfoKey](
+      BuildInfoKey.map( jsResources ) { case ( k, files ) => ( k, files.map( _.name ) ) }
+    ),
+    watchSources ++= (`web-front` / watchSources).value
+  )
+  .dependsOn( `web-api-jvm`, persistence, assets )
+
+// TODO not quite (still depends on web-front/fullLinkJS for instance)
+//val `web-server-dev` = project
+//  .enablePlugins( ScalacPlugin, DependenciesPlugin )
+//  .settings(
+//    // js interop
+//    jsResources := (`web-front` / Compile / fastOptJS / webpack).value.map( _.data ),
+//    Compile / resources ++= jsResources.value
+//  )
+//  .dependsOn( `web-server` )
 
 val tests = project
   .settings( commonSettings )
@@ -209,7 +277,11 @@ val `satisfactory-tools` = project
     persistence,
     `dev-tools`,
     `web-v2`,
+    `web-api-jvm`,
+    `web-api-js`,
     `web-front`,
+    `web-server`,
+//    `web-server-dev`,
     `production-calculator`,
     `tests`
   )
