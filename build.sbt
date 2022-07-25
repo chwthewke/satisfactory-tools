@@ -56,11 +56,13 @@ val `satisfactory-tools-solver` = project
 
 val `satisfactory-tools-api` = project
   .settings( compilerPlugins )
-  .settings(
-    libraryDependencies ++=
-      catsTime ++
-        circe
-  )
+  .settings( libraryDependencies ++= catsTime ++ circe )
+  .dependsOn( `satisfactory-tools-core`.jvm )
+  .enablePlugins( ScalacPlugin, DependenciesPlugin )
+
+val `satisfactory-tools-assets` = project
+  .settings( compilerPlugins )
+  .settings( libraryDependencies ++= catsEffect ++ pureconfig )
   .dependsOn( `satisfactory-tools-core`.jvm )
   .enablePlugins( ScalacPlugin, DependenciesPlugin )
 
@@ -83,8 +85,8 @@ val `satisfactory-tools-persistence` = project
 
 val `satisfactory-tools-dev` = project
   .settings( compilerPlugins )
-  .settings( libraryDependencies ++= circeFs2 ++ pureconfigCatsEffect )
-  .dependsOn( `satisfactory-tools-persistence` )
+  .settings( libraryDependencies ++= circeFs2 ++ pureconfigCatsEffect ++ pureconfigFs2 )
+  .dependsOn( `satisfactory-tools-persistence`, `satisfactory-tools-assets` )
   .enablePlugins( ScalacPlugin, DependenciesPlugin )
 
 val `satisfactory-tools-web-v2` = project
@@ -150,6 +152,7 @@ val `satisfactory-tools-all` = project
     `satisfactory-tools-core`.jvm,
     `satisfactory-tools-core`.js,
     `satisfactory-tools-api`,
+    `satisfactory-tools-assets`,
     `satisfactory-tools-solver`,
     `satisfactory-tools-persistence`,
     `satisfactory-tools-dev`,

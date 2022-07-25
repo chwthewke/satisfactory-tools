@@ -52,7 +52,7 @@ object WriteModel {
 
     /** Returns `AND (f1) AND (f2) AND ... (fn)` for all defined fragments. */
     def andOpt( fs: Option[Fragment]* ): Fragment =
-      fs.toList.unite.toNel.fold( Fragment.empty )( fs => fr"AND" ++ Fragments.and( fs.toList: _* ) )
+      fs.toList.unite.toNel.foldMap( fs => fr"AND" ++ Fragments.and( fs.toList: _* ) )
 
     def insertItem( version: ModelVersionId ): Update[Item] =
       Update[( Item, ModelVersionId )](
@@ -63,15 +63,21 @@ object WriteModel {
           |, "form"
           |, "energy_value"
           |, "sink_points"
+          |, "small_icon_package_dir"
+          |, "small_icon_package_name"
+          |, "small_icon_texture_name"
           |, "model_version_id"
           |)
-          |VALUES ( ?, ?, ?, ?, ?, ? )
+          |VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ? )
           |ON CONFLICT ON CONSTRAINT "items_name_version_unique"
           |DO UPDATE SET
-          |    "display_name" = "excluded"."display_name"
-          |  , "form"         = "excluded"."form"
-          |  , "energy_value" = "excluded"."energy_value"
-          |  , "sink_points"  = "excluded"."sink_points"
+          |    "display_name"            = "excluded"."display_name"
+          |  , "form"                    = "excluded"."form"
+          |  , "energy_value"            = "excluded"."energy_value"
+          |  , "sink_points"             = "excluded"."sink_points"
+          |  , "small_icon_package_dir"  = "excluded"."small_icon_package_dir"
+          |  , "small_icon_package_name" = "excluded"."small_icon_package_name"
+          |  , "small_icon_texture_name" = "excluded"."small_icon_texture_name"
           |""".stripMargin
       ).contramap( ( _, version ) )
 

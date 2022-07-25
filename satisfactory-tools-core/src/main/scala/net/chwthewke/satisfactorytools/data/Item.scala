@@ -6,12 +6,15 @@ import cats.Show
 import cats.syntax.show._
 import io.circe.Decoder
 
+import Parsers.ParserOps
+
 final case class Item(
     className: ClassName,
     displayName: String,
     form: Form,
     energyValue: Double,
-    sinkPoints: Int
+    sinkPoints: Int,
+    smallIcon: IconData
 ) {
   def fuelValue: Double = energyValue * form.simpleAmountFactor
 
@@ -20,21 +23,23 @@ final case class Item(
 
 object Item {
   implicit val itemDecoder: Decoder[Item] =
-    Decoder.forProduct5(
+    Decoder.forProduct6(
       "ClassName",
       "mDisplayName",
       "mForm",
       "mEnergyValue",
-      "mResourceSinkPoints"
+      "mResourceSinkPoints",
+      "mSmallIcon"
     )(
-      ( cn: ClassName, dn: String, fm: Form, ev: Double, pts: Option[Int] ) =>
-        Item( cn, dn, fm, ev, pts.getOrElse( 0 ) )
+      ( cn: ClassName, dn: String, fm: Form, ev: Double, pts: Option[Int], ico: IconData ) =>
+        Item( cn, dn, fm, ev, pts.getOrElse( 0 ), ico )
     )(
       Decoder[ClassName],
       Decoder[String],
       Decoder[Form],
       Decoders.doubleStringDecoder,
-      Decoder.decodeOption( Decoders.intStringDecoder )
+      Decoder.decodeOption( Decoders.intStringDecoder ),
+      Parsers.texture2d.decoder
     )
 
   implicit val showItem: Show[Item] = Show.show( item => show"""${item.displayName} # ${item.className}
