@@ -51,6 +51,9 @@ object ReadModel extends ModelApi[ConnectionIO] {
            |  , "form"
            |  , "energy_value"
            |  , "sink_points"
+           |  , "small_icon_package_dir"
+           |  , "small_icon_package_name"
+           |  , "small_icon_texture_name"
            |FROM "items"
            |WHERE "model_version_id" = $version
            |""".stripMargin //

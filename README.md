@@ -3,8 +3,8 @@
 A production planner for the game [Satisfactory](https://satisfactorygame.com/)
 
 * Built from the game-provided `Docs.json` plus a small amount of manual data entry (resource node counts).
-* Works with U4
-* Should hopefully resist future updates fairly well. U3 to U4 still took work though so ¯\\_(ツ)_/¯
+* Works with U4 to U6
+* Should hopefully resist future updates fairly well.
 
 ### Features
 
@@ -17,9 +17,11 @@ A production planner for the game [Satisfactory](https://satisfactorygame.com/)
   * Sources and destinations for each intermediate product
 * Make groups of production steps to organize your plan prior to building the factory
   * With all the same lists shown for each group
-* Manage your plans in a pertistent library
+* Manage your plans in a persistent library
 
-### Run requirements
+### Requirements
+
+#### Dependencies
 
 * Java 11+ (from e.g. [OpenJDK](https://adoptopenjdk.net/))
 * [SBT](https://scala-sbt.org)
@@ -30,16 +32,21 @@ owned by role `factory` with password `factory` (alternatively, copy
 `satisfactory-tools-persistence/src/main/resources/reference.conf` to 
 `satisfactory-tools-web-v2/src/main/resources/application.conf` and edit that to your preference)
 
+#### Data setup
+
+The data (docs and icons) for updates 4 to 6 are in the repository, but the database must be initialized.
+This is achieved by running any or all of the `InitDatabaseModelU[x]` programs in `satisfactory-tools-dev`, 
+which must be run from the root directory of this repo.
+
 Once the requirements are met, run with `sbt run satisfactory-tools-web-v2`.
 
 Point your browser at http://localhost:7282
-
 
 ### Old text-based interface
 
 #### To run
 
-* Copy `satisfactory-tools-core/src/main/resources/reference.conf` to `satisfactory-production-calculator/src/main/resources/application.conf`, edit and pray
+* Copy `satisfactory-production-calculator/src/main/resources/reference.conf` to `satisfactory-production-calculator/src/main/resources/application.conf`, edit and pray
 * Run with SBT `sbt satisfactory-production-calculator/run`
 
 #### Sample output
@@ -345,3 +352,14 @@ Coal
   3.000 -> Alternate: Compacted Coal
 ```
 </details>
+
+## Development notes
+
+### Import data for new update
+
+- Adjust source entries in `DataVersionStorage`
+- Create new `GrabDocs`, `GrabIcons` and `InitDatabaseModel` programs for the new entry
+- Run these programs, as well as `IndexIcons`
+- Commit the new docs/icon files
+
+Note: hardcoded paths in `DataVersionStorage` (Satisfactory installs), `GrabIcons` (UE Viewer).

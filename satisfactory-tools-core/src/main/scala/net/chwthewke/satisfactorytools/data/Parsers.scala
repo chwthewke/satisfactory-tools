@@ -47,6 +47,14 @@ object Parsers {
   val countableList: Parser[NonEmptyList[Countable[Double, ClassName]]] =
     char( '(' ) ~> countable.sepBy1( char( ',' ) ) <~ char( ')' )
 
+  val texture2d: Parser[IconData] =
+    (string( "Texture2D " ) ~>
+      (char( '/' ) ~> stringOf1( bpNoSep )).many1 ~ (char( '.' ) ~> stringOf1( bpNoSep )))
+      .map {
+        case ( pkgPath, texture ) =>
+          IconData( pkgPath.init.mkString( "/" ), pkgPath.last, texture )
+      }
+
   def listOf[A]( p: Parser[A] ): Parser[List[A]]          = char( '(' ) ~> p.sepBy( char( ',' ) ) <~ char( ')' )
   def listOf1[A]( p: Parser[A] ): Parser[NonEmptyList[A]] = char( '(' ) ~> p.sepBy1( char( ',' ) ) <~ char( ')' )
 
