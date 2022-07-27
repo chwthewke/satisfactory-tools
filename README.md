@@ -29,8 +29,8 @@ A production planner for the game [Satisfactory](https://satisfactorygame.com/)
 
 Postgres needs to run on the default port localhost:5432, create a database called `factory_data`, 
 owned by role `factory` with password `factory` (alternatively, copy
-`satisfactory-tools-persistence/src/main/resources/reference.conf` to 
-`satisfactory-tools-web-v2/src/main/resources/application.conf` and edit that to your preference)
+`persistence/src/main/resources/reference.conf` to 
+`web-v2/src/main/resources/application.conf` and edit that to your preference)
 
 #### Data setup
 
@@ -38,7 +38,7 @@ The data (docs and icons) for updates 4 to 6 are in the repository, but the data
 This is achieved by running any or all of the `InitDatabaseModelU[x]` programs in `satisfactory-tools-dev`, 
 which must be run from the root directory of this repo.
 
-Once the requirements are met, run with `sbt run satisfactory-tools-web-v2`.
+Once the requirements are met, run with `sbt run web-v2`.
 
 Point your browser at http://localhost:7282
 
@@ -46,8 +46,8 @@ Point your browser at http://localhost:7282
 
 #### To run
 
-* Copy `satisfactory-production-calculator/src/main/resources/reference.conf` to `satisfactory-production-calculator/src/main/resources/application.conf`, edit and pray
-* Run with SBT `sbt satisfactory-production-calculator/run`
+* Copy `production-calculator/src/main/resources/reference.conf` to `production-calculator/src/main/resources/application.conf`, edit and pray
+* Run with SBT `sbt production-calculator/run`
 
 #### Sample output
 

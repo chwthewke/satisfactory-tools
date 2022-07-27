@@ -109,7 +109,7 @@ class IndexIcons[F[_]]( implicit S: Sync[F], F: Files[F] ) {
 }
 
 object IndexIcons extends IOApp {
-  val output: Path = Path( "satisfactory-tools-assets" ) / "src" / "main" / "resources" / "icons.conf"
+  val output: Path = Path( "assets" ) / "src" / "main" / "resources" / "icons.conf"
 
   override def run( args: List[String] ): IO[ExitCode] =
     new IndexIcons[IO].run.as( ExitCode.Success )

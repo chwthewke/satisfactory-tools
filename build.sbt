@@ -18,7 +18,7 @@ ThisBuild / SettingKey[Seq[String]]( "ide-base-packages" )
 
 val compilerPlugins = libraryDependencies ++= kindProjector ++ betterMonadicFor
 
-val `satisfactory-tools-core` =
+val core =
   crossProject( JVMPlatform, JSPlatform )
     .crossType( CrossType.Pure )
     .settings( compilerPlugins )
@@ -48,25 +48,25 @@ val `satisfactory-tools-core` =
     )
     .enablePlugins( SbtBuildInfo, ScalacPlugin )
 
-val `satisfactory-tools-solver` = project
+val solver = project
   .settings( compilerPlugins )
   .settings( libraryDependencies ++= ojAlgo )
-  .dependsOn( `satisfactory-tools-core`.jvm )
+  .dependsOn( core.jvm )
   .enablePlugins( ScalacPlugin, DependenciesPlugin )
 
-val `satisfactory-tools-api` = project
+val api = project
   .settings( compilerPlugins )
   .settings( libraryDependencies ++= catsTime ++ circe )
-  .dependsOn( `satisfactory-tools-core`.jvm )
+  .dependsOn( core.jvm )
   .enablePlugins( ScalacPlugin, DependenciesPlugin )
 
-val `satisfactory-tools-assets` = project
+val assets = project
   .settings( compilerPlugins )
   .settings( libraryDependencies ++= catsEffect ++ pureconfig )
-  .dependsOn( `satisfactory-tools-core`.jvm )
+  .dependsOn( core.jvm )
   .enablePlugins( ScalacPlugin, DependenciesPlugin )
 
-val `satisfactory-tools-persistence` = project
+val persistence = project
   .settings( compilerPlugins )
   .settings(
     libraryDependencies ++=
@@ -80,16 +80,16 @@ val `satisfactory-tools-persistence` = project
         http4sBlazeServer ++
         logging
   )
-  .dependsOn( `satisfactory-tools-api`, `satisfactory-tools-solver` )
+  .dependsOn( api, solver )
   .enablePlugins( ScalacPlugin, DependenciesPlugin )
 
-val `satisfactory-tools-dev` = project
+val `dev-tools` = project
   .settings( compilerPlugins )
   .settings( libraryDependencies ++= circeFs2 ++ pureconfigCatsEffect ++ pureconfigFs2 )
-  .dependsOn( `satisfactory-tools-persistence`, `satisfactory-tools-assets` )
+  .dependsOn( persistence, assets )
   .enablePlugins( ScalacPlugin, DependenciesPlugin )
 
-val `satisfactory-tools-web-v2` = project
+val `web-v2` = project
   .settings(
     compilerPlugins,
     Compile / run / fork := true,
@@ -101,17 +101,17 @@ val `satisfactory-tools-web-v2` = project
         logging ++
         pureconfigCatsEffect
   )
-  .dependsOn( `satisfactory-tools-api`, `satisfactory-tools-persistence` )
+  .dependsOn( api, persistence )
   .enablePlugins( ScalacPlugin, DependenciesPlugin )
 
-val `satisfactory-production-calculator` = project
+val `production-calculator` = project
   .settings( compilerPlugins )
   .settings( mainClass.withRank( KeyRanks.Invisible ) := Some( "net.chwthewke.satisfactory.ProdCalculator" ) )
   .settings( libraryDependencies ++= decline ++ pureconfigCatsEffect )
-  .dependsOn( `satisfactory-tools-dev` )
+  .dependsOn( `dev-tools` )
   .enablePlugins( ScalacPlugin, DependenciesPlugin )
 
-val `satisfactory-tools-tests` = project
+val `tests` = project
   .settings( compilerPlugins )
   .settings(
     libraryDependencies ++= (
@@ -140,23 +140,23 @@ val `satisfactory-tools-tests` = project
     ).mkString( "\n" )
   )
   .dependsOn(
-    `satisfactory-production-calculator`,
-    `satisfactory-tools-persistence`,
-    `satisfactory-tools-web-v2`
+    `production-calculator`,
+    `persistence`,
+    `web-v2`
   )
   .enablePlugins( ScalacPlugin, DependenciesPlugin )
 
-val `satisfactory-tools-all` = project
+val `satisfactory-tools` = project
   .in( file( "." ) )
   .aggregate(
-    `satisfactory-tools-core`.jvm,
-    `satisfactory-tools-core`.js,
-    `satisfactory-tools-api`,
-    `satisfactory-tools-assets`,
-    `satisfactory-tools-solver`,
-    `satisfactory-tools-persistence`,
-    `satisfactory-tools-dev`,
-    `satisfactory-tools-web-v2`,
-    `satisfactory-production-calculator`,
-    `satisfactory-tools-tests`
+    core.jvm,
+    core.js,
+    api,
+    assets,
+    solver,
+    persistence,
+    `dev-tools`,
+    `web-v2`,
+    `production-calculator`,
+    `tests`
   )

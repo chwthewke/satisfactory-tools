@@ -99,7 +99,7 @@ class GrabIcons[F[_]]( version: DataVersionStorage )( implicit S: Sync[F], F: Fi
 
 object GrabIcons {
   val pathToUModel: String  = "C:\\Users\\Chewie\\umodel_win32\\umodel.exe"
-  val targetDirectory: Path = Path( "satisfactory-tools-assets" ) / "src" / "main" / "resources" / "img"
+  val targetDirectory: Path = Path( "assets" ) / "src" / "main" / "resources" / "img"
 
   abstract class Program( storage: DataVersionStorage ) extends IOApp {
     override def run( args: List[String] ): IO[ExitCode] =
