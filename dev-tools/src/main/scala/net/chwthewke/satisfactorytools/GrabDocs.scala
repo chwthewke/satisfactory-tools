@@ -53,7 +53,7 @@ class GrabDocs[F[_]: Sync]( implicit F: Files[F] ) {
 }
 
 object GrabDocs {
-  val destBase: Path = Path( "satisfactory-tools-dev" ) / "src" / "main" / "resources"
+  val destBase: Path = Path( "dev-tools" ) / "src" / "main" / "resources"
 
   abstract class Program( storage: DataVersionStorage ) extends IOApp {
     override def run( args: List[String] ): IO[ExitCode] =
