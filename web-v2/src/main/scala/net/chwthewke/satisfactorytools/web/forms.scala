@@ -174,13 +174,13 @@ object forms {
         Options( _, _, _, _, _, _ )
       )
 
-    def resourceNodes( model: Model ): FormDataDecoder[Map[ExtractorType, Map[Item, ResourceDistrib]]] =
+    def resourceNodes( model: Model ): FormDataDecoder[Map[ExtractorType, Map[ClassName, ResourceDistrib]]] =
       ( ExtractorType.values, model.extractedItems, ResourcePurity.values )
         .traverseN(
           ( exT, item, purity ) =>
             FormDataDecoder
               .fieldOptional[Int]( Keys.extractorItemPurityKey( exT, item, purity ) )
-              .map( n => n.map( ( exT, item, purity, _ ) ) )
+              .map( n => n.map( ( exT, item.className, purity, _ ) ) )
         )
         .map(
           m =>
@@ -209,7 +209,7 @@ object forms {
           item =>
             FormDataDecoder
               .fieldOptional[Int]( Keys.resourceWeightKey( item ) )
-              .map( o => ( item, o.getOrElse( ResourceWeights.range ) ) )
+              .map( o => ( item.className, o.getOrElse( ResourceWeights.range ) ) )
         )
         .map( v => ResourceWeights( v.toMap ) )
 

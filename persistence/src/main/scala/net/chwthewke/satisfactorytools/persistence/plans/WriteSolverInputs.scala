@@ -12,7 +12,6 @@ import doobie.implicits._
 
 import data.ClassName
 import data.Countable
-import data.Item
 import model.Bill
 import model.ExtractorType
 import model.Options
@@ -81,7 +80,7 @@ object WriteSolverInputs {
           resourceWeights.weights.toVector
             .mapFilter {
               case ( item, amount ) =>
-                itemIds.get( item.className ).map( ( planId, _, amount ) )
+                itemIds.get( item ).map( ( planId, _, amount ) )
             }
         )
         .void
@@ -89,7 +88,7 @@ object WriteSolverInputs {
   private def updateResourceDistribution(
       planId: PlanId,
       itemIds: Map[ClassName, ItemId],
-      resourceDistribOptions: Map[ExtractorType, Map[Item, ResourceDistrib]]
+      resourceDistribOptions: Map[ExtractorType, Map[ClassName, ResourceDistrib]]
   ): ConnectionIO[Unit] = {
     val rows: Iterable[( PlanId, ExtractorType, ItemId, ResourcePurity, Int )] = for {
       ( extractor, dists ) <- resourceDistribOptions
@@ -99,7 +98,7 @@ object WriteSolverInputs {
                              ( ResourcePurity.Normal, dist.normalNodes ),
                              ( ResourcePurity.Pure, dist.pureNodes )
                            )
-      itemId <- itemIds.get( item.className )
+      itemId <- itemIds.get( item )
     } yield ( planId, extractor, itemId, purity, amount )
 
     statements.upsertResourceDistribution.updateMany( rows ).void

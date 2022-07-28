@@ -3,11 +3,15 @@ package model
 
 import cats.Order
 import cats.Show
+import enumeratum.Circe
 import enumeratum.Enum
 import enumeratum.EnumEntry
+import io.circe.Decoder
+import io.circe.Encoder
+import io.circe.KeyDecoder
+import io.circe.KeyEncoder
 
 import data.ClassName
-import data.Extractor
 
 abstract sealed class ExtractorType(
     override val entryName: String,
@@ -28,10 +32,12 @@ object ExtractorType extends Enum[ExtractorType] {
 
   override val values: Vector[ExtractorType] = findValues.toVector
 
-  def fromExtractor( extractor: Extractor ): Option[ExtractorType] =
-    ExtractorType.values.find( _.dataKey.fold( _ == extractor.extractorTypeName, _ == extractor.className ) )
-
   implicit val extractorTypeShow: Show[ExtractorType]   = Show( _.entryName )
   implicit val extractorTypeOrder: Order[ExtractorType] = Order.by( values.indexOf )
 
+  implicit val extractorTypeDecoder: Decoder[ExtractorType] = Circe.decoder( this )
+  implicit val extractorTypeEncoder: Encoder[ExtractorType] = Circe.encoder( this )
+
+  implicit val extractorTypeKeyDecoder: KeyDecoder[ExtractorType] = Circe.keyDecoder( this )
+  implicit val extractorTypeKeyEncoder: KeyEncoder[ExtractorType] = Circe.keyEncoder( this )
 }

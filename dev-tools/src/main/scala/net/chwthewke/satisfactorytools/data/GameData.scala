@@ -29,7 +29,7 @@ object GameData {
   def nuclearGenerators( generators: Map[ClassName, NuclearGenerator] ): GameData =
     GameData( Map.empty, Map.empty, Map.empty, Vector.empty, generators )
 
-  implicit val modelMonoid: Monoid[GameData] = new Monoid[GameData] {
+  implicit val gameDataMonoid: Monoid[GameData] = new Monoid[GameData] {
     override def empty: GameData = GameData.empty
 
     override def combine( x: GameData, y: GameData ): GameData =
@@ -42,8 +42,30 @@ object GameData {
       )
   }
 
+  import Parsers.ParserOps
+
   private def decodeMap[A]( dec: Decoder[A] )( f: A => ClassName ): Decoder[Map[ClassName, A]] =
     Decoder.decodeVector( dec ).map( v => v.map( x => f( x ) -> x ).to( Map ) )
+
+  private val itemDecoder: Decoder[Item] =
+    Decoder.forProduct6(
+      "ClassName",
+      "mDisplayName",
+      "mForm",
+      "mEnergyValue",
+      "mResourceSinkPoints",
+      "mSmallIcon"
+    )(
+      ( cn: ClassName, dn: String, fm: Form, ev: Double, pts: Option[Int], ico: IconData ) =>
+        Item( cn, dn, fm, ev, pts.getOrElse( 0 ), ico )
+    )(
+      Decoder[ClassName],
+      Decoder[String],
+      Decoder[Form],
+      Decoders.doubleStringDecoder,
+      Decoder.decodeOption( Decoders.intStringDecoder ),
+      Parsers.texture2d.decoder
+    )
 
   def modelClassDecoder( nativeClass: NativeClass ): Decoder[GameData] =
     nativeClass match {
@@ -51,7 +73,7 @@ object GameData {
           NativeClass.equipmentDescClass | NativeClass.biomassDescClass | NativeClass.resourceDescClass |
           NativeClass.ammoInstantDescClass | NativeClass.ammoInstantClassU6 | NativeClass.ammoProjDescClass |
           NativeClass.ammoProjClassU6 | NativeClass.ammoSpreadClassU6 | NativeClass.ammoColorDescClass =>
-        decodeMap( Decoder[Item] )( _.className ).map( GameData.items )
+        decodeMap( itemDecoder )( _.className ).map( GameData.items )
       case NativeClass.manufacturerClass | NativeClass.colliderClass =>
         decodeMap( Decoder[Manufacturer] )( _.className ).map( GameData.manufacturers )
       case NativeClass.resourceExtractorClass | NativeClass.waterPumpClass | NativeClass.frackingExtractorClass =>
@@ -63,15 +85,15 @@ object GameData {
       case _ => Decoder.const( GameData.empty )
     }
 
-  implicit val modelDecoder: Decoder[GameData] =
+  implicit val gameDataDecoder: Decoder[GameData] =
     for {
       nativeClass <- Decoder[NativeClass].prepare( _.downField( "NativeClass" ) )
-      model <- modelClassDecoder( nativeClass )
-                .prepare( _.downField( "Classes" ) )
-                .handleErrorWith(
-                  f => Decoder.failed( f.withMessage( show"in NativeClass $nativeClass: ${f.message}" ) )
-                )
-    } yield model
+      gameData <- modelClassDecoder( nativeClass )
+                   .prepare( _.downField( "Classes" ) )
+                   .handleErrorWith(
+                     f => Decoder.failed( f.withMessage( show"in NativeClass $nativeClass: ${f.message}" ) )
+                   )
+    } yield gameData
 
   implicit val gameDataShow: Show[GameData] = Show(
     model => show"""Recipes:

@@ -3,10 +3,12 @@ package model
 
 import cats.Show
 import cats.syntax.show._
+import io.circe.Decoder
+import io.circe.Encoder
+import io.circe.generic.semiauto.deriveDecoder
+import io.circe.generic.semiauto.deriveEncoder
 
 import data.ClassName
-import data.Extractor
-import data.Manufacturer
 
 case class Machine(
     className: ClassName,
@@ -24,29 +26,6 @@ object Machine {
             |Power: ${f"$powerConsumption%.0f MW"}""".stripMargin
   }
 
-  def extractor( extractor: Extractor ): Either[String, Machine] =
-    ExtractorType
-      .fromExtractor( extractor )
-      .toRight( s"No known extractor type for class ${extractor.className}, type ${extractor.extractorTypeName}" )
-      .map(
-        exType =>
-          Machine(
-            extractor.className,
-            extractor.displayName,
-            MachineType( exType ),
-            extractor.powerConsumption
-          )
-      )
-
-  def manufacturer( manufacturer: Manufacturer ): Machine =
-    Machine(
-      manufacturer.className,
-      manufacturer.displayName,
-      MachineType(
-        if (manufacturer.powerConsumption == 0d) ManufacturerType.VariableManufacturer
-        else ManufacturerType.Manufacturer
-      ),
-      manufacturer.powerConsumption
-    )
-
+  implicit val machineDecoder: Decoder[Machine] = deriveDecoder[Machine]
+  implicit val machineEncoder: Encoder[Machine] = deriveEncoder[Machine]
 }

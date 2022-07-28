@@ -57,7 +57,7 @@ object ReadSolverInputs {
 
   def getResourceOptions( planId: PlanId ): ConnectionIO[ResourceOptions] =
     (
-      readModelIds( planId, ReadModel.readItems ),
+      readModelIds( planId, ReadModel.readItems ).map( _.map { case ( id, item ) => ( id, item.className ) } ),
       statements.selectResourceNodes.toQuery0( planId ).stream.compile.foldMonoid,
       statements.selectResourceWeights.toQuery0( planId ).stream.compile.foldMonoid
     ).mapN(

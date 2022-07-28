@@ -3,8 +3,11 @@ package model
 
 import cats.Order
 import cats.Show
+import enumeratum.Circe
 import enumeratum.Enum
 import enumeratum.EnumEntry
+import io.circe.Decoder
+import io.circe.Encoder
 
 sealed abstract class ManufacturerType( override val entryName: String, val description: String ) extends EnumEntry
 
@@ -18,4 +21,7 @@ object ManufacturerType extends Enum[ManufacturerType] {
 
   implicit val manufacturerTypeShow: Show[ManufacturerType]   = Show.show( _.description )
   implicit val manufacturerTypeOrder: Order[ManufacturerType] = Order.by( values.indexOf )
+
+  implicit val manufacturerTypeDecoder: Decoder[ManufacturerType] = Circe.decoder( this )
+  implicit val manufacturerTypeEncoder: Encoder[ManufacturerType] = Circe.encoder( this )
 }

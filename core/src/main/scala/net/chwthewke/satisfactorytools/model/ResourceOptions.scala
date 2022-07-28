@@ -6,25 +6,30 @@ import cats.Show
 import cats.syntax.foldable._
 import cats.syntax.option._
 import cats.syntax.show._
+import io.circe.Decoder
+import io.circe.Encoder
+import io.circe.generic.semiauto.deriveDecoder
+import io.circe.generic.semiauto.deriveEncoder
 
+import data.ClassName
 import data.Item
 
 case class ResourceOptions(
-    resourceNodes: Map[ExtractorType, Map[Item, ResourceDistrib]],
+    resourceNodes: Map[ExtractorType, Map[ClassName, ResourceDistrib]],
     resourceWeights: ResourceWeights
 ) {
   def get( machine: Machine, item: Item ): ResourceDistrib =
-    machine.machineType.extractorType.flatMap( resourceNodes.get ).flatMap( _.get( item ) ).orEmpty
+    machine.machineType.extractorType.flatMap( resourceNodes.get ).flatMap( _.get( item.className ) ).orEmpty
 }
 
 object ResourceOptions {
 
   implicit val resourceOptionsShow: Show[ResourceOptions] = {
-    def showItem( item: Item, distrib: ResourceDistrib ): String =
-      show"${item.displayName.padTo( 20, ' ' )} P ${f"${distrib.pureNodes}% 2d"} " +
+    def showItem( item: ClassName, distrib: ResourceDistrib ): String =
+      show"${item.name.padTo( 32, ' ' )} P ${f"${distrib.pureNodes}% 2d"} " +
         show"N ${f"${distrib.normalNodes}% 2d"} I ${f"${distrib.impureNodes}% 2d"}"
 
-    def showExtractorType( extractorType: ExtractorType, items: Map[Item, ResourceDistrib] ): String =
+    def showExtractorType( extractorType: ExtractorType, items: Map[ClassName, ResourceDistrib] ): String =
       items.toVector.map( (showItem _).tupled ).mkString_( show"${extractorType.description}\n  ", "\n  ", "" )
 
     Show.show(
@@ -34,17 +39,14 @@ object ResourceOptions {
               |
               |WEIGHTS
               |${opts.resourceWeights.weights
-                .map { case ( item, weight ) => show"${item.displayName}: $weight" }
+                .map { case ( item, weight ) => show"$item: $weight" }
                 .mkString( "\n" )}
               |""".stripMargin
     )
   }
 
-  implicit val resourceOptionsEq: Eq[ResourceOptions] = Eq.by(
-    ro =>
-      (
-        ro.resourceNodes.map { case ( t, m ) => ( t, m.map { case ( i, d ) => ( i.className, d ) } ) },
-        ro.resourceWeights
-      )
-  )
+  implicit val resourceOptionsEq: Eq[ResourceOptions] = Eq.by( ro => ( ro.resourceNodes, ro.resourceWeights ) )
+
+  implicit val resourceOptionsDecoder: Decoder[ResourceOptions] = deriveDecoder[ResourceOptions]
+  implicit val resourceOptionsEncoder: Encoder[ResourceOptions] = deriveEncoder[ResourceOptions]
 }

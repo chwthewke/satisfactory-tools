@@ -41,7 +41,7 @@ object RecipeSelection {
             options.scoreExtractionRecipe( recipe ),
             recipe.producedIn.machineType.extractorType
               .flatMap( map.resourceNodes.get )
-              .flatMap( _.get( product ) )
+              .flatMap( _.get( product.className ) )
               .map( _.get( purity ) )
           ).mapN( ( score, nodes ) => Map( ( product, Vector( ( ( score, purity ), ( nodes, recipe ) ) ) ) ) ).orEmpty
       }

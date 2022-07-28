@@ -7,7 +7,6 @@ import cats.data.OptionT
 import cats.syntax.applicativeError._
 import cats.syntax.apply._
 import cats.syntax.foldable._
-import cats.syntax.functor._
 import cats.syntax.traverse._
 import doobie._
 import doobie.implicits._
@@ -222,14 +221,16 @@ object ReadModel extends ModelApi[ConnectionIO] {
   private def readResourceNodes(
       itemsById: Map[ItemId, Item],
       version: ModelVersionId
-  ): ConnectionIO[Map[ExtractorType, Map[Item, ResourceDistrib]]] =
+  ): ConnectionIO[Map[ExtractorType, Map[ClassName, ResourceDistrib]]] =
     Streams
       .groupAdjacentByFirstNev( selectResourceNodes( version ).stream )
       .map {
         case ( extractorType, items ) =>
           (
             extractorType,
-            items.toVector.flatMap { case ( itemId, distrib ) => itemsById.get( itemId ).tupleRight( distrib ) }.toMap
+            items.toVector.flatMap {
+              case ( itemId, distrib ) => itemsById.get( itemId ).map( item => ( item.className, distrib ) )
+            }.toMap
           )
       }
       .compile
