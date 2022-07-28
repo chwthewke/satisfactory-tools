@@ -380,7 +380,7 @@ object WriteModel {
       .void
 
   private def writeResourceNodes(
-      resourceNodes: Map[ExtractorType, Map[Item, ResourceDistrib]],
+      resourceNodes: Map[ExtractorType, Map[ClassName, ResourceDistrib]],
       itemIds: Map[ClassName, ItemId],
       version: ModelVersionId
   ): ConnectionIO[Unit] =
@@ -388,7 +388,7 @@ object WriteModel {
       .updateMany(
         resourceNodes.toVector.flatMap {
           case ( ex, map ) =>
-            map.toVector.flatMap { case ( item, distrib ) => itemIds.get( item.className ).map( ( ex, _, distrib ) ) }
+            map.toVector.flatMap { case ( item, distrib ) => itemIds.get( item ).map( ( ex, _, distrib ) ) }
         }
       )
       .void
@@ -417,7 +417,7 @@ object WriteModel {
             model.defaultResourceOptions.resourceNodes.toVector.flatMap {
               case ( extractorType, byItem ) =>
                 byItem.toVector
-                  .flatMap { case ( item, _ ) => itemIds.get( item.className ) }
+                  .flatMap { case ( item, _ ) => itemIds.get( item ) }
                   .tupleLeft( extractorType )
             }.toNev
           ).run

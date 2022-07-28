@@ -19,14 +19,12 @@ import cats.syntax.option._
 import cats.syntax.show._
 import cats.syntax.traverse._
 import cats.syntax.traverseFilter._
-import cats.syntax.unorderedFoldable._
 import cats.syntax.validated._
 import fs2.Stream
 import io.circe.Decoder
 import io.circe.fs2.byteArrayParser
 import io.circe.fs2.decoder
 import java.io.InputStream
-import mouse.option._
 import pureconfig.ConfigSource
 import pureconfig.module.catseffect.syntax._
 import scala.collection.immutable.SortedMap
@@ -38,6 +36,7 @@ import data.Extractor
 import data.GameData
 import data.GameRecipe
 import data.Item
+import data.Manufacturer
 import model.ExtractorType
 import model.Machine
 import model.MachineType
@@ -97,7 +96,7 @@ object Loader {
       val ( rawSelfExtraction, rawManufacturing ) = data.recipes.partition( isSelfExtraction )
 
       val extractorMachines: ValidatedNel[String, Map[ClassName, ( Extractor, Machine )]] =
-        data.extractors.traverse( ex => Machine.extractor( ex ).toValidatedNel.tupleLeft( ex ) )
+        data.extractors.traverse( ex => extractorMachine( ex ).toValidatedNel.tupleLeft( ex ) )
 
       val extractionRecipes: ValidatedNel[String, Vector[( Item, ResourcePurity, Recipe )]] =
         extractorMachines.andThen( extractors => getExtractionRecipes( data, extractors, rawSelfExtraction ) )
@@ -130,7 +129,7 @@ object Loader {
           _.toVector
             .traverse {
               case ( itemClass, distrib ) =>
-                modelItems.get( itemClass ).toValidNel( itemClass ).tupleRight( distrib )
+                modelItems.get( itemClass ).toValidNel( itemClass ).as( itemClass ).tupleRight( distrib )
             }
             .map( _.toMap )
         )
@@ -201,14 +200,19 @@ object Loader {
         item                   <- data.items.get( resource )
       } yield ( item, extractor, machine )
 
-    def convertersFor( converters: Vector[( Extractor, Machine )], item: Item ): Vector[( Extractor, Machine )] =
-      converters.filter { case ( ex, _ ) => canExtract( ex, item ) }
-
-    def canExtract( extractor: Extractor, item: Item ): Boolean =
-      extractor.allowedResources.cata(
-        _.contains_( item.className ),
-        extractor.allowedResourceForms.contains( item.form )
-      )
+    def extractorMachine( extractor: Extractor ): Either[String, Machine] =
+      ExtractorType.values
+        .find( _.dataKey.fold( _ == extractor.extractorTypeName, _ == extractor.className ) )
+        .toRight( s"No known extractor type for class ${extractor.className}, type ${extractor.extractorTypeName}" )
+        .map(
+          exType =>
+            Machine(
+              extractor.className,
+              extractor.displayName,
+              MachineType( exType ),
+              extractor.powerConsumption
+            )
+        )
 
     def extractionRecipe(
         item: Item,
@@ -228,10 +232,21 @@ object Loader {
         Power.Fixed( extractor.powerConsumption )
       )
 
+    def manufacturerMachine( manufacturer: Manufacturer ): Machine =
+      Machine(
+        manufacturer.className,
+        manufacturer.displayName,
+        MachineType(
+          if (manufacturer.powerConsumption == 0d) ManufacturerType.VariableManufacturer
+          else ManufacturerType.Manufacturer
+        ),
+        manufacturer.powerConsumption
+      )
+
     def validateManufacturer( data: GameData, className: ClassName ): ValidatedNel[String, Machine] =
       data.manufacturers
         .get( className )
-        .map( Machine.manufacturer )
+        .map( manufacturerMachine )
         .toValidNel( show"Unknown machine class $className" )
 
     def recipePower( recipe: GameRecipe, manufacturer: Machine ): Power =

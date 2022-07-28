@@ -1,6 +1,8 @@
 package net.chwthewke.satisfactorytools
 package web.view
 
+import cats.Order.catsKernelOrderingForOrder
+import cats.syntax.functor._
 import cats.syntax.show._
 import scalatags.Text
 import scalatags.Text.Tag
@@ -26,8 +28,15 @@ object ResourceOptionsView extends ( ( Model, ResourceOptions ) => Tag ) {
       zipMap( resourceOptions.resourceNodes, model.defaultResourceOptions.resourceNodes )(
         ( byEx, defaultByEx ) => zipMap( byEx, defaultByEx )( ( _, _ ) )
       ).toVector
-        .sortBy { case ( ex, _ ) => ExtractorType.indexOf( ex ) }
-        .map { case ( exT, nodes ) => viewNodes( exT, nodes.toVector ) }
+        .sortBy( _._1 )
+        .map {
+          case ( exT, nodes ) =>
+            viewNodes(
+              exT,
+              nodes.toVector
+                .flatMap { case ( itemClass, v ) => model.items.get( itemClass ).tupleRight( v ) }
+            )
+        }
     )
 
   // TODO default sets by start area?
@@ -108,7 +117,7 @@ object ResourceOptionsView extends ( ( Model, ResourceOptions ) => Tag ) {
                       min := 0,
                       max := (2 * ResourceWeights.range),
                       step := 1,
-                      value := weights.weights.getOrElse( item, ResourceWeights.range )
+                      value := weights.weights.getOrElse( item.className, ResourceWeights.range )
                     )
                   )
                 )

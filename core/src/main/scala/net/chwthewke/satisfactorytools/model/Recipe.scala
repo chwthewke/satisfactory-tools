@@ -6,6 +6,10 @@ import cats.data.NonEmptyList
 import cats.syntax.foldable._
 import cats.syntax.semigroup._
 import cats.syntax.show._
+import io.circe.Decoder
+import io.circe.Encoder
+import io.circe.generic.semiauto.deriveDecoder
+import io.circe.generic.semiauto.deriveEncoder
 import scala.concurrent.duration._
 
 import data.ClassName
@@ -57,4 +61,10 @@ object Recipe {
               |""".stripMargin
     }
 
+  import scala.concurrent.duration._
+  private implicit val finiteDurationDecoder: Decoder[FiniteDuration] = Decoder[Long].map( _.millis )
+  private implicit val finiteDurationEncoder: Encoder[FiniteDuration] = Encoder[Long].contramap( _.toMillis )
+
+  implicit val recipeDecoder: Decoder[Recipe] = deriveDecoder[Recipe]
+  implicit val recipeEncoder: Encoder[Recipe] = deriveEncoder[Recipe]
 }

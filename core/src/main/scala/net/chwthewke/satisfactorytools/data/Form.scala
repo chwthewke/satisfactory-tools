@@ -6,6 +6,7 @@ import enumeratum.Circe
 import enumeratum.Enum
 import enumeratum.EnumEntry
 import io.circe.Decoder
+import io.circe.Encoder
 
 sealed abstract class Form( override val entryName: String, val simpleAmountFactor: Int ) extends EnumEntry
 
@@ -18,5 +19,6 @@ object Form extends Enum[Form] {
   override val values: IndexedSeq[Form] = findValues
 
   implicit val formDecoder: Decoder[Form] = Circe.decoder( this )
+  implicit val formEncoder: Encoder[Form] = Circe.encoder( this )
   implicit val formShow: Show[Form]       = Show.show( _.entryName )
 }

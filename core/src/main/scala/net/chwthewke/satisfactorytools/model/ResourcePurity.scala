@@ -3,8 +3,11 @@ package model
 
 import cats.Order
 import cats.Show
+import enumeratum.Circe
 import enumeratum.Enum
 import enumeratum.EnumEntry
+import io.circe.Decoder
+import io.circe.Encoder
 
 sealed abstract class ResourcePurity( override val entryName: String, val multiplier: Double )
     extends EnumEntry
@@ -19,4 +22,7 @@ object ResourcePurity extends Enum[ResourcePurity] {
 
   implicit val resourcePurityShow: Show[ResourcePurity]   = Show.fromToString
   implicit val resourcePurityOrder: Order[ResourcePurity] = Order.by( indexOf )
+
+  implicit val resourcePurityDecoder: Decoder[ResourcePurity] = Circe.decoder( this )
+  implicit val resourcePurityEncoder: Encoder[ResourcePurity] = Circe.encoder( this )
 }

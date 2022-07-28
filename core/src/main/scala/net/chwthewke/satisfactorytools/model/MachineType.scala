@@ -4,8 +4,11 @@ package model
 import cats.Order
 import cats.Show
 import cats.syntax.show._
+import enumeratum.Circe
 import enumeratum.Enum
 import enumeratum.EnumEntry
+import io.circe.Decoder
+import io.circe.Encoder
 
 final case class MachineType( machineType: Either[ExtractorType, ManufacturerType] ) extends EnumEntry {
   def is( manufacturerType: ManufacturerType ): Boolean =
@@ -33,4 +36,7 @@ object MachineType extends Enum[MachineType] {
 
   implicit val machineTypeShow: Show[MachineType]   = Show.show( _.machineType.fold( _.show, _.show ) )
   implicit val machineTypeOrder: Order[MachineType] = Order.by( _.machineType )
+
+  implicit val machineTypeDecoder: Decoder[MachineType] = Circe.decoder( this )
+  implicit val machineTypeEncoder: Encoder[MachineType] = Circe.encoder( this )
 }

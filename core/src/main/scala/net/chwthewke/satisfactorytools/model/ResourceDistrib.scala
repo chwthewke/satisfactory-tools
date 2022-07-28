@@ -7,6 +7,10 @@ import cats.Show
 import cats.derived.semiauto
 import cats.syntax.foldable._
 import cats.syntax.show._
+import io.circe.Decoder
+import io.circe.Encoder
+import io.circe.generic.semiauto.deriveDecoder
+import io.circe.generic.semiauto.deriveEncoder
 
 case class ResourceDistrib( impureNodes: Int, normalNodes: Int, pureNodes: Int ) {
   def value( extractorRecipe: Recipe, clockSpeed: Options.ClockSpeed, belt: Options.Belt ): Double =
@@ -40,4 +44,7 @@ object ResourceDistrib {
   implicit val resourceDistribShow: Show[ResourceDistrib] = Show.fromToString[ResourceDistrib]
 
   implicit val resourceDistribEq: Eq[ResourceDistrib] = semiauto.eq[ResourceDistrib]
+
+  implicit val resourceDistribDecoder: Decoder[ResourceDistrib] = deriveDecoder[ResourceDistrib]
+  implicit val resourceDistribEncoder: Encoder[ResourceDistrib] = deriveEncoder[ResourceDistrib]
 }

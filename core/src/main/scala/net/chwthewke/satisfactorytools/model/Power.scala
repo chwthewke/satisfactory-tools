@@ -3,6 +3,10 @@ package model
 
 import cats.Monoid
 import cats.Show
+import io.circe.Decoder
+import io.circe.Encoder
+import io.circe.generic.semiauto.deriveDecoder
+import io.circe.generic.semiauto.deriveEncoder
 
 sealed abstract class Power {
   def average: Double
@@ -45,4 +49,7 @@ object Power {
     case Fixed( value )       => f"$value%6.2f"
     case Variable( min, max ) => f"$min%6.2f-$max%6.2f"
   }
+
+  implicit val powerDecoder: Decoder[Power] = deriveDecoder[Power]
+  implicit val powerEncoder: Encoder[Power] = deriveEncoder[Power]
 }

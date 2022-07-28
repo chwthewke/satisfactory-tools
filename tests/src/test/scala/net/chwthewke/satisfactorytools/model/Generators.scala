@@ -8,12 +8,12 @@ import cats.syntax.traverse._
 import org.scalacheck.Gen
 import org.scalacheck.cats.implicits._
 
-import data.Item
+import data.ClassName
 
 trait Generators extends data.Generators {
   def model: Model
 
-  def genResourceNodes: Gen[Map[ExtractorType, Map[Item, ResourceDistrib]]] =
+  def genResourceNodes: Gen[Map[ExtractorType, Map[ClassName, ResourceDistrib]]] =
     model.defaultResourceOptions.resourceNodes
       .traverse( _.traverse {
         case ResourceDistrib( impureNodes, normalNodes, pureNodes ) =>
@@ -23,7 +23,7 @@ trait Generators extends data.Generators {
 
   def genResourceWeights: Gen[ResourceWeights] =
     model.extractedItems
-      .traverse( it => Gen.choose( 0, 2 * ResourceWeights.range ).tupleLeft( it ) )
+      .traverse( it => Gen.choose( 0, 2 * ResourceWeights.range ).tupleLeft( it.className ) )
       .map( v => ResourceWeights( v.filter( _._2 != ResourceWeights.range ).toMap ) )
 
   def genResourceOptions: Gen[ResourceOptions] =

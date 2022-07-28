@@ -8,6 +8,10 @@ import cats.Order
 import cats.Show
 import cats.Traverse
 import cats.syntax.show._
+import io.circe.Decoder
+import io.circe.Encoder
+import io.circe.generic.semiauto.deriveDecoder
+import io.circe.generic.semiauto.deriveEncoder
 import scala.annotation.tailrec
 import scala.collection.Factory
 
@@ -64,4 +68,7 @@ object Countable {
 
   implicit def countableOrder[N: Order, A: Order]: Order[Countable[N, A]] =
     Order.by { case Countable( item, amount ) => ( item, amount ) }
+
+  implicit def countableDecoder[N: Decoder, A: Decoder]: Decoder[Countable[N, A]] = deriveDecoder[Countable[N, A]]
+  implicit def countableEncoder[N: Encoder, A: Encoder]: Encoder[Countable[N, A]] = deriveEncoder[Countable[N, A]]
 }
