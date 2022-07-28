@@ -6,9 +6,8 @@ import cats.effect.Async
 import cats.effect.Concurrent
 import cats.effect.ExitCode
 import cats.effect.Ref
-import cats.effect.Sync
+import cats.effect.Resource
 import cats.syntax.apply._
-import cats.syntax.flatMap._
 import cats.syntax.functor._
 import cats.syntax.option._
 import com.comcast.ip4s.Port
@@ -23,36 +22,43 @@ import pureconfig.ConfigSource
 import pureconfig.module.catseffect.syntax._
 
 import assets.IconIndex
+import net.chwthewke.satisfactorytools.persistence.Resources
 
 object Server {
 
-  def initService[F[_]: Sync]( jsFiles: Vector[String] ): F[Service[F]] =
-    ConfigSource
-      .resources( "icons.conf" )
-      .loadF[F, IconIndex]()
-      .map( new Service[F]( jsFiles, _ ) )
+  def initService[F[_]: Async]( jsFiles: Vector[String] ): Resource[F, ( Service[F], Port )] =
+    for {
+      iconIndex <- Resource.eval( ConfigSource.resources( "icons.conf" ).loadF[F, IconIndex]() )
+      config    <- Resource.eval( ConfigSource.default.loadF[F, ServerConfig]() )
+      db        <- Resources.managedTransactor[F]( config.db )
+    } yield ( new Service[F]( jsFiles, iconIndex, DefsData.mapK( db.trans ) ), config.port )
 
-  def run[F[_]: Async]( jsFiles: Vector[String], port: Int ): F[ExitCode] = {
+  def run[F[_]: Async]( jsFiles: Vector[String] ): F[ExitCode] = {
     initService[F]( jsFiles )
-      .flatMap( service => mkStream[F]( port, service.route.orNotFound ).compile.lastOrError )
+      .use {
+        case ( service, port ) =>
+          mkStream[F]( port, service.route.orNotFound ).compile.lastOrError
+      }
   }
 
-  private def mkStream[F[_]: Async]( port: Int, app: HttpApp[F] ): Stream[F, ExitCode] =
+  private def mkStream[F[_]: Async]( port: Port, app: HttpApp[F] ): Stream[F, ExitCode] =
     (
       Stream.eval( Ref[F].of( ExitCode.Success ) ),
       Stream.eval( mkSignal[F] )
     ).flatMapN( mkStreamWithSignal( port, app, _, _ ) )
 
   private def mkStreamWithSignal[F[_]: Async](
-      port: Int,
+      port: Port,
       app: HttpApp[F],
       exitRef: Ref[F, ExitCode],
       stopSignal: SignallingRef[F, Boolean]
   ): Stream[F, ExitCode] =
     Stream.force( for {
-      tcpPort <- Port.fromInt( port + 1 ).liftTo[F]( new RuntimeException( s"Invalid TCP shutdown port ${port + 1}" ) )
+      tcpPort <- Port
+                  .fromInt( port.value + 1 )
+                  .liftTo[F]( new RuntimeException( s"Invalid TCP shutdown port ${port.value + 1}" ) )
       tcpServer  = tcpShutdownServer( tcpPort, stopSignal )
-      httpServer = httpAppServer[F]( port, app, stopSignal, exitRef )
+      httpServer = httpAppServer[F]( port.value, app, stopSignal, exitRef )
     } yield tcpServer.merge( httpServer ) )
 
   private def tcpShutdownServer[F[_]: Async](

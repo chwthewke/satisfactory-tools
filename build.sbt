@@ -86,7 +86,7 @@ val solver = project
 // Protocol types (e.g. DB IDs) which are common to web-v2 and SPA
 val protocol = crossProject( JVMPlatform, JSPlatform )
   .crossType( CrossType.Pure )
-  .enablePlugins( SbtBuildInfo, ScalacPlugin )
+  .enablePlugins( ScalacPlugin )
   .settings( commonSettings )
   .settings( crossModuleDependencyOverrides )
   .jsSettings( jsModuleDependencyOverrides )
@@ -151,7 +151,7 @@ val `production-calculator` = project
 
 val `web-api` = crossProject( JVMPlatform, JSPlatform )
   .crossType( CrossType.Pure )
-  .enablePlugins( SbtBuildInfo, ScalacPlugin )
+  .enablePlugins( ScalacPlugin )
   .settings( commonSettings )
   .settings( crossModuleDependencyOverrides )
   .jsSettings( jsModuleDependencyOverrides )
@@ -208,28 +208,45 @@ val `web-server` = project
         scalatags ++
         pureconfigCatsEffect
   )
+  .dependsOn( `web-api-jvm`, persistence, assets )
+
+val `web-server-fast` = project
+  .enablePlugins( ScalacPlugin, DependenciesPlugin, BuildInfoPlugin )
   .settings(
     // js interop
-    jsResources := (`web-front` / Compile / fullOptJS / webpack).value.map( _.data ),
+    jsResources := {
+      val files = (`web-front` / Compile / fastOptJS / webpack).value
+
+      def hasType( fileType: BundlerFileType ): Attributed[File] => Boolean =
+        f => f.metadata.get( BundlerFileTypeAttr ).contains( fileType )
+
+      (files.filter( hasType( BundlerFileType.Asset ) ) ++
+        files.find( hasType( BundlerFileType.Library ) )).map( _.data )
+    },
     Compile / resources ++= jsResources.value,
-    buildInfoObject := "WebServerBuildInfo",
+    buildInfoObject := "WebServerFastBuildInfo",
     buildInfoPackage := "net.chwthewke.satisfactorytools.web.server",
     buildInfoKeys ++= Seq[BuildInfoKey](
       BuildInfoKey.map( jsResources ) { case ( k, files ) => ( k, files.map( _.name ) ) }
     ),
     watchSources ++= (`web-front` / watchSources).value
   )
-  .dependsOn( `web-api-jvm`, persistence, assets )
+  .dependsOn( `web-server` )
 
-// TODO not quite (still depends on web-front/fullLinkJS for instance)
-//val `web-server-dev` = project
-//  .enablePlugins( ScalacPlugin, DependenciesPlugin )
-//  .settings(
-//    // js interop
-//    jsResources := (`web-front` / Compile / fastOptJS / webpack).value.map( _.data ),
-//    Compile / resources ++= jsResources.value
-//  )
-//  .dependsOn( `web-server` )
+val `web-server-full` = project
+  .enablePlugins( ScalacPlugin, DependenciesPlugin, BuildInfoPlugin )
+  .settings(
+    // js interop
+    jsResources := (`web-front` / Compile / fullOptJS / webpack).value.map( _.data ),
+    Compile / resources ++= jsResources.value,
+    buildInfoObject := "WebServerFullBuildInfo",
+    buildInfoPackage := "net.chwthewke.satisfactorytools.web.server",
+    buildInfoKeys ++= Seq[BuildInfoKey](
+      BuildInfoKey.map( jsResources ) { case ( k, files ) => ( k, files.map( _.name ) ) }
+    ),
+    watchSources ++= (`web-front` / watchSources).value
+  )
+  .dependsOn( `web-server` )
 
 val tests = project
   .settings( commonSettings )
@@ -281,7 +298,8 @@ val `satisfactory-tools` = project
     `web-api-js`,
     `web-front`,
     `web-server`,
-//    `web-server-dev`,
+    `web-server-fast`,
+    `web-server-full`,
     `production-calculator`,
     `tests`
   )

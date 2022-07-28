@@ -31,3 +31,8 @@ class DefsClient[F[_]: Concurrent] extends DefsApi[Kleisli[F, Client[F], *]] {
   override def getModel( version: ModelVersionId ): OptionT[Kleisli[F, Client[F], *], Model] =
     OptionT( Kleisli( (client: Client[F]) => client.expectOption[Model]( GET( uri"api" / "model" / version.show ) ) ) )
 }
+
+object DefsClient {
+  def apply[F[_]: Concurrent]( client: Client[F] ): DefsApi[F] =
+    new DefsClient[F].mapK( Kleisli.applyK( client ) )
+}

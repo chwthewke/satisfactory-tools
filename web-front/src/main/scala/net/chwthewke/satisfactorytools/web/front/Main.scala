@@ -2,11 +2,24 @@ package net.chwthewke.satisfactorytools
 package web
 package front
 
+import cats.effect.IO
+import cats.effect.SyncIO
+import colibri.Observable
+import colibri.Subject
+import colibri.ext.fs2._
+import fs2.Stream
+import org.http4s.client.Client
+import org.http4s.client.Middleware
+import org.http4s.dom.FetchClientBuilder
+import org.http4s.syntax.literals._
+import org.scalajs.dom.RequestMode
 import outwatch._
 import outwatch.dsl._
-import cats.effect.SyncIO
 
-import colibri.Subject
+import web.api.DefsApi
+import web.front.http.DefsClient
+import web.front.view.InitView
+import web.front.vm.InitVm
 
 // Outwatch documentation:
 // https://outwatch.github.io/docs/readme.html
@@ -17,9 +30,25 @@ object Main {
 
   def app: HtmlVNode = div(
     h1( "Hello World!" ),
-    counter,
-    inputField
+    Observable.lift( loadModel ).map( InitView( _ ) )
   )
+
+  val baseUri: Middleware[IO] = (client: Client[IO]) =>
+    Client( req => client.run( req.withUri( uri"http://localhost:7285/".resolve( req.uri ) ) ) )
+
+  val client: Client[IO] =
+    baseUri( FetchClientBuilder[IO].withMode( RequestMode.`same-origin` ).create )
+
+  val defsClient: DefsApi[IO] = DefsClient[IO]( client )
+
+  val loadModel: Stream[IO, InitVm] =
+    Stream
+      .eval(
+        defsClient.getVersions
+          .flatMap( versions => defsClient.getModel( versions.maxBy( _._2.version )._1 ).value )
+          .map[InitVm => InitVm]( modelOpt => (vm: InitVm) => vm.modelReceived( modelOpt ) )
+      )
+      .scan[InitVm]( InitVm.init )( ( vm, f ) => f( vm ) )
 
   def counter: SyncIO[HtmlVNode] = SyncIO {
     // https://outwatch.github.io/docs/readme.html#example-counter
