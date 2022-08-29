@@ -4,6 +4,7 @@ package server
 
 import cats.data.OptionT
 import cats.effect.Sync
+import cats.syntax.apply._
 import cats.syntax.semigroupk._
 import org.http4s.HttpRoutes
 import org.http4s.Request
@@ -12,9 +13,12 @@ import org.http4s.StaticFile
 import org.http4s.Uri
 import org.http4s.circe.CirceEntityEncoder._
 import org.http4s.dsl.Http4sDsl
+import pureconfig.ConfigSource
+import pureconfig.module.catseffect.syntax._
 import scalatags.Text.all._
-
 import assets.IconIndex
+import cats.effect.Async
+import cats.effect.kernel.Resource
 import protocol.ModelVersionId
 import web.api.DefsApi
 
@@ -66,6 +70,17 @@ class Service[F[_]: Sync]( jsFiles: Vector[String], iconIndex: IconIndex, defs: 
 }
 
 object Service {
+  def apply[F[_]: Async]( jsFiles: Vector[String], dbConfig: persistence.Config ): Resource[F, Service[F]] =
+    (
+      Resource.eval(
+        ConfigSource
+          .resources( "icons.conf" )
+          .loadF[F, IconIndex]()
+      ),
+      persistence.Resources.managedTransactor[F]( dbConfig )
+    ).mapN(
+      ( iconIndex, xa ) => new Service( jsFiles, iconIndex, DefsData.mapK( xa.trans ) )
+    )
 
   val staticExtensions: Set[String] = Set(
     ".css",

@@ -4,15 +4,24 @@ package front
 package view
 
 import outwatch._
-//import outwatch.dsl._
+import outwatch.dsl._
 
 import model.Model
 import vm.InitVm
 
 object InitView {
-  def viewLoading( loading: InitVm.Loading ): HtmlVNode = ???
+  def viewLoading( loading: InitVm.Loading ): HtmlVNode =
+    div(
+      tags.extra.progress(
+        maxAttr := "100",
+        `class` := "progress",
+        `class` := "is-primary"
+      ),
+      p( "Loading..." )
+    )
 
-  def viewLoaded( model: Model ): HtmlVNode = ???
+  def viewLoaded( model: Model ): HtmlVNode =
+    div( "TODO" )
 
   def apply( initVm: InitVm ): HtmlVNode =
     initVm match {

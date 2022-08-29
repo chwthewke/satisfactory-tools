@@ -200,7 +200,7 @@ val `web-front` = project
 addJSCommandAliases( module = "web-front", prefix = "web" )
 
 val `web-server` = project
-  .enablePlugins( ScalacPlugin, DependenciesPlugin, BuildInfoPlugin )
+  .enablePlugins( ScalacPlugin, DependenciesPlugin )
   .settings(
     libraryDependencies ++=
       http4s ++ http4sBlazeServer ++ http4sCirce ++
@@ -208,6 +208,10 @@ val `web-server` = project
         scalatags ++
         pureconfigCatsEffect
   )
+  .dependsOn( `web-api-jvm`, persistence, assets )
+
+val `web-server-run` = project
+  .enablePlugins( ScalacPlugin, DependenciesPlugin, BuildInfoPlugin )
   .settings(
     // js interop
     jsResources := (`web-front` / Compile / fullOptJS / webpack).value.map( _.data ),
@@ -219,17 +223,37 @@ val `web-server` = project
     ),
     watchSources ++= (`web-front` / watchSources).value
   )
-  .dependsOn( `web-api-jvm`, persistence, assets )
+  .dependsOn( `web-server` )
 
-// TODO not quite (still depends on web-front/fullLinkJS for instance)
-//val `web-server-dev` = project
-//  .enablePlugins( ScalacPlugin, DependenciesPlugin )
-//  .settings(
-//    // js interop
-//    jsResources := (`web-front` / Compile / fastOptJS / webpack).value.map( _.data ),
-//    Compile / resources ++= jsResources.value
-//  )
-//  .dependsOn( `web-server` )
+val `web-server-dev` = project
+  .enablePlugins( ScalacPlugin, DependenciesPlugin, BuildInfoPlugin )
+  .settings(
+    // js interop
+    jsResources := {
+      val _ = (`web-front` / Compile / fastOptJS / webpack).value
+      val targetDir =
+        (`web-front` / Compile / fastOptJS / crossTarget).value / "dev"
+      val baseName =
+        (`web-front` / Compile / fastOptJS / moduleName).value
+
+      Seq(
+        s"$baseName-fastopt-library.js",
+        s"$baseName-fastopt-loader.js",
+        s"$baseName-fastopt.js",
+        s"$baseName-fastopt-library.js.map",
+        s"$baseName-fastopt.js.map"
+      ).map( targetDir / _ )
+
+    },
+    Compile / resources ++= jsResources.value,
+    buildInfoObject := "WebServerBuildInfo",
+    buildInfoPackage := "net.chwthewke.satisfactorytools.web.server",
+    buildInfoKeys ++= Seq[BuildInfoKey](
+      BuildInfoKey.map( jsResources ) { case ( k, files ) => ( k, files.map( _.name ) ) }
+    ),
+    watchSources ++= (`web-front` / watchSources).value
+  )
+  .dependsOn( `web-server` )
 
 val tests = project
   .settings( commonSettings )
@@ -281,7 +305,8 @@ val `satisfactory-tools` = project
     `web-api-js`,
     `web-front`,
     `web-server`,
-//    `web-server-dev`,
+    `web-server-dev`,
+    `web-server-run`,
     `production-calculator`,
     `tests`
   )

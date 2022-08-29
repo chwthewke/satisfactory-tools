@@ -2,10 +2,10 @@ package net.chwthewke.satisfactorytools
 package web
 package front
 
+import cats.effect.IO
 import outwatch._
 import outwatch.dsl._
 import cats.effect.SyncIO
-
 import colibri.Subject
 
 // Outwatch documentation:
@@ -18,7 +18,8 @@ object Main {
   def app: HtmlVNode = div(
     h1( "Hello World!" ),
     counter,
-    inputField
+    inputField,
+    App[IO]
   )
 
   def counter: SyncIO[HtmlVNode] = SyncIO {

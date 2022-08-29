@@ -5,6 +5,7 @@ package http
 
 import cats.data.Kleisli
 import cats.data.OptionT
+import cats.effect.Async
 import cats.effect.Concurrent
 import cats.syntax.show._
 import io.circe.Decoder
@@ -13,14 +14,14 @@ import org.http4s.circe.CirceEntityDecoder._
 import org.http4s.client.Client
 import org.http4s.client.dsl.Http4sClientDsl
 import org.http4s.syntax.literals._
-
 import model.Model
 import model.ModelVersion
+import org.http4s.dom.FetchClientBuilder
 import protocol.ModelVersionId
 import web.api.DefsApi
 
 class DefsClient[F[_]: Concurrent] extends DefsApi[Kleisli[F, Client[F], *]] {
-  val dsl = new Http4sClientDsl[F] {}
+  val dsl: Http4sClientDsl[F] = new Http4sClientDsl[F] {}
   import dsl._
 
   Decoder[Vector[( ModelVersionId, ModelVersion )]]
@@ -30,4 +31,13 @@ class DefsClient[F[_]: Concurrent] extends DefsApi[Kleisli[F, Client[F], *]] {
 
   override def getModel( version: ModelVersionId ): OptionT[Kleisli[F, Client[F], *], Model] =
     OptionT( Kleisli( (client: Client[F]) => client.expectOption[Model]( GET( uri"api" / "model" / version.show ) ) ) )
+}
+
+object DefsClient {
+  def apply[F[_]: Async]: DefsApi[F] = { // TODO how to config?
+    val rawClient = FetchClientBuilder[F].create
+    val client: Client[F] =
+      Client( req => rawClient.run( req.withUri( uri"http://localhost:7285/".resolve( req.uri ) ) ) )
+    new DefsClient[F].mapK( Kleisli.applyK( client ) )
+  }
 }

@@ -6,7 +6,7 @@ import cats.effect.ExitCode
 import cats.effect.IO
 import cats.effect.IOApp
 
-object Main extends IOApp {
+abstract class RunMain( jsFiles: Vector[String] ) extends IOApp {
   override def run( args: List[String] ): IO[ExitCode] =
-    Server.run[IO]( WebServerBuildInfo.jsResources.toVector, 7285 )
+    Application.runServer[IO]( jsFiles )
 }

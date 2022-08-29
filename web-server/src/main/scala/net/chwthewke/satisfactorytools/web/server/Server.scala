@@ -6,9 +6,7 @@ import cats.effect.Async
 import cats.effect.Concurrent
 import cats.effect.ExitCode
 import cats.effect.Ref
-import cats.effect.Sync
 import cats.syntax.apply._
-import cats.syntax.flatMap._
 import cats.syntax.functor._
 import cats.syntax.option._
 import com.comcast.ip4s.Port
@@ -19,23 +17,11 @@ import fs2.concurrent.SignallingRef
 import fs2.io.net.Network
 import org.http4s.HttpApp
 import org.http4s.blaze.server.BlazeServerBuilder
-import pureconfig.ConfigSource
-import pureconfig.module.catseffect.syntax._
-
-import assets.IconIndex
 
 object Server {
 
-  def initService[F[_]: Sync]( jsFiles: Vector[String] ): F[Service[F]] =
-    ConfigSource
-      .resources( "icons.conf" )
-      .loadF[F, IconIndex]()
-      .map( new Service[F]( jsFiles, _ ) )
-
-  def run[F[_]: Async]( jsFiles: Vector[String], port: Int ): F[ExitCode] = {
-    initService[F]( jsFiles )
-      .flatMap( service => mkStream[F]( port, service.route.orNotFound ).compile.lastOrError )
-  }
+  def run[F[_]: Async]( app: HttpApp[F], port: Int ): F[ExitCode] =
+    mkStream[F]( port, app ).compile.lastOrError
 
   private def mkStream[F[_]: Async]( port: Int, app: HttpApp[F] ): Stream[F, ExitCode] =
     (
