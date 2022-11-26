@@ -110,3 +110,4 @@ object GrabIcons {
 object GrabIconsU4 extends GrabIcons.Program( DataVersionStorage.Update4 )
 object GrabIconsU5 extends GrabIcons.Program( DataVersionStorage.Update5 )
 object GrabIconsU6 extends GrabIcons.Program( DataVersionStorage.Update6 )
+object GrabIconsU7 extends GrabIcons.Program( DataVersionStorage.Update7 )

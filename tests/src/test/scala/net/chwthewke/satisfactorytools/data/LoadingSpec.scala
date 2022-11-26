@@ -24,17 +24,12 @@ class LoadingSpec extends AnyWordSpec with Matchers {
   }
 
   "The GameData" when {
-    "loading Update 4 data" should {
-      behave like gameDataProperties( DataVersionStorage.Update4 )
-    }
-
-    "loading Update 5 data" should {
-      behave like gameDataProperties( DataVersionStorage.Update5 )
-    }
-
-    "loading Update 6 data" should {
-      behave like gameDataProperties( DataVersionStorage.Update6 )
-    }
+    DataVersionStorage.values.foreach(
+      version =>
+        s"loading ${version.modelVersion.name} data" should {
+          behave like gameDataProperties( version )
+        }
+    )
 
     def gameDataProperties( storage: DataVersionStorage ): Unit = {
       "be loadable from resources" in {
@@ -58,7 +53,7 @@ class LoadingSpec extends AnyWordSpec with Matchers {
     }
   }
 
-  "The model" should {
+  "The model" when {
     "loading Update 4 data" should {
       behave like modelProperties( DataVersionStorage.Update4 )
     }

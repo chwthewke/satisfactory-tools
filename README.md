@@ -3,7 +3,7 @@
 A production planner for the game [Satisfactory](https://satisfactorygame.com/)
 
 * Built from the game-provided `Docs.json` plus a small amount of manual data entry (resource node counts).
-* Works with U4 to U6
+* Works with U4 to U7
 * Should hopefully resist future updates fairly well.
 
 ### Features
@@ -34,7 +34,7 @@ owned by role `factory` with password `factory` (alternatively, copy
 
 #### Data setup
 
-The data (docs and icons) for updates 4 to 6 are in the repository, but the database must be initialized.
+The data (docs and icons) for updates 4 to 7 are in the repository, but the database must be initialized.
 This is achieved by running any or all of the `InitDatabaseModelU[x]` programs in `satisfactory-tools-dev`, 
 which must be run from the root directory of this repo.
 

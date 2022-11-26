@@ -64,3 +64,4 @@ object GrabDocs {
 object GrabDocsU4 extends GrabDocs.Program( DataVersionStorage.Update4 )
 object GrabDocsU5 extends GrabDocs.Program( DataVersionStorage.Update5 )
 object GrabDocsU6 extends GrabDocs.Program( DataVersionStorage.Update6 )
+object GrabDocsU7 extends GrabDocs.Program( DataVersionStorage.Update7 )
