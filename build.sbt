@@ -215,13 +215,18 @@ val `web-server-fast` = project
   .settings(
     // js interop
     jsResources := {
-      val files = (`web-front` / Compile / fastOptJS / webpack).value
+      val _            = (`web-front` / Compile / fastOptJS / webpack).value
+      val targetDir    = (`web-front` / Compile / fastOptJS / crossTarget).value
+      val targetDevDir = targetDir / "dev"
+      val baseName     = (`web-front` / Compile / fastOptJS / moduleName).value
 
-      def hasType( fileType: BundlerFileType ): Attributed[File] => Boolean =
-        f => f.metadata.get( BundlerFileTypeAttr ).contains( fileType )
-
-      (files.filter( hasType( BundlerFileType.Asset ) ) ++
-        files.find( hasType( BundlerFileType.Library ) )).map( _.data )
+      Seq(
+        targetDevDir / s"$baseName-fastopt-library.js",
+        targetDir / s"$baseName-fastopt-loader.js",
+        targetDir / s"$baseName-fastopt.js",
+        targetDevDir / s"$baseName-fastopt-library.js.map",
+        targetDir / s"$baseName-fastopt.js.map"
+      )
     },
     Compile / resources ++= jsResources.value,
     buildInfoObject := "WebServerFastBuildInfo",

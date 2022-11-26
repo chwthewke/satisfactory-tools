@@ -9,10 +9,6 @@ import colibri.Subject
 import colibri.ext.fs2._
 import fs2.Stream
 import org.http4s.client.Client
-import org.http4s.client.Middleware
-import org.http4s.dom.FetchClientBuilder
-import org.http4s.syntax.literals._
-import org.scalajs.dom.RequestMode
 import outwatch._
 import outwatch.dsl._
 
@@ -29,15 +25,11 @@ object Main {
     Outwatch.renderInto[SyncIO]( "#app", app ).unsafeRunSync()
 
   def app: HtmlVNode = div(
-    h1( "Hello World!" ),
+    h1( "Hello World2!" ),
     Observable.lift( loadModel ).map( InitView( _ ) )
   )
 
-  val baseUri: Middleware[IO] = (client: Client[IO]) =>
-    Client( req => client.run( req.withUri( uri"http://localhost:7285/".resolve( req.uri ) ) ) )
-
-  val client: Client[IO] =
-    baseUri( FetchClientBuilder[IO].withMode( RequestMode.`same-origin` ).create )
+  val client: Client[IO] = Resources.httpClientIn[IO, SyncIO].unsafeRunSync()
 
   val defsClient: DefsApi[IO] = DefsClient[IO]( client )
 

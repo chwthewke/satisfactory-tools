@@ -31,7 +31,7 @@ object Server {
       iconIndex <- Resource.eval( ConfigSource.resources( "icons.conf" ).loadF[F, IconIndex]() )
       config    <- Resource.eval( ConfigSource.default.loadF[F, ServerConfig]() )
       db        <- Resources.managedTransactor[F]( config.db )
-    } yield ( new Service[F]( jsFiles, iconIndex, DefsData.mapK( db.trans ) ), config.port )
+    } yield ( new Service[F]( jsFiles, iconIndex, config, DefsData.mapK( db.trans ) ), config.port )
 
   def run[F[_]: Async]( jsFiles: Vector[String] ): F[ExitCode] = {
     initService[F]( jsFiles )
