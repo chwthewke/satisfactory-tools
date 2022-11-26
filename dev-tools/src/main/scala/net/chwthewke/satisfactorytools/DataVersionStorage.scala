@@ -29,15 +29,21 @@ object DataVersionStorage extends Enum[DataVersionStorage] {
       )
   case object Update5
       extends DataVersionStorage(
-        Some( GameSource( earlyAccessPath, "ue4.26" ) ),
+        None,
         "u5",
         ModelVersion( 2, "Satisfactory Update 5" )
       )
   case object Update6
       extends DataVersionStorage(
-        Some( GameSource( experimentalPath, "ue4.26" ) ),
+        None,
         "u6",
         ModelVersion( 3, "Satisfactory Update 6" )
+      )
+  case object Update7
+      extends DataVersionStorage(
+        Some( GameSource( earlyAccessPath, "ue4.26" ) ),
+        "u7",
+        ModelVersion( 4, "Satisfactory Update 7" )
       )
 
   override val values: Vector[DataVersionStorage] = findValues.toVector
