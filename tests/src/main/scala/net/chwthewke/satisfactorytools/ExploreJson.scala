@@ -1,11 +1,14 @@
 package net.chwthewke.satisfactorytools
 
 import cats.Monoid
+import cats.Order.catsKernelOrderingForOrder
 import cats.data.NonEmptyVector
 import cats.effect.ExitCode
 import cats.effect.IO
 import cats.effect.IOApp
+import cats.syntax.apply._
 import cats.syntax.foldable._
+import cats.syntax.functorFilter._
 import cats.syntax.option._
 import cats.syntax.show._
 import io.circe.Json
@@ -20,11 +23,17 @@ import loader.Loader
 object ExploreJson extends IOApp {
 
   def loadJson: IO[Vector[Json]] =
+    loadJsonVersion( DataVersionStorage.Update7 )
+
+  def loadJsonVersion( version: DataVersionStorage ): IO[Vector[Json]] =
     Loader.io
-      .streamDocsResource( DataVersionStorage.Update6 )
+      .streamDocsResource( version )
       .through( byteArrayParser )
       .compile
       .toVector
+
+  def loadJsonAllVersions: IO[Vector[Json]] =
+    DataVersionStorage.values.foldMapM( loadJsonVersion )
 
   def printNativeClasses( array: Vector[Json] ): IO[Unit] = {
     val ( notices, nativeClasses ) =
@@ -58,6 +67,30 @@ object ExploreJson extends IOApp {
       )
     )
 
+  private def extractNativeClass( json: Json ): Option[( NativeClass, Vector[Json] )] =
+    json.asObject.flatMap(
+      obj =>
+        (
+          obj( "NativeClass" )
+            .flatMap( _.asString )
+            .map( NativeClass( _ ) ),
+          obj( "Classes" )
+            .flatMap( _.asArray )
+        ).tupled
+    )
+
+  def showSchemas( array: Vector[Json] ): String =
+    array
+      .mapFilter( extractNativeClass )
+      .map {
+        case ( nc, classes ) =>
+          show"""$nc
+                |
+                |${JsonSchema.renderSchemas( JsonSchema.extractSchema( classes ) )}
+                |""".stripMargin
+      }
+      .mkString_( "\n" )
+
   def collectNativeClassFields( c: NativeClass ): Vector[Json] => SortedSet[String] =
     exploreNativeClasses( cls => obj => if (cls == c) obj.keys.to( SortedSet ) else SortedSet.empty )
 
@@ -79,13 +112,15 @@ object ExploreJson extends IOApp {
   override def run( args: List[String] ): IO[ExitCode] =
     for {
       array <- loadJson
+      _     <- IO.println( showSchemas( array ) )
 //      _     <- printNativeClasses( array )
-      _ <- IO.println( collectNativeClassFields( NativeClass.resourceExtractorClass )( array ).intercalate( "\n" ) )
-      _ <- IO.println(
-            collectNativeClassFieldValues( NativeClass.resourceExtractorClass, "mDisplayName" )( array )
-              .map( _.show )
-              .toVector
-              .intercalate( "\n" )
-          )
+//      _ <- IO.println( collectNativeClassFields( NativeClass.resourceExtractorClass )( array ).intercalate( "\n" ) )
+//      _ <- IO.println(
+//            collectNativeClassFieldValues( NativeClass.resourceExtractorClass, "mDisplayName" )( array )
+//              .map( _.show )
+//              .toVector
+//              .intercalate( "\n" )
+//          )
     } yield ExitCode.Success
+
 }
