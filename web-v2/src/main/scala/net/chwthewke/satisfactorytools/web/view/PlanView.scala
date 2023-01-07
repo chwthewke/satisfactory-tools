@@ -17,6 +17,7 @@ import web.forms._
 object PlanView {
   def apply[I, O](
       model: Model,
+      migrationTarget: Option[ModelVersion],
       header: PlanHeader,
       inputTab: InputTab.Aux[I],
       input: I,
@@ -27,7 +28,7 @@ object PlanView {
     form(
       method := "POST",
       enctype := "application/x-www-form-urlencoded",
-      documentHeader( header, model.version ),
+      documentHeader( header, model.version, migrationTarget ),
       div(
         id := "main",
         div(
@@ -49,7 +50,11 @@ object PlanView {
     )
   )
 
-  private def documentHeader( header: PlanHeader, modelVersion: ModelVersion ): Tag =
+  private def documentHeader(
+      header: PlanHeader,
+      modelVersion: ModelVersion,
+      migrationTarget: Option[ModelVersion]
+  ): Tag =
     div(
       id := "header",
       display.flex,
@@ -66,16 +71,28 @@ object PlanView {
       ),
       button(
         `class` := "button is-success is-medium",
-        formaction := "save",
+        formaction := Actions.save,
         "Save"
       ),
       button(
         `class` := "button is-info is-medium",
-        formaction := "copy",
+        formaction := Actions.copy,
         "Copy"
       ),
       div( flexGrow := "1" ),
-      div( color.gray, modelVersion.name )
+      div(
+        div( color.gray, modelVersion.name ),
+        migrationTarget
+          .filter( _ != modelVersion )
+          .map(
+            v =>
+              button(
+                `class` := "button is-warning",
+                formaction := Actions.migrate,
+                s"Migrate to ${v.name}"
+              )
+          )
+      )
     )
 
   private def inputTabs( selected: InputTab ): Tag =

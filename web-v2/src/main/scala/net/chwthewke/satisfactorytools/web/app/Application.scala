@@ -179,9 +179,10 @@ class Application[F[_]](
     getHeaderAndModel( planId ).semiflatMap {
       case ( header, model ) =>
         for {
-          inputData  <- planner.getPlanQuery( planId, inputTab )
-          outputData <- header.solution.traverse( planner.getPlanResult( planId, _, outputTab ) )
-          response   <- Ok( PlanView( model, header, inputTab, inputData, outputTab, outputData ) )
+          inputData       <- planner.getPlanQuery( planId, inputTab )
+          outputData      <- header.solution.traverse( planner.getPlanResult( planId, _, outputTab ) )
+          migrationTarget <- models.getModelVersions.map( _.lastOption.map( _._2 ) )
+          response        <- Ok( PlanView( model, migrationTarget, header, inputTab, inputData, outputTab, outputData ) )
         } yield response
     }.merge
 
@@ -220,7 +221,7 @@ class Application[F[_]](
       actionPath: Uri.Path
   ): F[PlanId] =
     actionPath match {
-      case "save" /: _ =>
+      case Actions.save /: _ =>
         decode( request )( Decoders.title )
           .flatMap(
             nameOpt =>
@@ -231,8 +232,10 @@ class Application[F[_]](
                 nameOpt.getOrElse( PlanName( show"Plan #${header.id}" ) )
               )
           )
-      case "copy" /: _ =>
+      case Actions.copy /: _ =>
         library.copyPlan( header.owner, header.id )
+      case Actions.migrate /: _ =>
+        library.migratePlan( header.owner, header.id )
       case _ =>
         if (header.isTransient || !hasChanges)
           header.id.pure[F]
@@ -353,9 +356,9 @@ class Application[F[_]](
   private def collectActionChanges( actionPath: Uri.Path ): OptionT[F, PlanId => F[Unit]] =
     actionPath match {
       case Actions.addAlts /: _ =>
-        OptionT.pure[F]( planner.addAllAlternatesToRecipeList( _ ) )
+        OptionT.pure[F]( planner.addAllAlternatesToRecipeList )
       case Actions.removeAlts /: _ =>
-        OptionT.pure[F]( planner.removeAllAlternatesFromRecipeList( _ ) )
+        OptionT.pure[F]( planner.removeAllAlternatesFromRecipeList )
       case _ => OptionT.none
     }
 
