@@ -4,6 +4,7 @@ package persistence
 import cats.data.OptionT
 import cats.syntax.applicativeError._
 import cats.syntax.functor._
+import cats.syntax.option._
 import cats.syntax.show._
 import doobie._
 import doobie.implicits._
@@ -63,6 +64,18 @@ object Library extends LibraryApi[ConnectionIO] {
   override def deletePlan( userId: UserId, planId: PlanId ): ConnectionIO[Unit] =
     statements.deletePlan.run( planId ).void
 
+  override def migratePlan( userId: UserId, planId: PlanId ): ConnectionIO[PlanId] =
+    for {
+      header <- Plans
+                 .getPlanHeader( planId )
+                 .getOrElseF( FC.raiseError( new IllegalArgumentException( show"Unknown plan #$planId" ) ) )
+      versions               <- ReadModel.getModelVersions
+      ( versionId, version ) <- versions.lastOption.liftTo[ConnectionIO]( Error( "No model version to migrate to" ) )
+      newId                  <- createPlan( userId, versionId, None, header.title.map( _.migrated( version ) ) )
+      _                      <- copyPlanInputParts( planId, newId )
+      _                      <- plans.WriteSolution.clearSolution( newId )
+    } yield newId
+
   override def getAllPlans( userId: UserId ): ConnectionIO[Vector[PlanHeader]] =
     statements.selectPlanHeaders( userId ).to[Vector]
 
@@ -94,6 +107,13 @@ object Library extends LibraryApi[ConnectionIO] {
 
   private def copyPlanParts( from: PlanId, to: PlanId ): ConnectionIO[Unit] =
     for {
+      _ <- copyPlanInputParts( from, to )
+      _ <- plans.WriteSolution.clearSolution( to )
+      _ <- copySolution( from, to )
+    } yield ()
+
+  private def copyPlanInputParts( from: PlanId, to: PlanId ): ConnectionIO[Unit] =
+    for {
       // TODO optimized SQL for the inputs part?
       bill       <- Plans.getPlanQuery( from, InputTab.Bill )
       _          <- Plans.setBill( to, bill )
@@ -103,9 +123,6 @@ object Library extends LibraryApi[ConnectionIO] {
       _          <- Plans.setOptions( to, options )
       resources  <- Plans.getPlanQuery( from, InputTab.ResourceOptions )
       _          <- Plans.setResourceOptions( to, resources )
-      //
-      _ <- plans.WriteSolution.clearSolution( to )
-      _ <- copySolution( from, to )
     } yield ()
 
   private def copySolution( from: PlanId, to: PlanId ): ConnectionIO[Unit] =

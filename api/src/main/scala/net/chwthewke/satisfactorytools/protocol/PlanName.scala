@@ -5,8 +5,11 @@ import cats.Eq
 import cats.Show
 import cats.syntax.contravariant._
 
+import model.ModelVersion
+
 case class PlanName( name: String ) extends AnyVal {
-  def copy: PlanName = PlanName( name + " (copy)" )
+  def copy: PlanName                         = PlanName( name + " (copy)" )
+  def migrated( to: ModelVersion ): PlanName = PlanName( name + s" (migrated to ${to.name})" )
 }
 
 object PlanName {
