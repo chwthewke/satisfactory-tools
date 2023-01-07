@@ -23,7 +23,7 @@ object ScalacPlugin extends AutoPlugin {
     opts.filterNot( _ == "-Ywarn-value-discard" )
 
   def forConsole( opts: Seq[String] ): Seq[String] =
-    opts.filterNot( Set( "-Xfatal-warnings", "-Xlint", "-Ywarn-unused-import" ) )
+    opts.filterNot( Set( "-Xfatal-warnings", "-Xlint:_,-byname-implicit" ) )
 
   override def projectSettings: Seq[Def.Setting[_]] =
     // format: off
