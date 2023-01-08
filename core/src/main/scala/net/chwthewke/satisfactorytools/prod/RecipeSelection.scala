@@ -22,7 +22,7 @@ import model.ResourcePurity
 case class RecipeSelection(
     allowedRecipes: Vector[( Recipe, Double )],
     extractedItems: Vector[Item],
-    tieredExtractionRecipes: Map[Item, Vector[ExtractionRecipe]],
+    tieredExtractionRecipes: Map[Item, List[ExtractionRecipe]],
     resourceCaps: Map[Item, Double],
     resourceWeights: Map[Item, Double]
 )
@@ -33,7 +33,7 @@ object RecipeSelection {
       options: Options,
       map: ResourceOptions,
       extractionRecipes: Vector[( Item, ResourcePurity, Recipe )]
-  ): Map[Item, Vector[ExtractionRecipe]] =
+  ): Map[Item, List[ExtractionRecipe]] =
     extractionRecipes
       .foldMap {
         case ( product, purity, recipe ) =>
@@ -49,37 +49,38 @@ object RecipeSelection {
         case ( item, recipes ) =>
           (
             item,
-            recipes.sortBy( _._1 ).map { case ( _, ( max, recipe ) ) => extractionRecipe( max, recipe, options ) }
+            recipes
+              .sortBy( _._1 )
+              .map { case ( _, ( max, recipe ) ) => extractionRecipe( item, max, recipe, options ) }
+              .toList
           )
       }
 
   def extractionRecipe(
+      item: Item,
       limit: Int,
       source: Recipe,
       options: Options
   ): ExtractionRecipe = {
-    val clockSpeed = source.products.map {
-      case Countable( item, amount ) =>
+    val clockSpeed: Double = source.productsPerMinute.map {
+      case Countable( item, amountPerMinute ) =>
         val maxAmountPerMinute: Int =
           if (item.form == Form.Solid) options.belt.itemsPerMinute else options.pipe.cubicMetersPerMinute
 
-        val maxOutput: Double =
-          maxAmountPerMinute.toDouble / 60000d * source.duration.toMillis
-
-        options.clockSpeed.percent.toDouble.min( 100d * maxOutput / amount )
+        options.clockSpeed.percent.toDouble.min( 100d * maxAmountPerMinute / amountPerMinute )
     }.minimum
 
-    ExtractionRecipe( source, clockSpeed, limit )
+    val maxAmountPerExtractor: Double =
+      source.productsPerMinute
+        .find( _.item == item )
+        .fold( 0d )( _.amount * clockSpeed / 100d )
+
+    ExtractionRecipe( source, clockSpeed, limit, maxAmountPerExtractor )
   }
 
-  def resourceCaps( tieredExtractionRecipes: Map[Item, Vector[ExtractionRecipe]] ): Map[Item, Double] =
-    tieredExtractionRecipes.map {
-      case ( item, tiers ) =>
-        ( item, tiers.foldMap {
-          case ExtractionRecipe( recipe, clock, count ) =>
-            recipe.productsPerMinute.find( _.item == item ).fold( 0d )( _.amount * count * clock / 100d )
-        } )
-    }
+  def resourceCaps( tieredExtractionRecipes: Map[Item, List[ExtractionRecipe]] ): Map[Item, Double] =
+    tieredExtractionRecipes
+      .map { case ( item, tiers ) => ( item, tiers.foldMap( _.maxAmount ) ) }
 
   def apply(
       model: Model,
