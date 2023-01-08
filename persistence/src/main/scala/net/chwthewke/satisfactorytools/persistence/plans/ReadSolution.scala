@@ -13,10 +13,10 @@ import cats.syntax.traverse._
 import doobie._
 import doobie.implicits._
 
-import data.ClassName
 import data.Countable
 import data.Item
 import model.Bill
+import model.GroupAssignments
 import model.Machine
 import model.Recipe
 import prod.ClockedRecipe
@@ -74,7 +74,7 @@ object ReadSolution {
 
     }
 
-  private def getSolution( planId: PlanId, solutionId: SolutionId ): ConnectionIO[( Factory, Map[ClassName, Int] )] =
+  private def getSolution( planId: PlanId, solutionId: SolutionId ): ConnectionIO[( Factory, GroupAssignments )] =
     (
       readModelIds( planId, ReadModel.readItems ),
       readModelIds( planId, ReadModel.readRecipes ),
@@ -96,13 +96,14 @@ object ReadSolution {
               r.traverse( recipesById.get ).tupleRight( g )
           }
 
-        val groups: Map[ClassName, Int] =
+        val groups: GroupAssignments = GroupAssignments(
           manufacturingRecipesWithGroups.flatMap { case ( r, g ) => g.tupleLeft( r.item.className ) }.toMap
+        )
 
         val extraInputs: Vector[Countable[Double, Item]] =
           inputs.mapFilter( _.traverse( itemsById.get ) )
 
-        val extraOutputs =
+        val extraOutputs: Vector[Countable[Double, Item]] =
           outputs.mapFilter( _.traverse( itemsById.get ) )
 
         (

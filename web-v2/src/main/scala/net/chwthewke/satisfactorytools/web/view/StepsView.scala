@@ -10,16 +10,16 @@ import enumeratum.EnumEntry
 import scalatags.Text
 import scalatags.Text.Tag
 
-import data.ClassName
+import model.GroupAssignments
 import model.Recipe
 import prod.ClockedRecipe
 import prod.Factory
 import web.forms._
 
-object StepsView extends ( ( ( Factory, Map[ClassName, Int] ), Int ) => Tag ) {
+object StepsView extends ( ( ( Factory, GroupAssignments ), Int ) => Tag ) {
   import Text.all._
 
-  override def apply( steps: ( Factory, Map[ClassName, Int] ), groupCount: Int ): Tag =
+  override def apply( steps: ( Factory, GroupAssignments ), groupCount: Int ): Tag =
     fieldset(
       legend( "Manufacturing steps" ),
       recipeTable( steps._1, steps._2, groupCount, CustomGroupsRadios.Full )
@@ -27,7 +27,7 @@ object StepsView extends ( ( ( Factory, Map[ClassName, Int] ), Int ) => Tag ) {
 
   def recipeTable(
       factory: Factory,
-      groups: Map[ClassName, Int],
+      groups: GroupAssignments,
       groupCount: Int,
       radios: CustomGroupsRadios
   ): Tag = {
@@ -84,7 +84,7 @@ object StepsView extends ( ( ( Factory, Map[ClassName, Int] ), Int ) => Tag ) {
   def recipeRow(
       block: ClockedRecipe,
       rowIndex: RowIndex,
-      groups: Map[ClassName, Int],
+      groups: GroupAssignments,
       groupCount: Int,
       radios: CustomGroupsRadios
   ): Tag = {
@@ -130,7 +130,7 @@ object StepsView extends ( ( ( Factory, Map[ClassName, Int] ), Int ) => Tag ) {
 
   def groupRadio(
       recipe: Recipe,
-      groups: Map[ClassName, Int],
+      groups: GroupAssignments,
       groupIndex: Int
   ): Tag =
     td(
@@ -163,7 +163,7 @@ object StepsView extends ( ( ( Factory, Map[ClassName, Int] ), Int ) => Tag ) {
     )
   )
 
-  val headers =
+  val headers: Vector[( Int, String, Modifier )] =
     Vector(
       ( 1, "Nb.", textAlign.right ),
       ( 2, "Recipe", textAlign.left ),
