@@ -2,13 +2,14 @@ package net.chwthewke.satisfactorytools
 package prod
 
 import cats.Id
+import cats.syntax.apply._
 import cats.syntax.flatMap._
 import cats.syntax.foldable._
 import cats.syntax.functor._
 import cats.syntax.option._
 import cats.syntax.semigroup._
-import cats.syntax.traverse._
 import mouse.option._
+import scala.annotation.tailrec
 
 import data.Countable
 import data.Item
@@ -38,41 +39,33 @@ object Calculator {
 
   def renderExtractionRecipes(
       input: Countable[Double, Item],
-      tieredRecipes: Vector[ExtractionRecipe]
-  ): Option[Vector[ClockedRecipe]] =
-    ( Vector.empty[Option[ClockedRecipe]], ( tieredRecipes, input.amount ) )
-      .tailRecM[Id, Option[Vector[ClockedRecipe]]] {
+      tieredRecipes: List[ExtractionRecipe]
+  ): Option[Vector[ClockedRecipe]] = {
+    @tailrec
+    def selectRecipes(
+        acc: Vector[Countable[Int, ExtractionRecipe]],
+        recipes: List[ExtractionRecipe],
+        produced: Double
+    ): Option[( Vector[Countable[Int, ExtractionRecipe]], Double )] =
+      if (produced >= input.amount) ( acc, produced ).some
+      else
+        recipes match {
+          case Nil => none
+          case head :: tail =>
+            val required: Int =
+              ((input.amount - produced) / head.maxAmountPerExtractor).ceil.toInt.min( head.limit )
 
-        case ( acc, ( tiers, target ) ) =>
-          tiers.headOption
-            .filter( _ => target.abs > Tolerance )
-            .map {
-              case ExtractionRecipe( recipe, maxClockSpeed, countBound ) =>
-                val ( produced, producing ) =
-                  recipe.productsPerMinute
-                    .find( _.item == input.item )
-                    .cata[( Double, Option[ClockedRecipe] )](
-                      c =>
-                        if (target > c.amount * countBound * maxClockSpeed / 100d)
-                          (
-                            c.amount * countBound,
-                            ClockedRecipe.overclocked( Countable( recipe, countBound ), maxClockSpeed ).some
-                          )
-                        else {
-                          val extractorCount   = (100d * target / (c.amount * maxClockSpeed)).ceil.toInt
-                          val actualClockSpeed = 100d * target / (c.amount * extractorCount)
-                          (
-                            target,
-                            ClockedRecipe.overclocked( Countable( recipe, extractorCount ), actualClockSpeed ).some
-                          )
-                        },
-                      ( 0d, none )
-                    )
+            selectRecipes( acc :+ Countable( head, required ), tail, produced + head.maxAmountPerExtractor * required )
+        }
 
-                ( acc :+ producing, ( tiers.tail, target - produced ) )
-            }
-            .toLeft( acc.sequence )
-      }
+    Option.when( input.amount > Tolerance )( () ) *>
+      selectRecipes( Vector.empty, tieredRecipes, 0d )
+        .map {
+          case ( recipes, maxAmount ) =>
+            val clockSpeed: Double = 100d * input.amount / maxAmount
+            recipes.map( extraction => ClockedRecipe.overclocked( extraction.map( _.recipe ), clockSpeed ) )
+        }
+  }
 
   def solutionFactory(
       bill: Bill,
