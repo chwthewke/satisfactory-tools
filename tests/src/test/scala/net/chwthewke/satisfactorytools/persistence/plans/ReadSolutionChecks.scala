@@ -5,12 +5,6 @@ package plans
 class ReadSolutionChecks extends DatabaseSpec {
   "the statement" which {
 
-    "selects manufacturing recipes in group" must {
-      "type check" in {
-        check( ReadSolution.statements.selectGroupManufacturingRecipes )
-      }
-    }
-
     "selects manufacturing recipes" must {
       "type check" in {
         check( ReadSolution.statements.selectManufacturingRecipes )

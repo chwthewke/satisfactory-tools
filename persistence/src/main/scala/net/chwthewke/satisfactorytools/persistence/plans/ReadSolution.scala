@@ -43,36 +43,78 @@ object ReadSolution {
       case OutputTab.Inputs            => getRawInputs( planId, solutionId )
     }
 
-  private def getGroupResult( planId: PlanId, solutionId: SolutionId, group: Int ): ConnectionIO[CustomGroupResult] =
-    (
-      readModelIds( planId, ReadModel.readRecipes ),
-      statements.selectGroupManufacturingRecipes.toQuery0( ( solutionId, group ) ).to[Vector]
-    ).mapN {
-      case ( recipesById, groupRecipes ) =>
-        val recipes: Vector[Countable[Double, Recipe]] =
-          groupRecipes.mapFilter( _.traverse( recipesById.get ) )
-
-        val external = recipes
+  private def getGroupResult( planId: PlanId, solutionId: SolutionId, group: Int ): ConnectionIO[CustomGroupResult] = {
+    ( ReadSolverInputs.getBill( planId ), getSolution( planId, solutionId ) ).mapN {
+      case ( bill, ( factory, groups ) ) =>
+        val groupRecipes: Vector[Countable[Double, Recipe]] =
+          factory.manufacturing.filter( r => groups.get( r.item.className ).contains( group ) )
+        val external = groupRecipes
           .foldMap( _.flatTraverse( _.itemsPerMinute ) )
           .gather
 
         val ( input, output ) = external.partition( _.amount < 0 )
 
-        val factory = Factory(
-          Vector.empty,
-          recipes,
-          Countable( input, -1d ).flatSequence,
-          output
-        )
+        def groupFactory: Factory =
+          Factory(
+            Vector.empty,
+            groupRecipes,
+            Countable( input, -1d ).flatSequence,
+            output
+          )
+
+        def adaptItemSrcDest( otherGroup: Int => ItemSrcDest, noGroup: => ItemSrcDest )(
+            srcDest: ItemSrcDest
+        ): ItemSrcDest =
+          srcDest match {
+            case ItemSrcDest.Step( recipe ) =>
+              val stepGroupOpt: Option[Int] = groups.get( recipe.className )
+              stepGroupOpt match {
+                case Some( `group` ) => srcDest
+                case Some( value )   => otherGroup( value )
+                case None            => noGroup
+              }
+
+            case other => other
+          }
+
+        def inGroup( srcDest: ItemSrcDest ): Boolean =
+          srcDest match {
+            case ItemSrcDest.Step( recipe ) =>
+              groups.get( recipe.className ).contains( group )
+            case _ => false
+          }
+
+        def itemIO: Map[Item, ItemIO] =
+          extractItemIO( bill, factory, ItemSrcDest.Byproduct )
+            .flatMap {
+              case ( item, itemIO ) =>
+                Option.when(
+                  (itemIO.sources ++ itemIO.destinations).exists( sd => inGroup( sd.item ) )
+                ) {
+                  val groupSources: Vector[Countable[Double, ItemSrcDest]] =
+                    itemIO.sources
+                      .map( _.map( adaptItemSrcDest( ItemSrcDest.FromGroup, ItemSrcDest.Input ) ) )
+                      .gather
+                  val groupDestinations: Vector[Countable[Double, ItemSrcDest]] =
+                    itemIO.destinations
+                      .map( _.map( adaptItemSrcDest( ItemSrcDest.ToGroup, ItemSrcDest.Output ) ) )
+                      .gather
+
+                  ( item, ItemIO( groupSources, groupDestinations ) )
+                }
+            }
+
+        def machines: Vector[Countable[Int, Machine]] = extractMachines( groupFactory )
 
         CustomGroupResult(
           group,
-          factory,
-          extractItemIO( Bill.empty, factory, ItemSrcDest.Output ),
-          extractMachines( factory )
+          groupFactory,
+          itemIO,
+          machines
         )
 
     }
+  }
 
   private def getSolution( planId: PlanId, solutionId: SolutionId ): ConnectionIO[( Factory, GroupAssignments )] =
     (
@@ -170,19 +212,6 @@ object ReadSolution {
     factory.extraction.map( _.productsPerMinute.head ).gather
 
   private[plans] object statements {
-    val selectGroupManufacturingRecipes: Query[( SolutionId, Int ), Countable[Double, RecipeId]] =
-      Query(
-        // language=SQL
-        """SELECT
-          |    "recipe_id"
-          |  , "amount"
-          |FROM "solution_manufacturing_recipes"
-          |WHERE "solution_id" = ?
-          |  AND "custom_group" = ?
-          |ORDER BY "group_order"
-          |""".stripMargin
-      )
-
     val selectManufacturingRecipes: Query[SolutionId, ( Countable[Double, RecipeId], Option[Int] )] =
       Query(
         // language=SQL
@@ -192,7 +221,7 @@ object ReadSolution {
           |  , "custom_group"
           |FROM "solution_manufacturing_recipes"
           |WHERE "solution_id" = ?
-          |ORDER BY "id"
+          |ORDER BY "custom_group", "group_order", "id"
           |""".stripMargin
       )
 
