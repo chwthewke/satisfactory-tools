@@ -38,10 +38,12 @@ object ItemsView extends ( ( Map[Item, ItemIO], Int ) => Tag ) {
     isd match {
       case ItemSrcDest.Step( recipe ) =>
         Seq[Modifier]( title := RecipesView.describeRecipe( recipe ), recipe.displayName )
-      case ItemSrcDest.Input     => "INPUT"
-      case ItemSrcDest.Output    => "OUTPUT"
-      case ItemSrcDest.Byproduct => "BYPRODUCT"
-      case ItemSrcDest.Requested => "REQUESTED"
+      case ItemSrcDest.Input          => "INPUT"
+      case ItemSrcDest.Output         => "OUTPUT"
+      case ItemSrcDest.Byproduct      => "BYPRODUCT"
+      case ItemSrcDest.Requested      => "REQUESTED"
+      case ItemSrcDest.FromGroup( n ) => s"GROUP #$n"
+      case ItemSrcDest.ToGroup( n )   => s"GROUP #$n"
     }
 
   private def itemIORows( dir: String, rows: Vector[Countable[Double, ItemSrcDest]] ): Frag =
