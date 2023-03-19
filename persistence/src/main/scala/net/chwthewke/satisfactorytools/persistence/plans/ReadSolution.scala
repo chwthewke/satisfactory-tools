@@ -37,6 +37,7 @@ object ReadSolution {
   ): ConnectionIO[D] =
     outputTab match {
       case OutputTab.CustomGroup( ix ) => getGroupResult( planId, solutionId, ix )
+      case OutputTab.GroupIO           => getGroupIO( planId, solutionId )
       case OutputTab.Steps             => getSolution( planId, solutionId )
       case OutputTab.Items             => getItems( planId, solutionId )
       case OutputTab.Machines          => getMachines( planId, solutionId )
@@ -109,6 +110,60 @@ object ReadSolution {
 
     }
   }
+
+  private def getGroupIO(
+      planId: PlanId,
+      solutionId: SolutionId
+  ): ConnectionIO[Map[Item, ItemIO[ItemSrcDest.InterGroup]]] =
+    ( ReadSolverInputs.getBill( planId ), getSolution( planId, solutionId ) ).mapN {
+      case ( bill, ( factory, groups ) ) =>
+        def adaptItemSrcDest( otherGroup: Int => ItemSrcDest.InterGroup )(
+            srcDest: ItemSrcDest.Global
+        ): ItemSrcDest.InterGroup =
+          srcDest match {
+            case ItemSrcDest.Step( _, group )  => otherGroup( group )
+            case ItemSrcDest.Extract( _ )      => ItemSrcDest.Input
+            case other: ItemSrcDest.InterGroup => other
+          }
+
+        extractItemIO( bill, factory, groups )
+          .map {
+            case ( item, itemIO ) =>
+              val sources: Vector[Countable[Double, ItemSrcDest.InterGroup]] =
+                itemIO.sources.map( _.map( adaptItemSrcDest( ItemSrcDest.FromGroup ) ) ).gather
+              val destinations: Vector[Countable[Double, ItemSrcDest.InterGroup]] =
+                itemIO.destinations.map( _.map( adaptItemSrcDest( ItemSrcDest.ToGroup ) ) ).gather
+
+              val intraGroupCancellation: Map[Int, Double] =
+                (0 +: groups.groupsByClass.values.toVector).distinct
+                  .mapFilter(
+                    n =>
+                      (
+                        sources.collectFirst { case Countable( ItemSrcDest.FromGroup( `n` ), amount )    => amount },
+                        destinations.collectFirst { case Countable( ItemSrcDest.ToGroup( `n` ), amount ) => amount }
+                      ).mapN( math.min ).tupleLeft( n )
+                  )
+                  .toMap
+
+              def extractGroup: ItemSrcDest => Option[Int] = {
+                case ItemSrcDest.FromGroup( n ) => Some( n )
+                case ItemSrcDest.ToGroup( n )   => Some( n )
+                case _                          => None
+              }
+
+              def removeCancellations(
+                  srcDests: Vector[Countable[Double, ItemSrcDest.InterGroup]]
+              ): Vector[Countable[Double, ItemSrcDest.InterGroup]] =
+                srcDests.map(
+                  srcDest =>
+                    extractGroup( srcDest.item )
+                      .flatMap( intraGroupCancellation.get )
+                      .foldLeft( srcDest )( ( c, d ) => c.mapAmount( _ - d ) )
+                )
+
+              ( item, ItemIO( removeCancellations( sources ), removeCancellations( destinations ) ) )
+          }
+    }
 
   private def getSolution( planId: PlanId, solutionId: SolutionId ): ConnectionIO[( Factory, GroupAssignments )] =
     (

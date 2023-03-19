@@ -16,7 +16,7 @@ object ItemsView extends ( ( Map[Item, ItemIO[ItemSrcDest]], Int ) => Tag ) {
 
   import Text.all._
 
-  private def sortAndFilterSmallAmounts[A: Order](
+  def sortAndFilterSmallAmounts[A: Order](
       srcOrDest: Vector[Countable[Double, A]]
   ): Vector[Countable[Double, A]] =
     srcOrDest.filter( _.amount.abs > AmountTolerance ).sortBy( _.item )
