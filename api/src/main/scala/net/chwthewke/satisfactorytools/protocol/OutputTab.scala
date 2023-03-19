@@ -14,9 +14,10 @@ sealed abstract class OutputTab extends Product {
 object OutputTab {
   type Aux[D] = OutputTab { type Data = D }
 
-  final case object Steps                 extends OutputTab { type Data = ( Factory, GroupAssignments )   }
+  final case object Steps                 extends OutputTab { type Data = ( Factory, GroupAssignments )             }
   final case object Items                 extends OutputTab { type Data = Map[Item, ItemIO[ItemSrcDest.Global]]     }
-  final case object Machines              extends OutputTab { type Data = Vector[Countable[Int, Machine]] }
-  final case object Inputs                extends OutputTab { type Data = Vector[Countable[Double, Item]] }
-  final case class CustomGroup( ix: Int ) extends OutputTab { type Data = CustomGroupResult               }
+  final case object Machines              extends OutputTab { type Data = Vector[Countable[Int, Machine]]           }
+  final case object Inputs                extends OutputTab { type Data = Vector[Countable[Double, Item]]           }
+  final case class CustomGroup( ix: Int ) extends OutputTab { type Data = CustomGroupResult                         }
+  final case object GroupIO               extends OutputTab { type Data = Map[Item, ItemIO[ItemSrcDest.InterGroup]] }
 }

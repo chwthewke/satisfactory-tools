@@ -19,10 +19,10 @@ package object view {
       )
     )
 
-  def numCell3( value: Double ): Frag =
+  def numCell3( value: Double ): Tag =
     td( f"$value%3.3f", title := value.toString, textAlign.right )
 
-  def numCell4( value: Double ): Frag =
+  def numCell4( value: Double ): Tag =
     td( f"$value%4.3f", title := value.toString, textAlign.right )
 
 }
