@@ -13,7 +13,7 @@ object SbtBuildInfo extends AutoPlugin {
       buildInfoPackage := "buildinfo",
       buildInfoObject := "Satisfactorytools",
       shortVersion := shortenVersion( version.value ),
-      buildInfoKeys := BuildInfoKey.ofN( name, version, shortVersion, scalaVersion )
+      buildInfoKeys ++= Seq( name, version, shortVersion, scalaVersion )
     )
 
   val MajorMinor = raw"(\d+)\.(\d+).*".r

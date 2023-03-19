@@ -2,6 +2,11 @@ import sbt._
 import sbt.Keys._
 
 object ScalacPlugin extends AutoPlugin {
+  private val warnValueDiscard     = "-Wvalue-discard"
+  private val warnNonUnitStatement = "-Wnonunit-statement"
+  private val fatalWarnings        = "-Xfatal-warnings"
+  private val xLint                = "-Xlint"
+
   val options: Seq[String] = Seq(
     "-deprecation",
     "-encoding",
@@ -9,29 +14,35 @@ object ScalacPlugin extends AutoPlugin {
     "-feature",
     "-language:higherKinds",
     "-unchecked",
-    "-Vimplicits",
-    "-Vtype-diffs",
-    "-Xfatal-warnings",
-    "-Xlint:_,-byname-implicit",
+    warnValueDiscard,
+    warnNonUnitStatement,
+    fatalWarnings,
+    s"$xLint:-byname-implicit,_",
     "-Ywarn-macros:after",
     "-Ywarn-dead-code",
     "-Ywarn-numeric-widen",
-    "-Ywarn-value-discard"
+    "-Ywarn-value-discard",
+    "-Vimplicits"
   )
 
+  val isIdea: SettingKey[Boolean] = SettingKey( "is-idea", "Whether sbt is run from IntelliJ IDEA" )
+
   def forTest( opts: Seq[String] ): Seq[String] =
-    opts.filterNot( _ == "-Ywarn-value-discard" )
+    opts.filterNot( x => x == warnValueDiscard || x == warnNonUnitStatement )
 
   def forConsole( opts: Seq[String] ): Seq[String] =
-    opts.filterNot( Set( "-Xfatal-warnings", "-Xlint:_,-byname-implicit" ) )
-
-  override def projectSettings: Seq[Def.Setting[_]] =
-    // format: off
-    Seq(
-      scalacOptions                         ++= options,
-      Test / scalacOptions                  ~=  forTest,
-      Compile / console / scalacOptions     ~=  forConsole,
-      Test    / console / scalacOptions     :=  forTest( (Compile / console / scalacOptions).value )
+    opts.filterNot(
+      x => x == fatalWarnings || x == warnValueDiscard || x == warnNonUnitStatement || x.startsWith( xLint )
     )
-  // format: on
+
+  override def projectSettings: Seq[Def.Setting[_]] = Seq(
+    // format: off
+                        scalacOptions ++= options,
+    Compile / console / scalacOptions :=  forConsole( (Compile / console / scalacOptions).value ),
+    Test    / compile / scalacOptions :=  forTest( (Compile / compile / scalacOptions).value ),
+    Test    / console / scalacOptions :=  forConsole( (Test / compile / scalacOptions).value ),
+    Test    / testOptions             +=  Tests.Argument( TestFrameworks.ScalaTest, "-oDF" )
+    // format: on
+  )
+
 }
