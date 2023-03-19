@@ -8,6 +8,7 @@ import scalatags.Text.Tag
 
 import data.Countable
 import data.Item
+import model.Recipe
 import protocol.ItemIO
 import protocol.ItemSrcDest
 
@@ -37,16 +38,18 @@ object ItemsView extends ( ( Map[Item, ItemIO[ItemSrcDest]], Int ) => Tag ) {
           itemIO.sources.isEmpty && itemIO.destinations.isEmpty
       }
 
+  private def showRecipeSrcDest( recipe: Recipe ): Modifier =
+    Seq[Modifier]( title := RecipesView.describeRecipe( recipe ), recipe.displayName )
+
   def showItemSrcDest( isd: ItemSrcDest ): Modifier =
     isd match {
-      case ItemSrcDest.Step( recipe, _ ) =>
-        Seq[Modifier]( title := RecipesView.describeRecipe( recipe ), recipe.displayName )
-      case ItemSrcDest.Input          => "INPUT"
-      case ItemSrcDest.Output         => "OUTPUT"
-      case ItemSrcDest.Byproduct      => "BYPRODUCT"
-      case ItemSrcDest.Requested      => "REQUESTED"
-      case ItemSrcDest.FromGroup( n ) => s"GROUP #$n"
-      case ItemSrcDest.ToGroup( n )   => s"GROUP #$n"
+      case ItemSrcDest.Extract( recipe ) => showRecipeSrcDest( recipe )
+      case ItemSrcDest.Step( recipe, _ ) => showRecipeSrcDest( recipe )
+      case ItemSrcDest.Input             => "INPUT"
+      case ItemSrcDest.Byproduct         => "BYPRODUCT"
+      case ItemSrcDest.Requested         => "REQUESTED"
+      case ItemSrcDest.FromGroup( n )    => s"GROUP #$n"
+      case ItemSrcDest.ToGroup( n )      => s"GROUP #$n"
     }
 
   private def itemIORows( dir: String, rows: Vector[Countable[Double, ItemSrcDest]] ): Frag =

@@ -14,9 +14,8 @@ final case class Factory(
     extraInputs: Vector[Countable[Double, Item]],
     extraOutputs: Vector[Countable[Double, Item]]
 ) {
-
-  def allRecipes: Vector[ClockedRecipe] = extraction ++ manufacturing.map( ClockedRecipe.roundUp )
-
+  def manufacturingRecipes: Vector[ClockedRecipe] = manufacturing.map( ClockedRecipe.roundUp )
+  def allRecipes: Vector[ClockedRecipe]           = extraction ++ manufacturingRecipes
 }
 
 object Factory {

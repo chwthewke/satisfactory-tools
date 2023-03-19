@@ -36,7 +36,7 @@ object StepsView extends ( ( ( Factory, GroupAssignments ), Int ) => Tag ) {
       case CustomGroupsRadios.Sorting => Seq( th( colspan := 2 ) )
       case CustomGroupsRadios.Placeholder | CustomGroupsRadios.Full =>
         Seq[Frag](
-          th( "-", textAlign.center ),
+          th( "0", textAlign.center ),
           1.to( groupCount ).map( ix => th( ix.toString, textAlign.center ) )
         )
     }

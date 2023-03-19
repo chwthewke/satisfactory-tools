@@ -62,23 +62,19 @@ object ReadSolution {
             output
           )
 
-        def adaptItemSrcDest( otherGroup: Int => ItemSrcDest.IntraGroup, noGroup: => ItemSrcDest.IntraGroup )(
+        def adaptItemSrcDest( otherGroup: Int => ItemSrcDest.IntraGroup )(
             srcDest: ItemSrcDest
         ): ItemSrcDest.IntraGroup =
           srcDest match {
-            case step @ ItemSrcDest.Step( _, stepGroupOpt ) =>
-              stepGroupOpt match {
-                case Some( `group` ) => step
-                case Some( value )   => otherGroup( value )
-                case None            => noGroup
-              }
+            case step @ ItemSrcDest.Step( _, stepGroup ) =>
+              if (stepGroup == group) step else otherGroup( stepGroup )
 
             case other: ItemSrcDest.IntraGroup => other
           }
 
         def inGroup( srcDest: ItemSrcDest ): Boolean =
           srcDest match {
-            case ItemSrcDest.Step( _, stepGroupOpt ) => stepGroupOpt.contains( group )
+            case ItemSrcDest.Step( _, stepGroupOpt ) => stepGroupOpt == group
             case _                                   => false
           }
 
@@ -91,11 +87,11 @@ object ReadSolution {
                 ) {
                   val groupSources: Vector[Countable[Double, ItemSrcDest.IntraGroup]] =
                     itemIO.sources
-                      .map( _.map( adaptItemSrcDest( ItemSrcDest.FromGroup, ItemSrcDest.Input ) ) )
+                      .map( _.map( adaptItemSrcDest( ItemSrcDest.FromGroup ) ) )
                       .gather
                   val groupDestinations: Vector[Countable[Double, ItemSrcDest.IntraGroup]] =
                     itemIO.destinations
-                      .map( _.map( adaptItemSrcDest( ItemSrcDest.ToGroup, ItemSrcDest.Output ) ) )
+                      .map( _.map( adaptItemSrcDest( ItemSrcDest.ToGroup ) ) )
                       .gather
 
                   ( item, ItemIO( groupSources, groupDestinations ) )
@@ -173,20 +169,30 @@ object ReadSolution {
       factory: Factory,
       groups: GroupAssignments
   ): Map[Item, ItemIO[ItemSrcDest.Global]] =
-    factory.allRecipes.foldMap( itemInOut( groups, _ ) ) |+|
+    factory.manufacturingRecipes.foldMap( manufacturingItemInOut( groups, _ ) ) |+|
+      factory.extraction.foldMap( extractionItemInOut ) |+|
       itemOut( ItemSrcDest.Requested, bill.items ) |+|
       itemIn( ItemSrcDest.Input, factory.extraInputs ) |+|
       itemOut( ItemSrcDest.Byproduct, factory.extraOutputs )
 
-  private def itemInOut(
+  private def manufacturingItemInOut(
       groups: GroupAssignments,
       recipeBlock: ClockedRecipe
   ): Map[Item, ItemIO[ItemSrcDest.Global]] = {
     val key: ItemSrcDest.Global =
-      ItemSrcDest.Step( recipeBlock.recipe.item, groups.get( recipeBlock.recipe.item.className ) )
+      ItemSrcDest.Step( recipeBlock.recipe.item, groups.getOrElse( recipeBlock.recipe.item.className, 0 ) )
 
     itemOut( key, recipeBlock.ingredientsPerMinute ) |+|
       itemIn( key, recipeBlock.productsPerMinute )
+  }
+
+  private def extractionItemInOut(
+      recipeBlock: ClockedRecipe
+  ): Map[Item, ItemIO[ItemSrcDest.Global]] = {
+    val key: ItemSrcDest.Global =
+      ItemSrcDest.Extract( recipeBlock.recipe.item )
+
+    itemIn( key, recipeBlock.productsPerMinute )
   }
 
   private def itemIn[F[_]: Foldable, A <: ItemSrcDest](
