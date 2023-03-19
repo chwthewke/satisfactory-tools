@@ -15,7 +15,7 @@ import io.circe.generic.semiauto.deriveEncoder
 import scala.annotation.tailrec
 import scala.collection.Factory
 
-final case class Countable[N, A]( item: A, amount: N )
+final case class Countable[+N, +A]( item: A, amount: N )
 
 object Countable {
   implicit class GatherOps[F[x] <: Iterable[x], N, A]( private val self: F[Countable[N, A]] ) {

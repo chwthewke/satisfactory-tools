@@ -38,6 +38,7 @@ import model.Model
 import prod.Factory
 import protocol.InputTab
 import protocol.ItemIO
+import protocol.ItemSrcDest
 import protocol.OutputTab
 import protocol.PlanHeader
 import protocol.PlanId
@@ -130,7 +131,7 @@ class Application[F[_]](
 
   }
 
-  private type CompareFactory = ( Factory, Map[Item, ItemIO] )
+  private type CompareFactory = ( Factory, Map[Item, ItemIO[ItemSrcDest.Global]] )
 
   private def comparePlans( before: PlanId, after: PlanId ): F[Response[F]] = {
     def getFactory( planId: PlanId ): OptionT[F, CompareFactory] =

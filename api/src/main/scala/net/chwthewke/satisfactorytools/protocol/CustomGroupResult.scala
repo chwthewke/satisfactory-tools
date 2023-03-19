@@ -9,6 +9,6 @@ import prod.Factory
 case class CustomGroupResult(
     index: Int,
     subFactory: Factory,
-    items: Map[Item, ItemIO],
+    items: Map[Item, ItemIO[ItemSrcDest.IntraGroup]],
     machines: Vector[Countable[Int, Machine]]
 )

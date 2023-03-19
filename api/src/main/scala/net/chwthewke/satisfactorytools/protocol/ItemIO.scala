@@ -7,28 +7,27 @@ import cats.derived.semiauto
 
 import data.Countable
 
-case class ItemIO(
-    sources: Vector[Countable[Double, ItemSrcDest]],
-    destinations: Vector[Countable[Double, ItemSrcDest]]
+case class ItemIO[+A <: ItemSrcDest](
+    sources: Vector[Countable[Double, A]],
+    destinations: Vector[Countable[Double, A]]
 )
 
 object ItemIO {
-  implicit val itemIOShow: Show[ItemIO] = semiauto.show[ItemIO]
-  implicit val itemIOMonoid: Monoid[ItemIO] = new Monoid[ItemIO] {
-    override def empty: ItemIO =
+  implicit def itemIOShow[A <: ItemSrcDest: Show]: Show[ItemIO[A]] = semiauto.show[ItemIO[A]]
+  implicit def itemIOMonoid[A <: ItemSrcDest]: Monoid[ItemIO[A]] = new Monoid[ItemIO[A]] {
+    override def empty: ItemIO[A] =
       ItemIO( Vector.empty, Vector.empty )
 
-    override def combine( x: ItemIO, y: ItemIO ): ItemIO =
+    override def combine( x: ItemIO[A], y: ItemIO[A] ): ItemIO[A] =
       ItemIO(
         (x.sources ++ y.sources).gather,
         (x.destinations ++ y.destinations).gather
       )
   }
 
-  def in( src: ItemSrcDest, amount: Double ): ItemIO =
+  def in[A <: ItemSrcDest]( src: A, amount: Double ): ItemIO[A] =
     ItemIO( Vector( Countable( src, amount ) ), Vector.empty )
 
-  def out( dest: ItemSrcDest, amount: Double ): ItemIO =
+  def out[A <: ItemSrcDest]( dest: A, amount: Double ): ItemIO[A] =
     ItemIO( Vector.empty, Vector( Countable( dest, amount ) ) )
-
 }
