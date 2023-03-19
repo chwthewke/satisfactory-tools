@@ -14,23 +14,23 @@ object ItemSrcDest {
   sealed trait IntraGroup extends ItemSrcDest
   sealed trait InterGroup extends ItemSrcDest
 
-  final case class Step( recipe: Recipe, group: Option[Int] ) extends IntraGroup with Global
-  final case class FromGroup( group: Int )                    extends IntraGroup with InterGroup
-  final case class ToGroup( group: Int )                      extends IntraGroup with InterGroup
-  final case object Input                                     extends IntraGroup with InterGroup with Global
-  final case object Output                                    extends IntraGroup
-  final case object Byproduct                                 extends IntraGroup with InterGroup with Global
-  final case object Requested                                 extends IntraGroup with InterGroup with Global
+  final case class Extract( recipe: Recipe )          extends IntraGroup with Global
+  final case class Step( recipe: Recipe, group: Int ) extends IntraGroup with Global
+  final case class FromGroup( group: Int )            extends IntraGroup with InterGroup
+  final case class ToGroup( group: Int )              extends IntraGroup with InterGroup
+  final case object Input                             extends IntraGroup with InterGroup with Global
+  final case object Byproduct                         extends IntraGroup with InterGroup with Global
+  final case object Requested                         extends IntraGroup with InterGroup with Global
 
-  // global: Step | Input | Byproduct | Requested
+  // global: Extract | Step | Input | Byproduct | Requested
   // intra: *
   // inter: FromGroup | ToGroup | Input | ByProduct | Requested
 
   private def index( srcDest: ItemSrcDest ): ( Int, String, Option[Int] ) = srcDest match {
-    case Input             => ( -1, "", None )
-    case FromGroup( g )    => ( -1, "", Some( g ) )
-    case Step( recipe, g ) => ( 0, recipe.displayName, g )
-    case Output            => ( 1, "", None )
+    case Input             => ( -2, "", None )
+    case FromGroup( g )    => ( -2, "", Some( g ) )
+    case Extract( recipe ) => ( -1, recipe.displayName, None )
+    case Step( recipe, g ) => ( 0, recipe.displayName, Some( g ) )
     case ToGroup( g )      => ( 1, "", Some( g ) )
     case Requested         => ( 2, "", None )
     case Byproduct         => ( 3, "", None )
