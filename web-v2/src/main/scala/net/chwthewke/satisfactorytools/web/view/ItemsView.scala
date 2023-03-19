@@ -1,6 +1,7 @@
 package net.chwthewke.satisfactorytools
 package web.view
 
+import cats.Order
 import cats.Order.catsKernelOrderingForOrder
 import scalatags.Text
 import scalatags.Text.Tag
@@ -10,16 +11,18 @@ import data.Item
 import protocol.ItemIO
 import protocol.ItemSrcDest
 
-object ItemsView extends ( ( Map[Item, ItemIO], Int ) => Tag ) {
+object ItemsView extends ( ( Map[Item, ItemIO[ItemSrcDest]], Int ) => Tag ) {
 
   import Text.all._
 
-  private def sortAndFilterSmallAmounts(
-      srcOrDest: Vector[Countable[Double, ItemSrcDest]]
-  ): Vector[Countable[Double, ItemSrcDest]] =
+  private def sortAndFilterSmallAmounts[A: Order](
+      srcOrDest: Vector[Countable[Double, A]]
+  ): Vector[Countable[Double, A]] =
     srcOrDest.filter( _.amount.abs > AmountTolerance ).sortBy( _.item )
 
-  private def sortAndFilterSmallAmounts( items: Map[Item, ItemIO] ): Vector[( Item, ItemIO )] =
+  private def sortAndFilterSmallAmounts(
+      items: Map[Item, ItemIO[ItemSrcDest]]
+  ): Vector[( Item, ItemIO[ItemSrcDest] )] =
     items.toVector
       .sortBy( _._1 )
       .map {
@@ -36,7 +39,7 @@ object ItemsView extends ( ( Map[Item, ItemIO], Int ) => Tag ) {
 
   def showItemSrcDest( isd: ItemSrcDest ): Modifier =
     isd match {
-      case ItemSrcDest.Step( recipe ) =>
+      case ItemSrcDest.Step( recipe, _ ) =>
         Seq[Modifier]( title := RecipesView.describeRecipe( recipe ), recipe.displayName )
       case ItemSrcDest.Input          => "INPUT"
       case ItemSrcDest.Output         => "OUTPUT"
@@ -56,7 +59,7 @@ object ItemsView extends ( ( Map[Item, ItemIO], Int ) => Tag ) {
         )
     }
 
-  override def apply( items: Map[Item, ItemIO], groupCount: Int ): Tag =
+  override def apply( items: Map[Item, ItemIO[ItemSrcDest]], groupCount: Int ): Tag =
     fieldset(
       legend( "Items I/O" ),
       div(

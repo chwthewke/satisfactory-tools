@@ -12,7 +12,6 @@ import scalatags.Text
 
 import data.Countable
 import data.Item
-import model.Model
 import model.Recipe
 import prod.ClockedRecipe
 import prod.Factory
@@ -25,8 +24,8 @@ object CompareView {
   import Text.tags2.summary
 
   def apply(
-      before: ( Factory, Map[Item, ItemIO] ),
-      after: ( Factory, Map[Item, ItemIO] )
+      before: ( Factory, Map[Item, ItemIO[ItemSrcDest.Global]] ),
+      after: ( Factory, Map[Item, ItemIO[ItemSrcDest.Global]] )
   ): Tag =
     page(
       "Compare plans",
@@ -34,7 +33,7 @@ object CompareView {
         case ( ( b, bio ), ( a, aio ) ) =>
           div(
             inputOutputsDiff( b, a ),
-            recipeDiff2( b, a ),
+            recipeDiff( b, a ),
             itemIODiff( bio, aio )
           )
       }
@@ -46,8 +45,8 @@ object CompareView {
   ////////////////////////////
   // Inputs/Outputs
 
-  def itemIODiff( before: Map[Item, ItemIO], after: Map[Item, ItemIO] ): Tag = {
-    val byItem: Vector[( Item, Option[ItemIO], Option[ItemIO] )] =
+  def itemIODiff( before: Map[Item, ItemIO[ItemSrcDest.Global]], after: Map[Item, ItemIO[ItemSrcDest.Global]] ): Tag = {
+    val byItem: Vector[( Item, Option[ItemIO[ItemSrcDest.Global]], Option[ItemIO[ItemSrcDest.Global]] )] =
       (before.keySet ++ after.keySet).toVector.sorted
         .map( item => ( item, before.get( item ), after.get( item ) ) )
 
@@ -59,7 +58,7 @@ object CompareView {
     )
   }
 
-  def compareItemIO( before: Option[ItemIO], after: Option[ItemIO] ): Frag = {
+  def compareItemIO( before: Option[ItemIO[ItemSrcDest.Global]], after: Option[ItemIO[ItemSrcDest.Global]] ): Frag = {
     def amountCells( beforeAmount: Option[Double], afterAmount: Option[Double], changeValue: ChangeValue ): Modifier = {
       val diff = afterAmount.orEmpty - beforeAmount.orEmpty
 
@@ -74,14 +73,14 @@ object CompareView {
     }
 
     def diffAllIO(
-        f: ItemIO => Vector[Countable[Double, ItemSrcDest]],
+        f: ItemIO[ItemSrcDest.Global] => Vector[Countable[Double, ItemSrcDest]],
         dir: String,
         changeValue: ChangeValue
     ): Seq[Tag] = {
       val allIO: Vector[ItemSrcDest] =
         (before.foldMap( i => f( i ).map( _.item ) ) ++ after.foldMap( i => f( i ).map( _.item ) )).distinct.sorted
 
-      def amountOf( isd: ItemSrcDest, in: Option[ItemIO] ): Option[Double] =
+      def amountOf( isd: ItemSrcDest, in: Option[ItemIO[ItemSrcDest.Global]] ): Option[Double] =
         in.flatMap( i => f( i ).find( _.item == isd ).map( _.amount ) )
 
       allIO.zipWithIndex.map {
@@ -173,47 +172,7 @@ object CompareView {
   ///////////////////////////////////
   // Recipes
 
-  def recipeDiff( model: Model, before: Factory, after: Factory ): Tag = {
-    val ( changed, unchanged ) =
-      model.manufacturingRecipes
-        .groupBy( _.products.head.item )
-        .toVector
-        .sortBy( _._1 )
-        .foldMap {
-          case ( item, recipes ) =>
-            val recipeBefore = before.manufacturing.map( _.item ).find( recipes.contains )
-            val recipeAfter  = after.manufacturing.map( _.item ).find( recipes.contains )
-            if (recipeBefore == recipeAfter)
-              ( Vector.empty, recipeAfter.map( ( item, _ ) ).toVector )
-            else
-              ( Vector( ( item, recipeBefore, recipeAfter ) ), Vector.empty )
-        }
-
-    fieldset(
-      legend( "Recipes" ),
-      table( changed.map {
-        case ( item, recipeBefore, recipeAfter ) =>
-          tr(
-            td( textAlign.left, fontWeight.bold, item.displayName ),
-            recipeBefore.fold[Frag]( td( colspan := 2 ) )( StepsView.recipeCell2Cols ),
-            td( "\u25b6" ),
-            recipeAfter.fold[Frag]( td( colspan := 2 ) )( StepsView.recipeCell2Cols )
-          )
-      } ),
-      details(
-        summary( "Unchanged" ),
-        table( unchanged.map {
-          case ( item, recipe ) =>
-            tr(
-              td( textAlign.left, fontWeight.bold, item.displayName ),
-              StepsView.recipeCell2Cols( recipe )
-            )
-        } )
-      )
-    )
-  }
-
-  def recipeDiff2( before: Factory, after: Factory ): Frag = {
+  def recipeDiff( before: Factory, after: Factory ): Frag = {
     val changesByRecipe: Map[Recipe, Ior[Double, Double]] =
       before.manufacturing
         .groupMapReduce( _.item )( _.amount )( _ + _ )
