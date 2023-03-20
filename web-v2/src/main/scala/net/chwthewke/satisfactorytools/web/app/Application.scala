@@ -225,23 +225,12 @@ class Application[F[_]](
       case Actions.save /: _ =>
         decode( request )( Decoders.title )
           .flatMap(
-            nameOpt =>
-              library.savePlan(
-                header.owner,
-                header.id,
-                header.copy,
-                nameOpt.getOrElse( PlanName( show"Plan #${header.id}" ) )
-              )
+            nameOpt => library.savePlan( header, nameOpt.getOrElse( PlanName( show"Plan #${header.id}" ) ) )
           )
-      case Actions.copy /: _ =>
-        library.copyPlan( header.owner, header.id )
       case Actions.migrate /: _ =>
         library.migratePlan( header.owner, header.id )
       case _ =>
-        if (header.isTransient || !hasChanges)
-          header.id.pure[F]
-        else
-          library.editPlan( header.owner, header.id )
+        library.editPlan( header, hasChanges )
     }
 
   private def computeAction[X]( hasChanges: Boolean, solution: SolutionHeader[X], actionPath: Uri.Path ): Boolean =

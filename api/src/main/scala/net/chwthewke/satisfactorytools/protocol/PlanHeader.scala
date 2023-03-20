@@ -12,12 +12,12 @@ case class PlanHeader(
     modelVersionId: ModelVersionId,
     owner: UserId,
     title: Option[PlanName],
-    copy: Option[PlanId],
+    srcId: Option[PlanId],
     dirty: Boolean,
     updated: Instant,
     solution: SolutionHeader[SolutionId]
 ) {
-  def isTransient: Boolean = title.isEmpty || copy.isDefined
+  def isTransient: Boolean = title.isEmpty || srcId.isDefined
 }
 
 object PlanHeader {

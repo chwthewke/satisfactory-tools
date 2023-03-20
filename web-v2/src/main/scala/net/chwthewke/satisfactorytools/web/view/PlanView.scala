@@ -74,11 +74,6 @@ object PlanView {
         formaction := Actions.save,
         "Save"
       ),
-      button(
-        `class` := "button is-info is-medium",
-        formaction := Actions.copy,
-        "Copy"
-      ),
       div( flexGrow := "1" ),
       div(
         div( color.gray, modelVersion.name ),

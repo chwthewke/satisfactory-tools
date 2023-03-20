@@ -11,11 +11,9 @@ import protocol.PlanName
 import protocol.UserId
 
 trait LibraryApi[F[_]] { self =>
-  def savePlan( userId: UserId, planId: PlanId, srcIdOpt: Option[PlanId], title: PlanName ): F[PlanId]
+  def savePlan( planHeader: PlanHeader, title: PlanName ): F[PlanId]
 
-  def editPlan( userId: UserId, planId: PlanId ): F[PlanId]
-
-  def copyPlan( userId: UserId, planId: PlanId ): F[PlanId]
+  def editPlan( planHeader: PlanHeader, hasChanges: Boolean ): F[PlanId]
 
   def deletePlan( userId: UserId, planId: PlanId ): F[Unit]
 
@@ -26,14 +24,11 @@ trait LibraryApi[F[_]] { self =>
   def getPlans( userId: UserId, page: PageQuery ): F[Page[PlanHeader]]
 
   def mapK[G[_]]( f: F ~> G ): LibraryApi[G] = new LibraryApi[G] {
-    override def savePlan( userId: UserId, planId: PlanId, srcIdOpt: Option[PlanId], title: PlanName ): G[PlanId] =
-      f( self.savePlan( userId, planId, srcIdOpt, title ) )
+    override def savePlan( planHeader: PlanHeader, title: PlanName ): G[PlanId] =
+      f( self.savePlan( planHeader, title ) )
 
-    override def editPlan( userId: UserId, planId: PlanId ): G[PlanId] =
-      f( self.editPlan( userId, planId ) )
-
-    override def copyPlan( userId: UserId, planId: PlanId ): G[PlanId] =
-      f( self.copyPlan( userId, planId ) )
+    override def editPlan( planHeader: PlanHeader, hasChanges: Boolean ): G[PlanId] =
+      f( self.editPlan( planHeader, hasChanges ) )
 
     override def deletePlan( userId: UserId, planId: PlanId ): G[Unit] =
       f( self.deletePlan( userId, planId ) )
