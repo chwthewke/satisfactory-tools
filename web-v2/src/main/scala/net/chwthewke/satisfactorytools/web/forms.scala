@@ -111,7 +111,6 @@ object forms {
     }
 
     val save: String    = "save"
-    val copy: String    = "copy"
     val migrate: String = "migrate"
 
     val addAlts: String    = "add_alts"

@@ -54,12 +54,6 @@ class LibraryChecks extends DatabaseSpec {
       }
     }
 
-    "selects a plan by user and name" must {
-      "type check" in {
-        check( Library.statements.selectPlanByName )
-      }
-    }
-
     "updates a plan's title" must {
       "type check" in {
         check( Library.statements.updatePlanName )

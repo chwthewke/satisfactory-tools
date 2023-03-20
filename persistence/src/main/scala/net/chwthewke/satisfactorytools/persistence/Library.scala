@@ -2,7 +2,10 @@ package net.chwthewke.satisfactorytools
 package persistence
 
 import cats.data.OptionT
+import cats.syntax.applicative._
 import cats.syntax.applicativeError._
+import cats.syntax.apply._
+import cats.syntax.flatMap._
 import cats.syntax.functor._
 import cats.syntax.option._
 import cats.syntax.show._
@@ -24,42 +27,24 @@ import protocol.UserId
 
 object Library extends LibraryApi[ConnectionIO] {
 
-  override def savePlan(
-      userId: UserId,
-      planId: PlanId,
-      srcIdOpt: Option[PlanId],
-      title: PlanName
-  ): ConnectionIO[PlanId] =
-    OptionT( statements.selectPlanByName.option( ( userId, title ) ) )
-      .orElse( OptionT.fromOption[ConnectionIO]( srcIdOpt ).filter( _ != planId ) ) // scrId == planId should not happen but it does???
-      .foldF(
-        statements.updatePlanName.run( ( title, planId ) ).as( planId )
-      )(
-        targetId =>
-          for {
-            _ <- statements.updatePlanName.run( ( title, targetId ) )
-            _ <- copyPlanParts( planId, targetId )
-            _ <- statements.deletePlan.run( planId )
-          } yield targetId
-      )
+  override def savePlan( header: PlanHeader, title: PlanName ): ConnectionIO[PlanId] =
+    (
+      OptionT.when[ConnectionIO, Unit]( header.title.forall( _ == title ) )( () ) *>
+        OptionT
+          .fromOption[ConnectionIO]( header.srcId )
+          .semiflatTap( srcId => copyPlanParts( header.id, srcId ) )
+    ).getOrElseF( makePlanCopy( header, None, Some( title ) ) ) <*
+      deletePlan( header.owner, header.id ).whenA( header.isTransient )
 
-  override def editPlan( userId: UserId, planId: PlanId ): ConnectionIO[PlanId] =
-    for {
-      header <- Plans
-                 .getPlanHeader( planId )
-                 .getOrElseF( FC.raiseError( new IllegalArgumentException( show"Unknown plan #$planId" ) ) )
-      newId <- createPlan( userId, header.modelVersionId, Some( planId ), None )
-      _     <- copyPlanParts( planId, newId )
-    } yield newId
+  override def editPlan( header: PlanHeader, hasChanges: Boolean ): ConnectionIO[PlanId] =
+    if (header.isTransient || !hasChanges)
+      header.id.pure[ConnectionIO]
+    else
+      makePlanCopy( header, Some( header.id ), None )
 
-  override def copyPlan( userId: UserId, planId: PlanId ): ConnectionIO[PlanId] =
-    for {
-      header <- Plans
-                 .getPlanHeader( planId )
-                 .getOrElseF( FC.raiseError( new IllegalArgumentException( show"Unknown plan #$planId" ) ) )
-      newId <- createPlan( userId, header.modelVersionId, None, header.title.map( _.copy ) )
-      _     <- copyPlanParts( planId, newId )
-    } yield newId
+  private def makePlanCopy( header: PlanHeader, srcId: Option[PlanId], name: Option[PlanName] ): ConnectionIO[PlanId] =
+    createPlan( header.owner, header.modelVersionId, srcId, name )
+      .flatTap( copyPlanParts( header.id, _ ) )
 
   override def deletePlan( userId: UserId, planId: PlanId ): ConnectionIO[Unit] =
     statements.deletePlan.run( planId ).void
@@ -281,15 +266,6 @@ object Library extends LibraryApi[ConnectionIO] {
           |  FROM       "solution_extra_outputs" x
           |  INNER JOIN "plan_solutions"         s ON s."id" = x."solution_id"
           |  WHERE s."plan_id" = ?
-          |""".stripMargin
-      )
-
-    val selectPlanByName: Query[( UserId, PlanName ), PlanId] =
-      Query(
-        // language=SQL
-        """SELECT "id" FROM "plans" 
-          |WHERE "user_id" = ?
-          |  AND "name"    = ?
           |""".stripMargin
       )
 
