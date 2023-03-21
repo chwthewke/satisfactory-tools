@@ -13,6 +13,7 @@ import scalatags.Text
 import data.Countable
 import data.Item
 import model.Recipe
+import net.chwthewke.satisfactorytools.model.Power
 import prod.ClockedRecipe
 import prod.Factory
 import protocol.ItemIO
@@ -32,6 +33,7 @@ object CompareView {
       ( before, after ) match {
         case ( ( b, bio ), ( a, aio ) ) =>
           div(
+            powerDiff( b, a ),
             inputOutputsDiff( b, a ),
             recipeDiff( b, a ),
             itemIODiff( bio, aio )
@@ -41,6 +43,36 @@ object CompareView {
 
   def apply( errorMessage: String ): Tag =
     div( errorMessage )
+
+  private def powerPartDiff( before: Double, after: Double, diff: Double ): Frag =
+    Seq[Frag](
+      td( f"$before%+.3f" ),
+      td( styleDiffD3( diff, LowerIsBetter ) ),
+      td( f"$after%+.3f" )
+    )
+
+  def powerDiff( before: Factory, after: Factory ): Tag = {
+    val powerBefore: Power = before.allRecipes.foldMap( _.power )
+    val powerAfter: Power  = after.allRecipes.foldMap( _.power )
+
+    val diff: Power = powerAfter |+| powerBefore.map( _ * -1d )
+
+    fieldset(
+      legend( "Power" ),
+      table(
+        ( powerBefore, powerAfter, diff ) match {
+          case ( Power.Fixed( b ), Power.Fixed( a ), Power.Fixed( d ) ) =>
+            tr( powerPartDiff( b, a, d ) )
+          case _ =>
+            Seq[Frag](
+              tr( "Average", powerPartDiff( powerBefore.average, powerAfter.average, diff.average ) ),
+              tr( "Min", powerPartDiff( powerBefore.min, powerAfter.min, diff.min ) ),
+              tr( "Max", powerPartDiff( powerBefore.max, powerAfter.max, diff.max ) )
+            )
+        }
+      )
+    )
+  }
 
   ////////////////////////////
   // Inputs/Outputs
