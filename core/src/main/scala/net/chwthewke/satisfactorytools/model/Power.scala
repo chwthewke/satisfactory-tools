@@ -11,6 +11,9 @@ import io.circe.generic.semiauto.deriveEncoder
 sealed abstract class Power {
   def average: Double
 
+  def min: Double
+  def max: Double
+
   def map( f: Double => Double ): Power
 
   def combine( other: Power ): Power
@@ -19,6 +22,9 @@ sealed abstract class Power {
 object Power {
   final case class Fixed( value: Double ) extends Power {
     override def average: Double = value
+
+    override def min: Double = average
+    override def max: Double = average
 
     override def map( f: Double => Double ): Power = Fixed( f( value ) )
 
