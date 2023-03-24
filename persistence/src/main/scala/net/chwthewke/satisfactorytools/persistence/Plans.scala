@@ -2,6 +2,8 @@ package net.chwthewke.satisfactorytools
 package persistence
 
 import cats.data.OptionT
+import cats.syntax.flatMap._
+import cats.syntax.functor._
 import doobie._
 
 import api.PlannerApi
@@ -47,6 +49,25 @@ object Plans extends PlannerApi[ConnectionIO] {
 
   override def setRecipeList( planId: PlanId, recipeList: RecipeList ): ConnectionIO[Unit] =
     plans.WriteSolverInputs.updateRecipeList( planId, recipeList )
+
+  override def lockCurrentRecipes( planId: PlanId ): ConnectionIO[Unit] =
+    plans.Headers
+      .readPlanHeader( planId )
+      .mproduct(
+        header =>
+          OptionT
+            .fromOption[ConnectionIO]( header.solution.value )
+            .semiflatMap( plans.ReadSolution.readPlanResult( planId, _, OutputTab.Steps ) )
+            .map( _._1 )
+      )
+      .flatMap {
+        case ( header, factory ) => ReadModel.getModel( header.modelVersionId ).tupleRight( factory )
+      }
+      .semiflatMap {
+        case ( model, factory ) => plans.WriteSolverInputs.lockCurrentRecipeList( planId, model, factory )
+      }
+      .value
+      .void
 
   override def addAllAlternatesToRecipeList( planId: PlanId ): ConnectionIO[Unit] =
     plans.WriteSolverInputs.addAllAlternatesToRecipeList( planId )

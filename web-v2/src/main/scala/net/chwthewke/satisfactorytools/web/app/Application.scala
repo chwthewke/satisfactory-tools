@@ -349,6 +349,8 @@ class Application[F[_]](
         OptionT.pure[F]( planner.addAllAlternatesToRecipeList )
       case Actions.removeAlts /: _ =>
         OptionT.pure[F]( planner.removeAllAlternatesFromRecipeList )
+      case Actions.lockRecipes /: _ =>
+        OptionT.pure[F]( planner.lockCurrentRecipes )
       case _ => OptionT.none
     }
 

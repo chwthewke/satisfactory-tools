@@ -3,10 +3,13 @@ package persistence
 package plans
 
 import alleycats.std.iterable._
+import cats.data.NonEmptyVector
 import cats.syntax.apply._
+import cats.syntax.foldable._
 import cats.syntax.functor._
 import cats.syntax.functorFilter._
 import cats.syntax.traverse._
+import cats.syntax.vector._
 import doobie._
 import doobie.implicits._
 
@@ -14,12 +17,15 @@ import data.ClassName
 import data.Countable
 import model.Bill
 import model.ExtractorType
+import model.Model
 import model.Options
+import model.Recipe
 import model.RecipeList
 import model.ResourceDistrib
 import model.ResourceOptions
 import model.ResourcePurity
 import model.ResourceWeights
+import prod.Factory
 import protocol.PlanId
 
 object WriteSolverInputs {
@@ -51,6 +57,27 @@ object WriteSolverInputs {
 
   def setDefaultRecipeList( planId: PlanId ): ConnectionIO[Unit] =
     statements.insertDefaultRecipeList( planId ).run.void
+
+  def lockCurrentRecipeList( planId: PlanId, model: Model, factory: Factory ): ConnectionIO[Unit] = {
+    val factoryRecipes: Vector[Recipe] = factory.manufacturingRecipes.map( _.recipe.item )
+    val producedItems: Set[ClassName]  = factoryRecipes.map( _.products.head.item.className ).toSet
+    val usedRecipes: Set[ClassName]    = factoryRecipes.map( _.className ).toSet
+
+    val recipesToDelete: Vector[Recipe] =
+      model.manufacturingRecipes.filter(
+        recipe =>
+          producedItems.contains( recipe.products.head.item.className ) &&
+            !usedRecipes.contains( recipe.className )
+      )
+
+    readModelIds( planId, ReadModel.readRecipeIds ).flatMap(
+      recipeIds =>
+        recipesToDelete
+          .mapFilter( recipe => recipeIds.get( recipe.className ) )
+          .toNev
+          .traverse_( statements.deleteUnusedRecipes( planId, _ ).run )
+    )
+  }
 
   def addAllAlternatesToRecipeList( planId: PlanId ): ConnectionIO[Unit] =
     statements.insertAllAlternatesToRecipeList( planId ).run.void
@@ -248,6 +275,13 @@ object WriteSolverInputs {
            |  AND $isAlternate
            |""".stripMargin //
       .update
+
+    def deleteUnusedRecipes( planId: PlanId, recipeIds: NonEmptyVector[RecipeId] ): Update0 =
+      // language=SQL
+      sql"""DELETE FROM "recipe_lists"
+           |WHERE "plan_id" = $planId
+           |  AND ${Fragments.in( fr0""""recipe_id"""", recipeIds )}
+           |""".stripMargin.update
 
   }
 }
