@@ -2,6 +2,8 @@ package net.chwthewke.satisfactorytools
 package persistence
 package plans
 
+import cats.data.NonEmptyVector
+
 import protocol.PlanId
 
 class WriteSolverInputsChecks extends DatabaseSpec {
@@ -70,6 +72,15 @@ class WriteSolverInputsChecks extends DatabaseSpec {
     "removes all alternates from the recipe list" must {
       "type check" in {
         check( WriteSolverInputs.statements.deleteAllAlternatesFromRecipeList( PlanId( 1 ) ) )
+      }
+    }
+
+    "removes selected recipes from the recipe list" must {
+      "type check" in {
+        check(
+          WriteSolverInputs.statements
+            .deleteUnusedRecipes( PlanId( 1 ), NonEmptyVector.of( 1, 2, 3 ).map( RecipeId( _ ) ) )
+        )
       }
     }
 

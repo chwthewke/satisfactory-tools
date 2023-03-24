@@ -33,6 +33,11 @@ object RecipesView extends ( ( Model, RecipeList ) => Tag ) {
           `class` := "button is-info",
           formaction := Actions.removeAlts,
           "- ALL ALTS"
+        ),
+        button(
+          `class` := "button is-info",
+          formaction := Actions.lockRecipes,
+          "LOCK CURRENT"
         )
       ),
       recipeFieldSets( model.manufacturingRecipes, list.recipes.toSet )

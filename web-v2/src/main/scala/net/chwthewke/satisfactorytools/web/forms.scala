@@ -113,8 +113,9 @@ object forms {
     val save: String    = "save"
     val migrate: String = "migrate"
 
-    val addAlts: String    = "add_alts"
-    val removeAlts: String = "remove_alts"
+    val addAlts: String     = "add_alts"
+    val removeAlts: String  = "remove_alts"
+    val lockRecipes: String = "lock_recipes"
 
     val compute: String     = "compute"
     val addGroup: String    = "group_inc"
