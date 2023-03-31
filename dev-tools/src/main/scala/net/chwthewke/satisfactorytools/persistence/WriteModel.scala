@@ -101,21 +101,25 @@ object WriteModel {
       ).contramap( ( _, version ) )
 
     def insertRecipe( version: ModelVersionId ): Update[( Recipe, MachineId )] =
-      Update[( ClassName, String, FiniteDuration, MachineId, Power, ModelVersionId )](
+      Update[( ClassName, String, Option[Int], Option[String], FiniteDuration, MachineId, Power, ModelVersionId )](
         // language=SQL
         """INSERT INTO "recipes"
           |( "class_name"
           |, "display_name"
+          |, "tier"
+          |, "category"
           |, "duration_ms"
           |, "produced_in"
           |, "power"
           |, "power_var"
           |, "model_version_id"
           |)
-          |VALUES ( ?, ?, ?, ?, ?, ?, ? )
+          |VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ? )
           |ON CONFLICT ON CONSTRAINT "recipes_name_version_unique"
           |DO UPDATE SET
           |    "display_name" = "excluded"."display_name"
+          |  , "tier"         = "excluded"."tier"
+          |  , "category"     = "excluded"."category"
           |  , "duration_ms"  = "excluded"."duration_ms"
           |  , "produced_in"  = "excluded"."produced_in"
           |  , "power"        = "excluded"."power"
@@ -123,7 +127,16 @@ object WriteModel {
           |""".stripMargin
       ).contramap {
         case ( recipe, machineId ) =>
-          ( recipe.className, recipe.displayName, recipe.duration, machineId, recipe.power, version )
+          (
+            recipe.className,
+            recipe.displayName,
+            recipe.category.tierOpt,
+            recipe.category.typeOpt,
+            recipe.duration,
+            machineId,
+            recipe.power,
+            version
+          )
       }
 
     val insertRecipeIngredient: Update[( RecipeId, Countable[Double, ItemId] )] =

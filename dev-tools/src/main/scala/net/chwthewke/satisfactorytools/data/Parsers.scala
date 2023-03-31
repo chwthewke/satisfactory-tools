@@ -22,11 +22,14 @@ object Parsers {
   val bpGeneratedClass: Parser[ClassName] =
     (
       string( "BlueprintGeneratedClass'\"/Game/FactoryGame/" ) ~>
-        (stringOf1( bpNoSep ) ~ char( '/' )).skipMany1 ~>
+        (stringOf1( bpNoSep ) ~ char( '/' )).skipMany ~>
         stringOf1( bpNoSep ) ~> char( '.' ) ~>
         stringOf1( bpNoSep ) <~
         string( "\"'" )
     ).map( ClassName( _ ) )
+
+  val bpGeneratedClassList: Parser[Vector[ClassName]] =
+    listOf1( bpGeneratedClass ).map( _.toList.toVector )
 
   val buildableClass: Parser[ClassName] =
     (
@@ -63,7 +66,7 @@ object Parsers {
       err[A]( e.values.map( _.entryName ).mkString( s"Not one of: <", ", ", ">" ) )
     )( ( p, a ) => p | string( a.entryName ).as( a ) )
 
-  implicit class ParserOps[A]( val self: Parser[A] ) {
+  implicit class ParserOps[A]( private val self: Parser[A] ) {
     def decoder: Decoder[A] = Decoder[String].emap(
       x =>
         Parser

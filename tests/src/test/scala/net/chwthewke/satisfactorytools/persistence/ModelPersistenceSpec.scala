@@ -15,12 +15,13 @@ class ModelPersistenceSpec extends DatabaseSpec {
 
   val loadModel: IO[Model] = Loader.io.loadModel( DataVersionStorage.Update4 )
 
-  "storing and reading the model" must {
-    "return it as-is" in {
+  def readingThePersistedModel( version: DataVersionStorage ): Unit =
+    s"return it as-is (${version.entryName})" in {
       // setup
       val ( expected, versionId ) =
-        loadModel
-          .mproduct( WriteModel.writeModel( _, DataVersionStorage.Update4.modelVersion ).transact( transactor ) )
+        Loader.io
+          .loadModel( version )
+          .mproduct( WriteModel.writeModel( _, version.modelVersion ).transact( transactor ) )
           .unsafeRunSync()
 
       // exercise
@@ -29,8 +30,13 @@ class ModelPersistenceSpec extends DatabaseSpec {
       // verify
       actual must ~=( expected )
     }
-  }
 
-  // TODO model updates
+  "storing and reading the model" must {
+    behave like readingThePersistedModel( DataVersionStorage.Update4 )
+    behave like readingThePersistedModel( DataVersionStorage.Update5 )
+    behave like readingThePersistedModel( DataVersionStorage.Update6 )
+    behave like readingThePersistedModel( DataVersionStorage.Update7 )
+
+  }
 
 }
