@@ -29,6 +29,7 @@ import model.ResourceDistrib
 import model.ResourceOptions
 import model.ResourcePurity
 import model.ResourceWeights
+import net.chwthewke.satisfactorytools.model.RecipeCategory
 import protocol.ModelVersionId
 
 object ReadModel extends ModelApi[ConnectionIO] {
@@ -71,7 +72,11 @@ object ReadModel extends ModelApi[ConnectionIO] {
            |""".stripMargin //
       .query
 
-    type RecipeRow = ( RecipeId, ( ClassName, String, FiniteDuration, MachineId, Power ), Countable[Double, ItemId] )
+    type RecipeRow = (
+        RecipeId,
+        ( ClassName, String, Option[Int], Option[String], FiniteDuration, MachineId, Power ),
+        Countable[Double, ItemId]
+    )
 
     def selectRecipes( version: ModelVersionId ): Query0[RecipeRow] =
       // language=SQL
@@ -79,6 +84,8 @@ object ReadModel extends ModelApi[ConnectionIO] {
            |    r."id"
            |  , r."class_name"
            |  , r."display_name"
+           |  , r."tier"
+           |  , r."category"
            |  , r."duration_ms"
            |  , r."produced_in"
            |  , r."power"
@@ -183,9 +190,10 @@ object ReadModel extends ModelApi[ConnectionIO] {
     } yield for {
       (
         recipeId,
-        ( className, displayName, duration, machineId, power ),
+        ( className, displayName, tierOpt, catOpt, duration, machineId, power ),
         productIds
       )          <- rows
+      category   <- RecipeCategory.of( tierOpt, catOpt ).toOption
       products   <- productIds.traverse( _.traverse( itemsById.get ) )
       producedIn <- machinesById.get( machineId )
       ingredients <- ingredientRows
@@ -195,6 +203,7 @@ object ReadModel extends ModelApi[ConnectionIO] {
       Recipe(
         className,
         displayName,
+        category,
         ingredients.toList,
         NonEmptyList( products.head, products.tail.toList ),
         duration,

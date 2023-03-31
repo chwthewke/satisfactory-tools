@@ -28,6 +28,7 @@ object Item {
                                                                |Form: ${item.form}
                                                                |Energy: ${item.energyValue} MJ
                                                                |Sink: ${item.sinkPoints} points
+                                                               |Icon: ${item.smallIcon}
                                                                |""".stripMargin )
 
   implicit val itemOrder: Order[Item] = Order.by( _.displayName )

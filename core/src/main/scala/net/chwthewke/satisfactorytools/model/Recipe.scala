@@ -19,6 +19,7 @@ import data.Item
 final case class Recipe(
     className: ClassName,
     displayName: String,
+    category: RecipeCategory,
     ingredients: List[Countable[Double, Item]],
     products: NonEmptyList[Countable[Double, Item]],
     duration: FiniteDuration,
@@ -49,7 +50,7 @@ object Recipe {
 
   implicit def recipeShow( implicit showItem: Show[Item], showMachine: Show[Machine] ): Show[Recipe] =
     Show.show {
-      case Recipe( className, displayName, ingredients, products, duration, producer, power ) =>
+      case Recipe( className, displayName, category, ingredients, products, duration, producer, power ) =>
         show"""  $displayName # $className
               |  Ingredients:
               |    ${ingredients.map( _.show ).intercalate( "\n    " )}

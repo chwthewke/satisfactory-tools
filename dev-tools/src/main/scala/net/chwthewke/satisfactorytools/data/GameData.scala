@@ -13,21 +13,30 @@ final case class GameData(
     extractors: Map[ClassName, Extractor],
     manufacturers: Map[ClassName, Manufacturer],
     recipes: Vector[GameRecipe],
-    nuclearGenerators: Map[ClassName, NuclearGenerator]
+    nuclearGenerators: Map[ClassName, NuclearGenerator],
+    schematics: Vector[Schematic]
 )
 
 object GameData {
-  val empty: GameData = GameData( Map.empty, Map.empty, Map.empty, Vector.empty, Map.empty )
+  private def init(
+      items: Map[ClassName, Item] = Map.empty,
+      extractors: Map[ClassName, Extractor] = Map.empty,
+      manufacturers: Map[ClassName, Manufacturer] = Map.empty,
+      recipes: Vector[GameRecipe] = Vector.empty,
+      nuclearGenerators: Map[ClassName, NuclearGenerator] = Map.empty,
+      schematics: Vector[Schematic] = Vector.empty
+  ): GameData =
+    GameData( items, extractors, manufacturers, recipes, nuclearGenerators, schematics )
 
-  def items( items: Map[ClassName, Item] ): GameData = GameData( items, Map.empty, Map.empty, Vector.empty, Map.empty )
-  def extractors( extractors: Map[ClassName, Extractor] ): GameData =
-    GameData( Map.empty, extractors, Map.empty, Vector.empty, Map.empty )
-  def manufacturers( manufacturers: Map[ClassName, Manufacturer] ): GameData =
-    GameData( Map.empty, Map.empty, manufacturers, Vector.empty, Map.empty )
-  def recipes( recipes: Vector[GameRecipe] ): GameData =
-    GameData( Map.empty, Map.empty, Map.empty, recipes, Map.empty )
+  val empty: GameData = init()
+
+  def items( items: Map[ClassName, Item] ): GameData                         = init( items = items )
+  def extractors( extractors: Map[ClassName, Extractor] ): GameData          = init( extractors = extractors )
+  def manufacturers( manufacturers: Map[ClassName, Manufacturer] ): GameData = init( manufacturers = manufacturers )
+  def recipes( recipes: Vector[GameRecipe] ): GameData                       = init( recipes = recipes )
   def nuclearGenerators( generators: Map[ClassName, NuclearGenerator] ): GameData =
-    GameData( Map.empty, Map.empty, Map.empty, Vector.empty, generators )
+    init( nuclearGenerators = generators )
+  def schematics( schematics: Vector[Schematic] ): GameData = init( schematics = schematics )
 
   implicit val gameDataMonoid: Monoid[GameData] = new Monoid[GameData] {
     override def empty: GameData = GameData.empty
@@ -38,7 +47,8 @@ object GameData {
         x.extractors ++ y.extractors,
         x.manufacturers ++ y.manufacturers,
         x.recipes ++ y.recipes,
-        x.nuclearGenerators ++ y.nuclearGenerators
+        x.nuclearGenerators ++ y.nuclearGenerators,
+        x.schematics ++ y.schematics
       )
   }
 
@@ -82,6 +92,8 @@ object GameData {
         Decoder[Vector[GameRecipe]].map( GameData.recipes )
       case NativeClass.nuclearGeneratorClass =>
         decodeMap( Decoder[NuclearGenerator] )( _.className ).map( GameData.nuclearGenerators )
+      case NativeClass.schematicClass =>
+        Decoder[Vector[Schematic]].map( GameData.schematics )
       case _ => Decoder.const( GameData.empty )
     }
 
