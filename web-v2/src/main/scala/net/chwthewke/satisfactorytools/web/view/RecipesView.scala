@@ -26,6 +26,11 @@ object RecipesView extends ( ( Model, RecipeList ) => Tag ) {
       div(
         button(
           `class` := "button is-info",
+          formaction := Actions.addAllRecipes,
+          "+ ALL"
+        ),
+        button(
+          `class` := "button is-info",
           formaction := Actions.addAlts,
           "+ ALL ALTS"
         ),

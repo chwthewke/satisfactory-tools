@@ -50,6 +50,9 @@ object Plans extends PlannerApi[ConnectionIO] {
   override def setRecipeList( planId: PlanId, recipeList: RecipeList ): ConnectionIO[Unit] =
     plans.WriteSolverInputs.updateRecipeList( planId, recipeList )
 
+  override def addAllRecipes( planId: PlanId ): doobie.ConnectionIO[Unit] =
+    plans.WriteSolverInputs.setDefaultRecipeList( planId )
+
   override def lockCurrentRecipes( planId: PlanId ): ConnectionIO[Unit] =
     plans.Headers
       .readPlanHeader( planId )
