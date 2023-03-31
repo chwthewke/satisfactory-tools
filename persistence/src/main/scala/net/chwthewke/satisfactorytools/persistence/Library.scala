@@ -33,6 +33,7 @@ object Library extends LibraryApi[ConnectionIO] {
         OptionT
           .fromOption[ConnectionIO]( header.srcId )
           .semiflatTap( srcId => copyPlanParts( header.id, srcId ) )
+          .orElse( OptionT.when[ConnectionIO, PlanId]( !header.isTransient )( header.id ) )
     ).getOrElseF( makePlanCopy( header, None, Some( title ) ) ) <*
       deletePlan( header.owner, header.id ).whenA( header.isTransient )
 

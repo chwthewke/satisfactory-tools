@@ -29,6 +29,8 @@ trait PlannerApi[F[_]] { self =>
 
   def setRecipeList( planId: PlanId, recipeList: RecipeList ): F[Unit]
 
+  def addAllRecipes( planId: PlanId ): F[Unit]
+
   def lockCurrentRecipes( planId: PlanId ): F[Unit]
 
   def addAllAlternatesToRecipeList( planId: PlanId ): F[Unit]
@@ -69,6 +71,9 @@ trait PlannerApi[F[_]] { self =>
 
     override def setRecipeList( planId: PlanId, recipeList: RecipeList ): G[Unit] =
       f( self.setRecipeList( planId, recipeList ) )
+
+    override def addAllRecipes( planId: PlanId ): G[Unit] =
+      f( self.addAllRecipes( planId ) )
 
     override def lockCurrentRecipes( planId: PlanId ): G[Unit] =
       f( self.lockCurrentRecipes( planId ) )

@@ -276,7 +276,7 @@ class Application[F[_]](
   ): OptionT[F, PlanId => F[Unit]] =
     collectInputChanges( planId, model, inputTab, request ) |+|
       collectOutputChanges( planId, outputTab, request ) |+|
-      collectActionChanges( actionPath )
+      OptionT.fromOption[F]( collectActionChanges( actionPath ) )
 
   private def collectInputChanges(
       planId: PlanId,
@@ -343,15 +343,17 @@ class Application[F[_]](
           OptionT.when( newValue =!= oldValue )( writeValue( _, newValue ) )
       }
 
-  private def collectActionChanges( actionPath: Uri.Path ): OptionT[F, PlanId => F[Unit]] =
+  private def collectActionChanges( actionPath: Uri.Path ): Option[PlanId => F[Unit]] =
     actionPath match {
+      case Actions.addAllRecipes /: _ =>
+        Some( planner.addAllRecipes )
       case Actions.addAlts /: _ =>
-        OptionT.pure[F]( planner.addAllAlternatesToRecipeList )
+        Some( planner.addAllAlternatesToRecipeList )
       case Actions.removeAlts /: _ =>
-        OptionT.pure[F]( planner.removeAllAlternatesFromRecipeList )
+        Some( planner.removeAllAlternatesFromRecipeList )
       case Actions.lockRecipes /: _ =>
-        OptionT.pure[F]( planner.lockCurrentRecipes )
-      case _ => OptionT.none
+        Some( planner.lockCurrentRecipes )
+      case _ => None
     }
 
   private def decode[A]( request: Request[F] )( implicit formDataDecoder: FormDataDecoder[A] ): F[A] = {
