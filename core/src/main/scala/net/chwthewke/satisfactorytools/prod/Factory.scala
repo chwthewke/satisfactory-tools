@@ -20,7 +20,7 @@ final case class Factory(
 
 object Factory {
   private def showClockedRecipe( cr: ClockedRecipe ) =
-    show"${cr.recipe.amount} ${cr.recipe.item.displayName} @ ${cr.clockSpeed}"
+    show"${cr.machineCount} ${cr.recipe.item.displayName} @ ${cr.clockSpeed}"
 
   private def showAmount( amount: Double ) = f"$amount%f4.3"
   private def showCountables[A]( countables: Vector[Countable[Double, A]] )( s: A => String ): String =

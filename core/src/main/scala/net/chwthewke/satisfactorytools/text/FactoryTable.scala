@@ -152,7 +152,7 @@ object FactoryTable {
 
   private def extractedResources( factory: Factory ): String =
     factory.extraction
-      .foldMap( cr => Map( ( cr.products.head.item.displayName, cr.productsPerMinute.head.amount ) ) )
+      .foldMap( cr => Map( ( cr.productsPerMinute.head.item.displayName, cr.productsPerMinute.head.amount ) ) )
       .toVector
       .sortBy { case ( p, x ) => ( -x, p ) }
       .map { case ( p, x ) => f"${p.padTo( 24, ' ' )} $x%.3f" }

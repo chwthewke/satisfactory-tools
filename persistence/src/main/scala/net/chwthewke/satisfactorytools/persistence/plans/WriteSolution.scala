@@ -72,8 +72,8 @@ object WriteSolution {
   ): ConnectionIO[Int] = {
 
     val rows: Vector[( SolutionId, RecipeId, Int, Double )] = recipes.flatMap {
-      case ClockedRecipe( recipe, clockSpeed, _ ) =>
-        recipeIds.get( recipe.item.className ).map( ( solutionId, _, recipe.amount, clockSpeed ) )
+      case ClockedRecipe( recipe, clockSpeed, machineCount ) =>
+        recipeIds.get( recipe.item.className ).map( ( solutionId, _, machineCount, clockSpeed ) )
     }
 
     statements.insertSolutionExtractionRecipe.updateMany( rows )

@@ -269,7 +269,7 @@ object ReadSolution {
 
   private def extractMachines( factory: Factory ): Vector[Countable[Int, Machine]] =
     factory.allRecipes
-      .map( r => r.recipe.as( r.machine ) )
+      .map( r => Countable( r.machine, r.machineCount ) )
       .gather
       .sortBy( m => ( m.item.machineType, m.item.powerConsumption ) )
 

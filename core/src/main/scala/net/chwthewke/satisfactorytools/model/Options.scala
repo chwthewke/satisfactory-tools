@@ -2,6 +2,7 @@ package net.chwthewke.satisfactorytools
 package model
 
 import cats.Eq
+import cats.Order
 import cats.Show
 import cats.derived.semiauto
 import enumeratum.Enum
@@ -115,7 +116,8 @@ object Options {
 
     override val values: Vector[ClockSpeed] = findValues.toVector
 
-    implicit val clockSpeedShow: Show[ClockSpeed] = Show.fromToString
+    implicit val clockSpeedShow: Show[ClockSpeed]   = Show.fromToString
+    implicit val clockSpeedOrder: Order[ClockSpeed] = Order.by( values.indexOf )
   }
 
 }
