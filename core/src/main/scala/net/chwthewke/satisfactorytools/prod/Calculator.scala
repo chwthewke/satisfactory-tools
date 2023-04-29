@@ -124,7 +124,7 @@ object Calculator {
           }
       }
 
-    Factory( inputRecipes.filter( _.recipe.amount > Tolerance ), sortedBlocks, extraInputs, extraOutputs )
+    Factory( inputRecipes.filter( _.fractionalAmount > Tolerance ), sortedBlocks, extraInputs, extraOutputs )
   }
 
 }

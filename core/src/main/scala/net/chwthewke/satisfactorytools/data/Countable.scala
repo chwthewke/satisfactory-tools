@@ -17,6 +17,7 @@ import scala.collection.Factory
 
 final case class Countable[+N, +A]( item: A, amount: N ) {
   def mapAmount[M]( f: N => M ): Countable[M, A] = Countable( item, f( amount ) )
+  def withAmount[M]( a: M ): Countable[M, A]     = Countable( item, a )
 }
 
 object Countable {

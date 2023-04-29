@@ -95,16 +95,16 @@ object StepsView extends ( ( ( Factory, GroupAssignments ), Int ) => Tag ) {
       case CustomGroupsRadios.Sorting     => Some( groupOrder( rowIndex ) )
       case CustomGroupsRadios.Placeholder => Some( td( colspan := (groupCount + 1) ) )
       case CustomGroupsRadios.Full =>
-        Some( 0.to( groupCount ).map( groupRadio( block.recipe.item, groups, _ ) ) )
+        Some( 0.to( groupCount ).map( groupRadio( recipe.item, groups, _ ) ) )
     }
 
     tr(
       customGroupRadios,
-      numCell4( itemAmount ),
+      numCell4( mainProductAmount ),
       recipeCell2Cols( recipe.item ),
       td( f"$machineCount%3d", textAlign.right ),
       td( machine.displayName, textAlign.left ),
-      numCell3( itemAmountPerUnit ),
+      numCell3( mainProductAmountPerUnit ),
       td( " / unit @ ", textAlign.center ),
       td( f"${clockSpeedMillionth / 10000}%3d.${clockSpeedMillionth % 10000}%04d %%", textAlign.left ),
       td( power.show, textAlign.right ),

@@ -1,9 +1,9 @@
 package net.chwthewke.satisfactorytools
 package prod
 
-import cats.Functor
 import cats.data.NonEmptyList
-import cats.syntax.functor._
+import cats.syntax.flatMap._
+import cats.syntax.traverse._
 
 import data.Countable
 import data.Item
@@ -19,43 +19,42 @@ import model.Recipe
   *
   * - For manufacturing recipes, calculated from the required amount.
   *
-  * @param recipe the amount of machines producing the recipe
+  * @param recipe the fractional amount of machines producing the recipe
   * @param clockSpeed the clock speed of the machines
+  * @param machineCount the integer amount of machines
   */
 case class ClockedRecipe(
-    recipe: Countable[Int, Recipe],
+    recipe: Countable[Double, Recipe],
     clockSpeed: Double,
-    fractionalAmount: Double
+    machineCount: Int
 ) {
 
-  val machineCount: Int        = recipe.amount
   val clockSpeedMillionth: Int = (clockSpeed * 10000d).ceil.toInt
+  val machine: Machine         = recipe.item.producedIn
 
-  val machine: Machine = recipe.item.producedIn
+  val fractionalAmount: Double = recipe.amount
 
   def power: Power = recipe.item.power.map( _ * machineCount * math.pow( clockSpeedMillionth / 1e6d, 1.6d ) )
 
-  val itemAmount: Double        = recipe.amount * recipe.item.productsPerMinute.head.amount * clockSpeed / 100d
-  val itemAmountPerUnit: Double = itemAmount / machineCount
+  val mainProductAmount: Double = recipe.flatMap( _.productsPerMinute.head ).amount
+  val mainProductAmountPerUnit: Double = mainProductAmount / machineCount
 
-  private def withAmount[F[_]: Functor]( items: F[Countable[Double, Item]] ): F[Countable[Double, Item]] =
-    items.map { case Countable( item, amount ) => Countable( item, amount * fractionalAmount ) }
+  val ingredientsPerMinute: List[Countable[Double, Item]] = recipe.flatTraverse( _.ingredientsPerMinute )
 
-  val ingredients: List[Countable[Double, Item]]          = withAmount( recipe.item.ingredients )
-  val ingredientsPerMinute: List[Countable[Double, Item]] = withAmount( recipe.item.ingredientsPerMinute )
+  val productsPerMinute: NonEmptyList[Countable[Double, Item]] = recipe.flatTraverse( _.productsPerMinute )
 
-  val products: NonEmptyList[Countable[Double, Item]]          = withAmount( recipe.item.products )
-  val productsPerMinute: NonEmptyList[Countable[Double, Item]] = withAmount( recipe.item.productsPerMinute )
+  def multipleOf( n: Int ): ClockedRecipe =
+    ClockedRecipe.fixed( recipe.item, fractionalAmount, 1 + n * ((machineCount - 1) / n) )
+
 }
 
 object ClockedRecipe {
-  def roundUp( recipe: Countable[Double, Recipe] ): ClockedRecipe = {
-    val machineCount: Int  = recipe.amount.ceil.toInt
-    val clockSpeed: Double = recipe.amount / machineCount * 100d
+  def fixed( recipe: Recipe, fractionalAmount: Double, amount: Int ): ClockedRecipe =
+    ClockedRecipe( Countable( recipe, fractionalAmount ), fractionalAmount / amount * 100d, amount )
 
-    ClockedRecipe( Countable( recipe.item, machineCount ), clockSpeed, recipe.amount )
-  }
+  def roundUp( recipe: Countable[Double, Recipe] ): ClockedRecipe =
+    fixed( recipe.item, recipe.amount, recipe.amount.ceil.toInt )
 
   def overclocked( recipe: Countable[Int, Recipe], clockSpeed: Double ): ClockedRecipe =
-    ClockedRecipe( recipe, clockSpeed, recipe.amount.toDouble * clockSpeed / 100d )
+    ClockedRecipe( Countable( recipe.item, recipe.amount.toDouble * clockSpeed / 100d ), clockSpeed, recipe.amount )
 }
