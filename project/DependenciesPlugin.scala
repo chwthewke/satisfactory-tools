@@ -36,45 +36,43 @@ object DependenciesPlugin extends AutoPlugin {
       "com.github.ghik" % "silencer-lib" % silencerVersion % Provided cross CrossVersion.full
     )
 
-    val catsVersion         = "2.8.0"
+    val catsVersion         = "2.9.0"
     val cats: Deps          = "org.typelevel" %% Seq( "cats-core", "cats-kernel" ) % catsVersion
     val catsFree: Deps      = Seq( "org.typelevel" %% "cats-free" % catsVersion )
     val catsMtl: Deps       = Seq( "org.typelevel" %% "cats-mtl-core" % "0.7.1" )
-    val mouse: Deps         = Seq( "org.typelevel" %% "mouse" % "1.1.0" )
-    val kittens: Deps       = Seq( "org.typelevel" %% "kittens" % "2.3.2" )
+    val mouse: Deps         = Seq( "org.typelevel" %% "mouse" % "1.2.1" )
+    val kittens: Deps       = Seq( "org.typelevel" %% "kittens" % "3.0.0" )
     val alleycatsCore: Deps = Seq( "org.typelevel" %% "alleycats-core" % catsVersion )
-    val catsTime: Deps      = Seq( "org.typelevel" %% "cats-time" % "0.5.0" )
+    val catsTime: Deps      = Seq( "org.typelevel" %% "cats-time" % "0.5.1" )
 
-    val catsEffect: Deps = "org.typelevel" %% Seq( "cats-effect", "cats-effect-kernel", "cats-effect-std" ) % "3.3.12"
+    val catsEffect: Deps = "org.typelevel" %% Seq( "cats-effect", "cats-effect-kernel", "cats-effect-std" ) % "3.4.8"
 
-    val fs2: Deps = "co.fs2" %% Seq( "fs2-core", "fs2-io" ) % "3.2.10"
+    val fs2: Deps = "co.fs2" %% Seq( "fs2-core", "fs2-io" ) % "3.6.1"
 
-    val http4s: Deps            = "org.http4s" %% Seq( "http4s-core", "http4s-dsl" ) % "0.23.13"
-    val http4sBlazeServer: Deps = Seq( "org.http4s" %% "http4s-blaze-server" % "0.23.12" )
-    val http4sBlazeClient: Deps = Seq( "org.http4s" %% "http4s-blaze-client" % "0.23.12" )
+    val http4s: Deps            = "org.http4s" %% Seq( "http4s-core", "http4s-dsl" ) % "0.23.18"
+    val http4sBlazeServer: Deps = Seq( "org.http4s" %% "http4s-blaze-server" % "0.23.14" )
+    val http4sBlazeClient: Deps = Seq( "org.http4s" %% "http4s-blaze-client" % "0.23.14" )
 
     val http4sPinnedDependencies: Deps = Seq(
-//      "com.comcast"   %% "ip4s-core" % "3.0.2",
+//      "com.comcast" %% "ip4s-core" % "3.2.0"
 //      "org.typelevel" %% "literally" % "1.0.1"
     )
 
-    val scalatags: Deps = Seq( "com.lihaoyi" %% "scalatags" % "0.11.1" )
+    val scalatags: Deps = Seq( "com.lihaoyi" %% "scalatags" % "0.12.0" )
 
-    val monocleVersion       = "2.0.4"
-    val monocle: Deps        = "com.github.julien-truffaut" %% Seq( "monocle-core", "monocle-macro" ) % monocleVersion
-    val monocleState: Deps   = Seq( "com.github.julien-truffaut" %% "monocle-state" % monocleVersion )
-    val monocleGeneric: Deps = Seq( "com.github.julien-truffaut" %% "monocle-generic" % monocleVersion )
+    val monocleVersion = "3.2.0"
+    val monocle: Deps  = "dev.optics" %% Seq( "monocle-core", "monocle-macro" ) % monocleVersion
 
-    val circeVersion      = "0.14.2"
-    val circe: Deps       = "io.circe" %% Seq( "circe-core", "circe-generic", "circe-parser" ) % circeVersion
-    val circeOptics: Deps = Seq( "io.circe" %% "circe-optics" % "0.14.1" )
-    val circeFs2: Deps    = Seq( "io.circe" %% "circe-fs2" % "0.14.0" )
-    val circeJawn: Deps   = Seq( "io.circe" %% "circe-jawn" % circeVersion )
-    val jawnParser: Deps  = Seq( "org.typelevel" %% "jawn-parser" % "1.3.2" )
+    val circeVersion = "0.14.5"
+    val circe: Deps  = "io.circe" %% Seq( "circe-core", "circe-generic", "circe-parser" ) % circeVersion
+//    val circeOptics: Deps = Seq( "io.circe" %% "circe-optics" % "0.14.1" )
+    val circeFs2: Deps   = Seq( "io.circe"      %% "circe-fs2"   % "0.14.1" )
+    val circeJawn: Deps  = Seq( "io.circe"      %% "circe-jawn"  % circeVersion )
+    val jawnParser: Deps = Seq( "org.typelevel" %% "jawn-parser" % "1.4.0" )
 
     val scodec: Deps = Seq(
-      "org.scodec" %% "scodec-bits" % "1.1.34",
-      "org.scodec" %% "scodec-core" % "1.11.9"
+      "org.scodec" %% "scodec-bits" % "1.1.37",
+      "org.scodec" %% "scodec-core" % "1.11.10"
     )
 
     val atto: Deps = Seq( "org.tpolecat" %% "atto-core" % "0.9.5" )
@@ -93,9 +91,9 @@ object DependenciesPlugin extends AutoPlugin {
         "com.github.fommil.netlib" % "core"          % "1.1.2"
       )
 
-    val ojAlgo: Deps = Seq( "org.ojalgo" % "ojalgo" % "51.4.0" )
+    val ojAlgo: Deps = Seq( "org.ojalgo" % "ojalgo" % "52.0.1" )
 
-    val enumeratumVersion: String = "1.7.0"
+    val enumeratumVersion: String = "1.7.2"
     val enumeratum: Deps          = "com.beachape" %% Seq( "enumeratum", "enumeratum-cats" ) % enumeratumVersion
     val enumeratumCirce: Deps     = Seq( "com.beachape" %% "enumeratum-circe" % enumeratumVersion )
 
@@ -107,11 +105,11 @@ object DependenciesPlugin extends AutoPlugin {
     val logging: Deps =
       Seq(
         "org.slf4j"      % "slf4j-api"       % "1.7.36",
-        "ch.qos.logback" % "logback-classic" % "1.2.11",
-        "org.typelevel"  %% "log4cats-slf4j" % "2.4.0"
+        "ch.qos.logback" % "logback-classic" % "1.2.12",
+        "org.typelevel"  %% "log4cats-slf4j" % "2.5.0"
       )
 
-    val pureconfigVersion = "0.17.1"
+    val pureconfigVersion = "0.17.2"
     val pureconfig: Deps = "com.github.pureconfig" %% Seq(
       "pureconfig-core",
       "pureconfig-cats",
@@ -125,7 +123,7 @@ object DependenciesPlugin extends AutoPlugin {
 
     private[DependenciesPlugin] val typesafeConfig: Deps = Seq( "com.typesafe" % "config" % "1.4.2" )
 
-    val decline: Deps = "com.monovore" %% Seq( "decline", "decline-effect" ) % "2.3.0"
+    val decline: Deps = "com.monovore" %% Seq( "decline", "decline-effect" ) % "2.4.1"
 
     val doobieVersion             = "1.0.0-RC2"
     val doobie: Deps              = "org.tpolecat" %% Seq( "doobie-core", "doobie-free" ) % doobieVersion
@@ -134,26 +132,27 @@ object DependenciesPlugin extends AutoPlugin {
     val doobieH2: Deps            = Seq( "org.tpolecat" %% "doobie-h2" % doobieVersion )
     val doobieScalatest: Deps     = Seq( "org.tpolecat" %% "doobie-scalatest" % doobieVersion )
 
-    val postgresql: Deps = Seq( "org.postgresql" % "postgresql"  % "42.4.0" )
+    val postgresql: Deps = Seq( "org.postgresql" % "postgresql"  % "42.6.0" )
     val h2database: Deps = Seq( "com.h2database" % "h2"          % "1.4.200" )
-    val flywayCore: Deps = Seq( "org.flywaydb"   % "flyway-core" % "9.0.1" )
+    val flywayCore: Deps = Seq( "org.flywaydb"   % "flyway-core" % "9.16.1" )
 
     val scalatest: Deps = Seq(
-      "org.scalatest"     %% "scalatest"       % "3.2.12",
-      "org.scalatestplus" %% "scalacheck-1-16" % "3.2.12.0"
+      "org.scalatest"     %% "scalatest"       % "3.2.15",
+      "org.scalatestplus" %% "scalacheck-1-17" % "3.2.15.0"
     )
 
     val scalacheck: Deps =
       Seq(
-        "org.scalacheck"    %% "scalacheck"      % "1.16.0",
-        "io.chrisdavenport" %% "cats-scalacheck" % "0.3.1"
+        "org.scalacheck"    %% "scalacheck"      % "1.17.0",
+        "io.chrisdavenport" %% "cats-scalacheck" % "0.3.2"
       )
 
     val catsLaws: Deps = Seq( "org.typelevel" %% "cats-laws" % catsVersion )
     val discipline: Deps =
       Seq( "org.typelevel" %% "discipline-core" % "1.5.1", "org.typelevel" %% "discipline-scalatest" % "2.2.0" )
+        .exclude( "org.scalatestplus", "scalacheck-1-16_2.13" )
 
-    val autoDiffVersion          = "0.5.1"
+    val autoDiffVersion          = "0.6.0"
     val autoDiff: Deps           = "fr.thomasdufour" %% Seq( "auto-diff-core", "auto-diff-generic" ) % autoDiffVersion
     val autoDiffEnumeratum: Deps = Seq( "fr.thomasdufour" %% "auto-diff-enumeratum" % autoDiffVersion )
     val autoDiffScalatest: Deps  = Seq( "fr.thomasdufour" %% "auto-diff-scalatest" % autoDiffVersion )
@@ -175,12 +174,12 @@ object DependenciesPlugin extends AutoPlugin {
       http4sBlazeClient ++
       http4sPinnedDependencies ++
       monocle ++
-      monocleState ++
-      monocleGeneric ++
+//      monocleState ++
+//      monocleGeneric ++
       circe ++
-//      circeFs2 ++
+      circeFs2 ++
       circeJawn ++
-      circeOptics ++
+//      circeOptics ++
       scodec ++
       atto ++
       asciiGraphs ++
