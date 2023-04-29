@@ -25,9 +25,10 @@ val core =
     .settings(
       libraryDependencies ++= Seq(
         "org.typelevel" %%% "cats-core"        % catsVersion,
+        "org.typelevel" %%% "cats-free"        % catsVersion,
         "org.typelevel" %%% "alleycats-core"   % catsVersion,
-        "org.typelevel" %%% "kittens"          % "2.3.2",
-        "org.typelevel" %%% "mouse"            % "1.1.0",
+        "org.typelevel" %%% "kittens"          % "3.0.0",
+        "org.typelevel" %%% "mouse"            % "1.2.1",
         "org.tpolecat"  %%% "atto-core"        % "0.9.5",
         "io.circe"      %%% "circe-core"       % circeVersion,
         "io.circe"      %%% "circe-generic"    % circeVersion,
@@ -38,13 +39,14 @@ val core =
       ),
       dependencyOverrides ++= Seq(
         "org.typelevel" %%% "cats-core"      % catsVersion,
+        "org.typelevel" %%% "cats-free"      % catsVersion,
         "org.typelevel" %%% "alleycats-core" % catsVersion,
         "io.circe"      %%% "circe-core"     % circeVersion,
         "com.chuusai"   %%% "shapeless"      % "2.3.9"
       )
     )
     .jsSettings(
-      dependencyOverrides ++= Seq( "org.scala-js" %% "scalajs-library" % "1.10.1" )
+      dependencyOverrides ++= Seq( "org.scala-js" %% "scalajs-library" % "1.13.1" )
     )
     .enablePlugins( SbtBuildInfo, ScalacPlugin )
 
