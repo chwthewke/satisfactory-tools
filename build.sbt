@@ -25,19 +25,21 @@ val core =
     .settings(
       libraryDependencies ++= Seq(
         "org.typelevel" %%% "cats-core"        % catsVersion,
+        "org.typelevel" %%% "cats-free"        % catsVersion,
         "org.typelevel" %%% "alleycats-core"   % catsVersion,
-        "org.typelevel" %%% "kittens"          % "2.3.2",
-        "org.typelevel" %%% "mouse"            % "1.1.0",
+        "org.typelevel" %%% "kittens"          % "3.0.0",
+        "org.typelevel" %%% "mouse"            % "1.2.1",
         "org.tpolecat"  %%% "atto-core"        % "0.9.5",
         "io.circe"      %%% "circe-core"       % circeVersion,
         "io.circe"      %%% "circe-generic"    % circeVersion,
         "io.circe"      %%% "circe-parser"     % circeVersion,
         "com.beachape"  %%% "enumeratum"       % enumeratumVersion,
         "com.beachape"  %%% "enumeratum-cats"  % enumeratumVersion,
-        "com.beachape"  %%% "enumeratum-circe" % enumeratumVersion
+        "com.beachape"  %%% "enumeratum-circe" % enumeratumVersion,
       ),
       dependencyOverrides ++= Seq(
         "org.typelevel" %%% "cats-core"      % catsVersion,
+        "org.typelevel" %%% "cats-free"      % catsVersion,
         "org.typelevel" %%% "alleycats-core" % catsVersion,
         "io.circe"      %%% "circe-core"     % circeVersion,
         "com.chuusai"   %%% "shapeless"      % "2.3.9"
