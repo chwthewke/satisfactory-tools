@@ -8,6 +8,7 @@ import cats.effect.IOApp
 import cats.effect.Ref
 import cats.effect.Resource
 import cats.syntax.apply._
+import cats.syntax.functor._
 import cats.syntax.semigroupk._
 import doobie.Transactor
 import fs2.concurrent.Signal
@@ -20,6 +21,10 @@ import org.http4s.server.middleware.AutoSlash
 import pureconfig.ConfigSource
 import pureconfig.module.catseffect.syntax._
 
+import net.chwthewke.satisfactorytools.api.PlannerApi
+import net.chwthewke.satisfactorytools.persistence.PlansWithTrees
+import net.chwthewke.satisfactorytools.prod.adv.tree.TreeCommand
+import net.chwthewke.satisfactorytools.protocol.PlanId
 import persistence.Library
 import persistence.Plans
 import persistence.ReadModel
@@ -55,16 +60,22 @@ class Main[F[_]: Async] {
       )
   }
 
+  private def mkPlans( xa: Transactor[F] ): F[PlannerApi[F]] =
+    Ref[F]
+      .of( Map.empty[PlanId, Vector[TreeCommand]] )
+      .map( store => new PlansWithTrees[F]( store, Plans.mapK( xa.trans ) ) )
+
   val httpApp: Resource[F, ( Signal[F, Boolean], HttpApp[F] )] =
     for {
       shutdownSignal <- mkShutdownSignal
       xa             <- mkTransactor
+      planner        <- Resource.eval( mkPlans( xa ) )
     } yield {
       val app = Application[F](
         ReadModel.mapK( xa.trans ),
         Sessions.mapK( xa.trans ),
         Library.mapK( xa.trans ),
-        Plans.mapK( xa.trans )
+        planner
       )
 
       (

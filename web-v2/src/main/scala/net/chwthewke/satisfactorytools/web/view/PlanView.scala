@@ -131,7 +131,8 @@ object PlanView {
           ( "Raw resources", OutputTab.Inputs ),
           ( "Manufacturing machines", OutputTab.Machines ),
           ( "Item I/O", OutputTab.Items ),
-          ( "Inter-group Item I/O", OutputTab.GroupIO )
+          ( "Inter-group Item I/O", OutputTab.GroupIO ),
+          ( "Tree", OutputTab.Tree )
         ) ++
           (1 to solution.groupCount)
             .map( ix => ( ix.show, OutputTab.CustomGroup( ix ) ) )
@@ -175,6 +176,7 @@ object PlanView {
       case OutputTab.Items            => ItemsView
       case OutputTab.Machines         => MachinesView
       case OutputTab.Inputs           => InputsView
+      case OutputTab.Tree             => TreeView
     }
 
 }

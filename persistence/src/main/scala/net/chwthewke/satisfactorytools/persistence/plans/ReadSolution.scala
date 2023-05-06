@@ -19,6 +19,7 @@ import model.Bill
 import model.GroupAssignments
 import model.Machine
 import model.Recipe
+import net.chwthewke.satisfactorytools.prod.adv.tree.FactoryTree
 import prod.ClockedRecipe
 import prod.Factory
 import protocol.CustomGroupResult
@@ -42,7 +43,12 @@ object ReadSolution {
       case OutputTab.Items             => getItems( planId, solutionId )
       case OutputTab.Machines          => getMachines( planId, solutionId )
       case OutputTab.Inputs            => getRawInputs( planId, solutionId )
+      case OutputTab.Tree              => getNakedTree( planId, solutionId )
     }
+
+  private def getNakedTree( planId: PlanId, solutionId: SolutionId ): ConnectionIO[FactoryTree] =
+    getSolution( planId, solutionId )
+      .map { case ( factory, _ ) => FactoryTree( factory.allRecipes ) }
 
   private def getGroupResult( planId: PlanId, solutionId: SolutionId, group: Int ): ConnectionIO[CustomGroupResult] = {
     ( ReadSolverInputs.getBill( planId ), getSolution( planId, solutionId ) ).mapN {

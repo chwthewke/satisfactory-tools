@@ -97,11 +97,18 @@ object forms {
         case OutputTab.Inputs            => "inputs"
         case OutputTab.CustomGroup( ix ) => s"group_$ix"
         case OutputTab.GroupIO           => "group-io"
+        case OutputTab.Tree              => "tree"
       }
 
       def unapply( string: String ): Option[OutputTab] =
-        Vector( OutputTab.Steps, OutputTab.Items, OutputTab.Machines, OutputTab.Inputs, OutputTab.GroupIO )
-          .find( apply( _ ) == string )
+        Vector(
+          OutputTab.Steps,
+          OutputTab.Items,
+          OutputTab.Machines,
+          OutputTab.Inputs,
+          OutputTab.GroupIO,
+          OutputTab.Tree
+        ).find( apply( _ ) == string )
           .orElse(
             Option
               .when( string.startsWith( "group_" ) )( string.stripPrefix( "group_" ) )

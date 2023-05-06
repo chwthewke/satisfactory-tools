@@ -9,6 +9,7 @@ import model.Bill
 import model.Options
 import model.RecipeList
 import model.ResourceOptions
+import net.chwthewke.satisfactorytools.prod.adv.tree.TreeCommand
 import protocol.InputTab
 import protocol.ModelVersionId
 import protocol.OutputTab
@@ -54,6 +55,8 @@ trait PlannerApi[F[_]] { self =>
   def getCustomGroupSelection( planId: PlanId ): F[Map[ClassName, Int]]
 
   def computePlan( planId: PlanId ): F[Unit]
+
+  def recordCommand( planId: PlanId, command: TreeCommand ): F[Unit]
 
   def mapK[G[_]]( f: F ~> G ): PlannerApi[G] = new PlannerApi[G] {
 
@@ -110,6 +113,9 @@ trait PlannerApi[F[_]] { self =>
 
     override def computePlan( planId: PlanId ): G[Unit] =
       f( self.computePlan( planId ) )
+
+    override def recordCommand( planId: PlanId, command: TreeCommand ): G[Unit] =
+      f( self.recordCommand( planId, command ) )
   }
 
 }

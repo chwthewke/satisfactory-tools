@@ -12,6 +12,7 @@ import model.Bill
 import model.Options
 import model.RecipeList
 import model.ResourceOptions
+import net.chwthewke.satisfactorytools.prod.adv.tree
 import prod.Calculator
 import prod.ojsolver.ConstraintSolver
 import protocol.InputTab
@@ -128,4 +129,5 @@ object Plans extends PlannerApi[ConnectionIO] {
       )
       .getOrElse( () )
 
+  override def recordCommand( planId: PlanId, command: tree.TreeCommand ): ConnectionIO[Unit] = FC.unit
 }
