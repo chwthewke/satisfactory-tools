@@ -3,13 +3,18 @@ package prod
 package adv
 
 import cats.Eval
+import cats.Monoid
+import cats.PartialOrder
+import cats.Show
 import cats.data.NonEmptyVector
+import cats.derived.semiauto
 import cats.free.Cofree
 import cats.syntax.flatMap._
 import cats.syntax.foldable._
 import cats.syntax.functor._
 import cats.syntax.functorFilter._
 import cats.syntax.option._
+import cats.syntax.partialOrder._
 import cats.syntax.traverse._
 import cats.syntax.vector._
 
@@ -37,10 +42,14 @@ object tree {
    */
 
   sealed abstract class TreeLoc( val indices: Vector[Int] ) {
-    def append( ix: Int ): TreeLoc  = TreeLoc( indices :+ ix )
-    def prepend( ix: Int ): TreeLoc = TreeLoc( ix +: indices )
+    def append( ix: Int ): TreeLoc.NonRoot =
+      TreeLoc.NonRoot( indices.toNev.fold( NonEmptyVector.one( ix ) )( _.append( ix ) ) )
+    def prepend( ix: Int ): TreeLoc.NonRoot =
+      TreeLoc.NonRoot( NonEmptyVector( ix, indices ) )
 
-    override def toString: String = indices.mkString_( "," )
+    def nonRoot: Option[TreeLoc.NonRoot]
+
+    override def toString: String = indices.map( _ + 1 ).mkString_( "." )
   }
 
   object TreeLoc {
@@ -48,14 +57,34 @@ object tree {
       indices.toNev.fold[TreeLoc]( Root )( NonRoot( _ ) )
 
     def parse( str: String ): Option[TreeLoc] =
-      str.split( ',' ).toVector.traverse( _.toIntOption ).map( TreeLoc( _ ) )
+      str
+        .split( '.' )
+        .toVector
+        .filter( _.nonEmpty )
+        .traverse( _.toIntOption.map( _ - 1 ).filter( _ >= 0 ) )
+        .map( TreeLoc( _ ) )
 
-    case object Root extends TreeLoc( Vector.empty )
+    implicit val treeLocPartialOrder: PartialOrder[TreeLoc] =
+      PartialOrder.from(
+        ( l, m ) =>
+          if (l == m) 0d
+          else if (l.indices.startsWith( m.indices )) 1d
+          else if (m.indices.startsWith( l.indices )) -1d
+          else Double.NaN
+      )
+
+    implicit val treeLocShow: Show[TreeLoc] = Show.fromToString
+
+    case object Root extends TreeLoc( Vector.empty ) {
+      override def nonRoot: Option[NonRoot] = None
+    }
     case class NonRoot( path: NonEmptyVector[Int] ) extends TreeLoc( path.toVector ) {
       def head: Int     = path.head
       def tail: TreeLoc = TreeLoc( path.tail )
       def init: TreeLoc = TreeLoc( path.init )
       def last: Int     = path.last
+
+      override def nonRoot: Option[NonRoot] = Some( this )
     }
 
     object NonRoot {
@@ -67,10 +96,70 @@ object tree {
   sealed trait TreeCommand
 
   object TreeCommand {
-    case class PushDown( from: TreeLoc, recipe: ClassName, to: Int, `type`: PushDownType ) extends TreeCommand
-    case class PullUp( from: TreeLoc.NonRoot, recipe: ClassName )                          extends TreeCommand
-    case class Destroy( at: TreeLoc.NonRoot )                                              extends TreeCommand
+    case class PushDown( to: TreeLoc.NonRoot, recipe: ClassName, `type`: PushDownType ) extends TreeCommand
+    case class PullUp( from: TreeLoc.NonRoot, recipe: ClassName )                       extends TreeCommand
+    case class Destroy( at: TreeLoc.NonRoot )                                           extends TreeCommand
+
+    implicit val treeCommandShow: Show[TreeCommand] = semiauto.show[TreeCommand]
   }
+
+  case class TreeCommands( commands: Vector[TreeCommand] ) extends AnyVal
+
+  object TreeCommands {
+    val empty: TreeCommands = TreeCommands( Vector.empty )
+
+    def apply( command: TreeCommand ): TreeCommands = TreeCommands( Vector( command ) )
+
+    implicit val treeCommandsMonoid: Monoid[TreeCommands] =
+      new Monoid[TreeCommands] {
+        override def empty: TreeCommands = TreeCommands.empty
+
+        override def combine( x: TreeCommands, y: TreeCommands ): TreeCommands =
+          TreeCommands( y.commands.foldLeft( x.commands )( appendCommand ) )
+      }
+
+    implicit val treeCommandsShow: Show[TreeCommands] =
+      Show.show( _.commands.mkString_( " | " ) )
+  }
+
+  def appendCommand[C >: TreeCommand.PushDown <: TreeCommand]( commands: Vector[C], command: TreeCommand ): Vector[C] =
+    command match {
+      case TreeCommand.PullUp( from, recipe ) =>
+        // TODO this recursion could be a filter
+        ( commands, Vector.empty[C] )
+          .tailRecM[Eval, Vector[C]] {
+            case ( rest, acc ) =>
+              if (rest.isEmpty)
+                Eval.now( Right( acc ) )
+              else {
+                rest.last match {
+                  case TreeCommand.PushDown( to, recipe1, _ ) if (from: TreeLoc) == to && recipe == recipe1 =>
+                    Eval.later( Left( ( rest.init, acc ) ) )
+                  case _ =>
+                    Eval.later( Left( ( rest.init, rest.last +: acc ) ) )
+                }
+              }
+          }
+          .value
+
+      case TreeCommand.Destroy( at ) =>
+        ( commands, Vector.empty[C] )
+          .tailRecM[Eval, Vector[C]] {
+            case ( rest, acc ) =>
+              if (rest.isEmpty)
+                Eval.now( Right( acc ) )
+              else {
+                rest.last match {
+                  case TreeCommand.PushDown( to, _, _ ) if (at: TreeLoc) <= to =>
+                    Eval.later( Left( ( rest.init, acc ) ) )
+                  case _ =>
+                    Eval.later( Left( ( rest.init, rest.last +: acc ) ) )
+                }
+              }
+          }
+          .value
+      case c @ TreeCommand.PushDown( _, _, _ ) => commands :+ c
+    }
 
   sealed trait PushDownType
 
@@ -79,6 +168,8 @@ object tree {
     case class Fraction( n: Int )       extends PushDownType
     case class Amount( amount: Double ) extends PushDownType
     case class For( recipe: ClassName ) extends PushDownType
+
+    implicit val pushDownTypeShow: Show[PushDownType] = semiauto.show[PushDownType]
   }
 
   type Tree = Cofree[Vector, Vector[ClockedRecipe]]
@@ -97,8 +188,10 @@ object tree {
   case class FactoryTree( tree: Tree ) {
 
     def run( command: TreeCommand ): Option[FactoryTree] = command match {
-      case TreeCommand.PushDown( from, recipe, to, pdt ) =>
-        modify( from )( sub => pushDown( sub, sub.head.indexWhere( _.recipe.item.className == recipe ), to, pdt ) )
+      case TreeCommand.PushDown( to, recipe, pdt ) =>
+        modify( to.init )(
+          sub => pushDown( sub, sub.head.indexWhere( _.recipe.item.className == recipe ), to.last, pdt )
+        )
 
       case TreeCommand.PullUp( from, recipe ) =>
         modify( from.init ) { sub =>

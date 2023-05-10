@@ -4,18 +4,26 @@ package web
 import cats.data.Chain
 import cats.data.Validated.Valid
 import cats.data.ValidatedNel
+import cats.effect.Async
 import cats.syntax.alternative._
+import cats.syntax.applicative._
 import cats.syntax.apply._
 import cats.syntax.either._
 import cats.syntax.foldable._
 import cats.syntax.functor._
 import cats.syntax.functorFilter._
+import cats.syntax.option._
 import cats.syntax.show._
 import cats.syntax.traverse._
 import enumeratum.Enum
 import enumeratum.EnumEntry
 import org.http4s.FormDataDecoder
 import org.http4s.ParseFailure
+import org.http4s.QueryParamDecoder
+import org.http4s.QueryParamEncoder
+import org.http4s.Request
+import org.http4s.Uri
+import org.http4s.syntax.literals._
 
 import data.ClassName
 import data.Countable
@@ -29,6 +37,9 @@ import model.ResourceDistrib
 import model.ResourceOptions
 import model.ResourcePurity
 import model.ResourceWeights
+import prod.adv.tree.PushDownType
+import prod.adv.tree.TreeCommand
+import prod.adv.tree.TreeLoc
 import protocol.InputTab
 import protocol.ModelVersionId
 import protocol.OutputTab
@@ -36,6 +47,20 @@ import protocol.PlanId
 import protocol.PlanName
 
 object forms {
+
+  // TODO merge with the other enum decoder in forms.Decoders
+  import FormDataDecoder.formEntityDecoder
+
+  implicit def enumQueryParamEncoder[E <: EnumEntry: Enum]: QueryParamEncoder[E] =
+    QueryParamEncoder[String].contramap[E]( _.entryName )
+
+  implicit def enumQueryParamDecoder[E <: EnumEntry]( implicit E: Enum[E] ): QueryParamDecoder[E] =
+    QueryParamDecoder[String]
+      .emap(
+        s =>
+          E.withNameOption( s )
+            .toRight( ParseFailure( s"Invalid enum string", s"Invalid enum string '$s'" ) )
+      )
 
   object Keys {
     abstract class Prefix[A] private[forms] ( prefix: String, to: A => String, from: String => Option[A] ) {
@@ -115,6 +140,100 @@ object forms {
               .flatMap( Numeric[Int].parseString )
               .map( OutputTab.CustomGroup )
           )
+    }
+
+    object tree {
+      val destroyPath: Uri.Path     = path"tree_destroy"
+      val pullUpPath: Uri.Path      = path"tree_pull_up"
+      val pushDownPath: Uri.Path    = path"tree_push_down"
+      val pushDownForPath: Uri.Path = path"tree_push_down_for"
+
+      import org.http4s.dsl.request._
+
+      object location {
+        val root: String = "root"
+
+        def apply( loc: TreeLoc ): String = loc match {
+          case TreeLoc.Root => root
+          case _            => loc.toString
+        }
+
+        def unapply( str: String ): Option[TreeLoc] =
+          TreeLoc.parse( str ).orElse( Option.when( str == root )( TreeLoc.Root ) )
+      }
+
+      def pullUp( from: TreeLoc.NonRoot, recipe: ClassName ): String =
+        (pullUpPath / location( from ) / recipe.name).renderString
+
+      def destroy( at: TreeLoc.NonRoot ): String =
+        (destroyPath / location( at )).renderString
+
+      def pushDown( from: TreeLoc, ix: Int, recipe: ClassName ): String =
+        (pushDownPath / location( from ) / ix.toString / recipe.name).renderString
+
+      def pushDownTargetDropdown( loc: TreeLoc, ix: Int ): String =
+        s"push_down_target_${ix}_$loc"
+
+      def pushDownRadio( loc: TreeLoc, ix: Int ): String =
+        s"push_down_type_${ix}_$loc"
+
+      def pushDownFractionDropdown( loc: TreeLoc, ix: Int ): String =
+        s"push_down_fraction_${ix}_$loc"
+
+      def pushDownAmountInput( loc: TreeLoc, ix: Int ): String =
+        s"push_down_amount_${ix}_$loc"
+
+      sealed abstract class RegularPushDownTypeChoice( override val entryName: String ) extends EnumEntry
+      object RegularPushDownTypeChoice extends Enum[RegularPushDownTypeChoice] {
+        final case object All      extends RegularPushDownTypeChoice( "all" )
+        final case object Fraction extends RegularPushDownTypeChoice( "fraction" )
+        final case object Amount   extends RegularPushDownTypeChoice( "amount" )
+
+        override val values: IndexedSeq[RegularPushDownTypeChoice] = findValues
+      }
+
+      def regularPushDownTypeDecoder( loc: TreeLoc, ix: Int ): FormDataDecoder[( PushDownType, Int )] =
+        (
+          FormDataDecoder.field[RegularPushDownTypeChoice]( pushDownRadio( loc, ix ) ),
+          FormDataDecoder.field[Int]( pushDownFractionDropdown( loc, ix ) ),
+          FormDataDecoder.field[Double]( pushDownAmountInput( loc, ix ) ),
+          FormDataDecoder.field[Int]( pushDownTargetDropdown( loc, ix ) )
+        ).mapN(
+          ( t, frac, am, tgt ) =>
+            ( t match {
+              case RegularPushDownTypeChoice.All      => PushDownType.Full
+              case RegularPushDownTypeChoice.Fraction => PushDownType.Fraction( frac )
+              case RegularPushDownTypeChoice.Amount   => PushDownType.Amount( am )
+            }, tgt )
+        )
+
+      def command[F[_]: Async]( path: Uri.Path, request: Request[F] ): Option[F[TreeCommand]] =
+        path match {
+          case `destroyPath` / location( loc ) =>
+            loc.nonRoot.map( TreeCommand.Destroy ).map( _.pure[F].widen )
+          case `pullUpPath` / location( loc ) / recipe =>
+            loc.nonRoot.map( TreeCommand.PullUp( _, ClassName( recipe ) ) ).map( _.pure[F].widen )
+          case `pushDownPath` / location( loc ) / IntVar( ix ) / recipe =>
+            implicit val decoder: FormDataDecoder[( PushDownType, Int )] =
+              regularPushDownTypeDecoder( loc, ix )
+            request
+              .as[( PushDownType, Int )]( implicitly, formEntityDecoder )
+              .map { case ( tpe, chIx ) => TreeCommand.PushDown( loc.append( chIx ), ClassName( recipe ), tpe ) }
+              .widen[TreeCommand]
+              .some
+          //         case _ / `action` => ???
+          case _ => None
+        }
+
+//      def unapply( path: Uri.Path ): Option[TreeCommand] = path match {
+//        case _ / `action` / `destroy` / location( loc ) =>
+//          loc.nonRoot.map( TreeCommand.Destroy )
+//        case _ / `action` / `pullUp` / location( loc ) / recipe =>
+//          loc.nonRoot.map( TreeCommand.PullUp( _, ClassName( recipe ) ) )
+//        case `action` /: _ => ???
+//        case _             => None
+//      }
+
     }
 
     val save: String    = "save"

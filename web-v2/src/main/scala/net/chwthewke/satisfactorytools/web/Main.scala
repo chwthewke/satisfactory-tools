@@ -23,7 +23,7 @@ import pureconfig.module.catseffect.syntax._
 
 import net.chwthewke.satisfactorytools.api.PlannerApi
 import net.chwthewke.satisfactorytools.persistence.PlansWithTrees
-import net.chwthewke.satisfactorytools.prod.adv.tree.TreeCommand
+import net.chwthewke.satisfactorytools.prod.adv.tree.TreeCommands
 import net.chwthewke.satisfactorytools.protocol.PlanId
 import persistence.Library
 import persistence.Plans
@@ -62,7 +62,7 @@ class Main[F[_]: Async] {
 
   private def mkPlans( xa: Transactor[F] ): F[PlannerApi[F]] =
     Ref[F]
-      .of( Map.empty[PlanId, Vector[TreeCommand]] )
+      .of( Map.empty[PlanId, TreeCommands] )
       .map( store => new PlansWithTrees[F]( store, Plans.mapK( xa.trans ) ) )
 
   val httpApp: Resource[F, ( Signal[F, Boolean], HttpApp[F] )] =

@@ -5,9 +5,12 @@ import cats.data.OptionT
 import cats.effect.Ref
 import cats.effect.Sync
 import cats.syntax.apply._
+import cats.syntax.flatMap._
+import cats.syntax.foldable._
 import cats.syntax.functor._
 import cats.syntax.option._
 import cats.syntax.semigroup._
+import cats.syntax.show._
 
 import api.PlannerApi
 import data.ClassName
@@ -15,6 +18,7 @@ import model.Bill
 import model.Options
 import model.RecipeList
 import model.ResourceOptions
+import net.chwthewke.satisfactorytools.prod.adv.tree.TreeCommands
 import prod.adv.tree.TreeCommand
 import protocol.InputTab
 import protocol.ModelVersionId
@@ -24,7 +28,7 @@ import protocol.PlanId
 import protocol.SolutionId
 import protocol.UserId
 
-class PlansWithTrees[F[_]: Sync]( store: Ref[F, Map[PlanId, Vector[TreeCommand]]], delegate: PlannerApi[F] )
+class PlansWithTrees[F[_]: Sync]( store: Ref[F, Map[PlanId, TreeCommands]], delegate: PlannerApi[F] )
     extends PlannerApi[F] {
   override def newPlan( userId: UserId, modelVersion: ModelVersionId ): F[PlanId] =
     delegate.newPlan( userId, modelVersion )
@@ -72,14 +76,26 @@ class PlansWithTrees[F[_]: Sync]( store: Ref[F, Map[PlanId, Vector[TreeCommand]]
   override def computePlan( planId: PlanId ): F[Unit] = delegate.computePlan( planId )
 
   def recordCommand( planId: PlanId, command: TreeCommand ): F[Unit] =
-    store.update( _ |+| Map( ( planId, Vector( command ) ) ) )
+    for {
+      _ <- store.update( _ |+| Map( ( planId, TreeCommands( command ) ) ) )
+      m <- store.get
+      _ <- m.get( planId )
+            .traverse_(
+              cmds =>
+                cats.effect.std.Console
+                  .make[F]
+                  .println(
+                    show"plan#$planId $cmds"
+                  )
+            )
+    } yield ()
 
   private def getPlanResultAux[O]( planId: PlanId, solutionId: SolutionId, outputTab: OutputTab.Aux[O] ): F[O] =
     outputTab match {
       case OutputTab.Tree =>
         ( delegate.getPlanResult( planId, solutionId, OutputTab.Tree ), store.get.map( _.get( planId ) ) ).mapN(
           ( nakedTree, commandsOpt ) =>
-            commandsOpt.orEmpty.foldLeft( nakedTree )( ( tree, cmd ) => tree.run( cmd ).getOrElse( tree ) )
+            commandsOpt.orEmpty.commands.foldLeft( nakedTree )( ( tree, cmd ) => tree.run( cmd ).getOrElse( tree ) )
         )
       case _ =>
         delegate.getPlanResult( planId, solutionId, outputTab )
