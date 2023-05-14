@@ -187,6 +187,16 @@ object tree {
 
   case class FactoryTree( tree: Tree ) {
 
+    def get( loc: TreeLoc ): Option[FactoryTree] =
+      ( tree.some, loc )
+        .tailRecM[Eval, Option[FactoryTree]] {
+          case ( x, TreeLoc.Root ) => Eval.now( Right( x.map( FactoryTree( _ ) ) ) )
+          case ( None, _ )         => Eval.now( Right( none ) )
+          case ( Some( t ), TreeLoc.NonRoot( hd, tl ) ) =>
+            t.tail.map( bs => Left( ( bs.get( hd ), tl ) ) )
+        }
+        .value
+
     def run( command: TreeCommand ): Option[FactoryTree] = command match {
       case TreeCommand.PushDown( to, recipe, pdt ) =>
         modify( to.init )(

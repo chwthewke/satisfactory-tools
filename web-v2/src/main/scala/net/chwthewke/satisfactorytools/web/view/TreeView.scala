@@ -6,6 +6,7 @@ import cats.syntax.show._
 import cats.syntax.vector._
 import enumeratum.EnumEntry
 import scalatags.Text
+import scalatags.Text
 import scalatags.Text.Tag
 
 import prod.ClockedRecipe
@@ -21,6 +22,11 @@ object TreeView extends ( ( FactoryTree, Int ) => Tag ) {
 
   override def apply( tree: FactoryTree, groupCount: Int ): Tag =
     renderNode( TreeLoc.Root, tree.tree )
+
+  case class Zoomed( loc: TreeLoc ) extends ( ( FactoryTree, Int ) => Tag ) {
+    override def apply( tree: FactoryTree, groupCount: Int ): Tag =
+      TreeView( tree, groupCount )
+  }
 
   //////////////////////
   /* Commands
