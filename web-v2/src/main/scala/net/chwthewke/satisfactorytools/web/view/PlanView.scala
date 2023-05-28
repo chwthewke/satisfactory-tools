@@ -31,13 +31,17 @@ object PlanView {
       documentHeader( header, model.version, migrationTarget ),
       div(
         id := "main",
+        display.flex,
         div(
           id := "input",
-          inputTabs( inputTab ),
+          flexGrow := "1",
+          inputTabs( inputTab, output ),
           inputView( inputTab )( model, input )
         ),
+        div( paddingLeft := "1em" ),
         div(
           id := "output",
+          flexGrow := "3",
           outputTabs( outputTab, output ),
           output match {
             case SolutionHeader.NotComputed        => p( "Configure plan on the left and press Compute" )
@@ -90,23 +94,38 @@ object PlanView {
       )
     )
 
-  private def inputTabs( selected: InputTab ): Tag =
+  private def inputTabs[X]( selected: InputTab, solution: SolutionHeader[X] ): Tag = {
+    val computeTab: Tag =
+      button(
+        `class` := "button is-small",
+        formaction := Actions.compute,
+        if (solution.isComputed) "Recompute" else "Compute"
+      )
+
     div(
-      Vector(
-        ( "Requested", InputTab.Bill ),
-        ( "Recipes", InputTab.Recipes ),
-        ( "Resource nodes", InputTab.ResourceOptions ),
-        ( "Options", InputTab.Options )
-      ).map {
-        case ( text, tab ) =>
-          button(
-            `class` := "button is-small",
-            formaction := s"input/${Actions.input( tab )}",
-            text,
-            Option.when( tab == selected )( fontWeight.bold )
-          )
-      }
+      display.flex,
+      div(
+        Vector(
+          ( "Requested", InputTab.Bill ),
+          ( "Recipes", InputTab.Recipes ),
+          ( "Resource nodes", InputTab.ResourceOptions ),
+          ( "Options", InputTab.Options )
+        ).map {
+          case ( text, tab ) =>
+            button(
+              `class` := "button is-small",
+              formaction := s"input/${Actions.input( tab )}",
+              text,
+              Option.when( tab == selected )( fontWeight.bold )
+            )
+        }
+      ),
+      div( flexGrow := "1" ),
+      div(
+        computeTab
+      )
     )
+  }
 
   private def inputView[I]( inputTab: InputTab.Aux[I] ): ( Model, I ) => Tag =
     inputTab match {
@@ -116,14 +135,7 @@ object PlanView {
       case InputTab.ResourceOptions => ResourceOptionsView
     }
 
-  private def outputTabs[X]( selected: OutputTab, solution: SolutionHeader[X] ): Tag = {
-    val computeTab =
-      button(
-        `class` := "button is-small",
-        formaction := Actions.compute,
-        if (solution.isComputed) "Recompute" else "Compute"
-      )
-
+  private def outputTabs[X]( selected: OutputTab, solution: SolutionHeader[X] ): Frag = {
     val regularTabs: Vector[Tag] =
       (
         Vector(
@@ -162,10 +174,7 @@ object PlanView {
         )
       )
 
-    div(
-      computeTab,
-      (regularTabs ++ groupActionTabs).filter( _ => solution.isComputed )
-    )
+    Option.when( solution.isComputed )( regularTabs ++ groupActionTabs )
   }
 
   private def outputView[O]( outputTab: OutputTab.Aux[O] ): ( O, Int ) => Tag =
