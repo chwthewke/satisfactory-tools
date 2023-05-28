@@ -12,8 +12,8 @@ import scalatags.Text
 
 import data.Countable
 import data.Item
+import model.Power
 import model.Recipe
-import net.chwthewke.satisfactorytools.model.Power
 import prod.ClockedRecipe
 import prod.Factory
 import protocol.ItemIO

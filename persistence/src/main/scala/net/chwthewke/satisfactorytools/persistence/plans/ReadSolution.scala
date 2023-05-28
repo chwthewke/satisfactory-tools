@@ -21,6 +21,7 @@ import model.Machine
 import model.Recipe
 import prod.ClockedRecipe
 import prod.Factory
+import prod.tree.FactoryTree
 import protocol.CustomGroupResult
 import protocol.ItemIO
 import protocol.ItemSrcDest
@@ -42,7 +43,14 @@ object ReadSolution {
       case OutputTab.Items             => getItems( planId, solutionId )
       case OutputTab.Machines          => getMachines( planId, solutionId )
       case OutputTab.Inputs            => getRawInputs( planId, solutionId )
+      case OutputTab.Tree              => getPlanTree( planId, solutionId )
     }
+
+  private def getPlanTree( planId: PlanId, solutionId: SolutionId ): ConnectionIO[FactoryTree] =
+    (
+      getSolution( planId, solutionId ),
+      PlanTrees.readPlanTreeCommands( planId )
+    ).mapN { case ( ( factory, _ ), commands ) => FactoryTree( factory.allRecipes ).runAll( commands ) }
 
   private def getGroupResult( planId: PlanId, solutionId: SolutionId, group: Int ): ConnectionIO[CustomGroupResult] = {
     ( ReadSolverInputs.getBill( planId ), getSolution( planId, solutionId ) ).mapN {

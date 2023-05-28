@@ -203,13 +203,9 @@ class Application[F[_]](
           _ <- planner
                 .computePlan( targetId )
                 .whenA( computeAction( changes.isDefined, header.solution, actionPath ) )
-          _ <- planner
-                .addCustomGroup( targetId )
-                .whenA( addCustomGroup( actionPath ) )
-          _ <- planner
-                .removeCustomGroup( targetId )
-                .whenA( removeCustomGroup( actionPath ) )
-          _ <- reorderGroup( targetId, changes.isDefined, outputTab, actionPath )
+          _ <- resetTreeAction( planId, actionPath )
+          _ <- treeAction( planId, actionPath, request )
+          _ <- customGroupActions( targetId, changes.isDefined, outputTab, actionPath )
           ( nextInputTab, nextOutputTab ) = destination( inputTab, outputTab, actionPath )
           response <- redirect( targetId, nextInputTab, nextOutputTab )
         } yield response
@@ -238,6 +234,29 @@ class Application[F[_]](
       case Actions.compute /: _ => true
       case _                    => hasChanges && solution.isComputed
     }
+
+  private def resetTreeAction( planId: PlanId, path: Uri.Path ): F[Unit] =
+    path match {
+      case Actions.tree.resetPath => planner.resetTreeCommands( planId )
+      case _                      => F.unit
+    }
+
+  private def treeAction( planId: PlanId, path: Uri.Path, request: Request[F] ): F[Unit] =
+    Actions.tree
+      .command( path, request )
+      .fold( F.unit )(
+        _.flatMap( cmd => planner.recordTreeCommand( planId, cmd ) )
+      )
+
+  private def customGroupActions[O](
+      targetId: PlanId,
+      hasChanges: Boolean,
+      outputTab: OutputTab.Aux[O],
+      actionPath: Uri.Path
+  ): F[Unit] =
+    planner.addCustomGroup( targetId ).whenA( addCustomGroup( actionPath ) ) *>
+      planner.removeCustomGroup( targetId ).whenA( removeCustomGroup( actionPath ) ) *>
+      reorderGroup( targetId, hasChanges, outputTab, actionPath )
 
   private def addCustomGroup( actionPath: Uri.Path ): Boolean =
     actionPath match {

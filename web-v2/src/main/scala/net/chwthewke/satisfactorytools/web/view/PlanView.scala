@@ -124,14 +124,15 @@ object PlanView {
         if (solution.isComputed) "Recompute" else "Compute"
       )
 
-    val regularTabs =
+    val regularTabs: Vector[Tag] =
       (
         Vector(
           ( "Production steps", OutputTab.Steps ),
           ( "Raw resources", OutputTab.Inputs ),
           ( "Manufacturing machines", OutputTab.Machines ),
           ( "Item I/O", OutputTab.Items ),
-          ( "Inter-group Item I/O", OutputTab.GroupIO )
+          ( "Inter-group Item I/O", OutputTab.GroupIO ),
+          ( "Tree (beta)", OutputTab.Tree )
         ) ++
           (1 to solution.groupCount)
             .map( ix => ( ix.show, OutputTab.CustomGroup( ix ) ) )
@@ -145,7 +146,7 @@ object PlanView {
           )
       }
 
-    val groupActionTabs =
+    val groupActionTabs: Vector[Tag] =
       Vector(
         button(
           `class` := "button is-small",
@@ -175,6 +176,7 @@ object PlanView {
       case OutputTab.Items            => ItemsView
       case OutputTab.Machines         => MachinesView
       case OutputTab.Inputs           => InputsView
+      case OutputTab.Tree             => TreeView
     }
 
 }

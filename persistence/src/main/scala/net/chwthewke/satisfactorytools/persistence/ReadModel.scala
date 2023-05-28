@@ -25,11 +25,11 @@ import model.Model
 import model.ModelVersion
 import model.Power
 import model.Recipe
+import model.RecipeCategory
 import model.ResourceDistrib
 import model.ResourceOptions
 import model.ResourcePurity
 import model.ResourceWeights
-import net.chwthewke.satisfactorytools.model.RecipeCategory
 import protocol.ModelVersionId
 
 object ReadModel extends ModelApi[ConnectionIO] {
