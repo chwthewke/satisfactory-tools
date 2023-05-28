@@ -9,6 +9,7 @@ import model.Bill
 import model.Options
 import model.RecipeList
 import model.ResourceOptions
+import prod.tree.TreeCommand
 import protocol.InputTab
 import protocol.ModelVersionId
 import protocol.OutputTab
@@ -54,6 +55,10 @@ trait PlannerApi[F[_]] { self =>
   def getCustomGroupSelection( planId: PlanId ): F[Map[ClassName, Int]]
 
   def computePlan( planId: PlanId ): F[Unit]
+
+  def recordTreeCommand( planId: PlanId, command: TreeCommand ): F[Unit]
+
+  def resetTreeCommands( planId: PlanId ): F[Unit]
 
   def mapK[G[_]]( f: F ~> G ): PlannerApi[G] = new PlannerApi[G] {
 
@@ -110,6 +115,12 @@ trait PlannerApi[F[_]] { self =>
 
     override def computePlan( planId: PlanId ): G[Unit] =
       f( self.computePlan( planId ) )
+
+    override def recordTreeCommand( planId: PlanId, command: TreeCommand ): G[Unit] =
+      f( self.recordTreeCommand( planId, command ) )
+
+    override def resetTreeCommands( planId: PlanId ): G[Unit] =
+      f( self.resetTreeCommands( planId ) )
   }
 
 }

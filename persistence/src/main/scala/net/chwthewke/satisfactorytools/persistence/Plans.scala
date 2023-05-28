@@ -12,8 +12,10 @@ import model.Bill
 import model.Options
 import model.RecipeList
 import model.ResourceOptions
+import persistence.plans.PlanTrees
 import prod.Calculator
 import prod.ojsolver.ConstraintSolver
+import prod.tree.TreeCommand
 import protocol.InputTab
 import protocol.ModelVersionId
 import protocol.OutputTab
@@ -128,4 +130,8 @@ object Plans extends PlannerApi[ConnectionIO] {
       )
       .getOrElse( () )
 
+  override def recordTreeCommand( planId: PlanId, command: TreeCommand ): ConnectionIO[Unit] =
+    PlanTrees.recordCommand( planId, command )
+  override def resetTreeCommands( planId: PlanId ): ConnectionIO[Unit] =
+    PlanTrees.resetCommands( planId )
 }

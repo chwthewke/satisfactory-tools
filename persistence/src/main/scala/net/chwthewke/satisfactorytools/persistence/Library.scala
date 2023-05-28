@@ -15,6 +15,7 @@ import doobie.postgres.implicits._
 import doobie.util.invariant.UnexpectedEnd
 
 import api.LibraryApi
+import net.chwthewke.satisfactorytools.persistence.plans.PlanTrees
 import protocol.InputTab
 import protocol.ModelVersionId
 import protocol.Page
@@ -96,6 +97,7 @@ object Library extends LibraryApi[ConnectionIO] {
       _ <- copyPlanInputParts( from, to )
       _ <- plans.WriteSolution.clearSolution( to )
       _ <- copySolution( from, to )
+      _ <- copyPlanTree( from, to )
     } yield ()
 
   private def copyPlanInputParts( from: PlanId, to: PlanId ): ConnectionIO[Unit] =
@@ -117,6 +119,9 @@ object Library extends LibraryApi[ConnectionIO] {
       .evalTap( copySolutionItems( from, _ ) )
       .compile
       .drain
+
+  private def copyPlanTree( from: PlanId, to: PlanId ): ConnectionIO[Unit] =
+    PlanTrees.readPlanTreeCommands( from ).flatMap( PlanTrees.writePlanTreeCommands( to, _ ) )
 
   private def copySolutionItems( from: PlanId, to: SolutionId ): ConnectionIO[Unit] =
     for {
