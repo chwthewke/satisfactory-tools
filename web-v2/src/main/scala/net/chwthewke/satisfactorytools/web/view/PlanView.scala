@@ -3,6 +3,7 @@ package web.view
 
 import cats.syntax.foldable._
 import cats.syntax.show._
+import scala.annotation.nowarn
 import scalatags.Text.Tag
 import scalatags.Text.all._
 
@@ -178,7 +179,7 @@ object PlanView {
   }
 
   private def outputView[O]( outputTab: OutputTab.Aux[O] ): ( O, Int ) => Tag =
-    outputTab match {
+    (outputTab match {
       case OutputTab.CustomGroup( _ ) => CustomGroupView
       case OutputTab.GroupIO          => GroupIOView
       case OutputTab.Steps            => StepsView
@@ -186,6 +187,6 @@ object PlanView {
       case OutputTab.Machines         => MachinesView
       case OutputTab.Inputs           => InputsView
       case OutputTab.Tree             => TreeView
-    }
-
+      case OutputTab.TreeAt( _ )      => TreeZoomView
+    }): @nowarn( "cat=other-match-analysis" )
 }

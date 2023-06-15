@@ -7,6 +7,7 @@ import model.GroupAssignments
 import model.Machine
 import prod.Factory
 import prod.tree.FactoryTree
+import prod.tree.TreeLoc
 
 sealed abstract class OutputTab extends Product {
   type Data
@@ -22,4 +23,5 @@ object OutputTab {
   final case class CustomGroup( ix: Int ) extends OutputTab { type Data = CustomGroupResult                         }
   final case object GroupIO               extends OutputTab { type Data = Map[Item, ItemIO[ItemSrcDest.InterGroup]] }
   final case object Tree                  extends OutputTab { type Data = FactoryTree                               }
+  final case class TreeAt( loc: TreeLoc ) extends OutputTab { type Data = FactoryTree.At                            }
 }

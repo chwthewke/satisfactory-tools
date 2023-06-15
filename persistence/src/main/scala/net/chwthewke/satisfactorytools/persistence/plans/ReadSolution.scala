@@ -12,6 +12,7 @@ import cats.syntax.semigroup._
 import cats.syntax.traverse._
 import doobie._
 import doobie.implicits._
+import scala.annotation.nowarn
 
 import data.Countable
 import data.Item
@@ -36,7 +37,7 @@ object ReadSolution {
       solutionId: SolutionId,
       outputTab: OutputTab.Aux[D]
   ): ConnectionIO[D] =
-    outputTab match {
+    (outputTab match {
       case OutputTab.CustomGroup( ix ) => getGroupResult( planId, solutionId, ix )
       case OutputTab.GroupIO           => getGroupIO( planId, solutionId )
       case OutputTab.Steps             => getSolution( planId, solutionId )
@@ -44,7 +45,8 @@ object ReadSolution {
       case OutputTab.Machines          => getMachines( planId, solutionId )
       case OutputTab.Inputs            => getRawInputs( planId, solutionId )
       case OutputTab.Tree              => getPlanTree( planId, solutionId )
-    }
+      case OutputTab.TreeAt( loc )     => getPlanTree( planId, solutionId ).map( FactoryTree.At( _, loc ) )
+    }): @nowarn( "cat=other-match-analysis" )
 
   private def getPlanTree( planId: PlanId, solutionId: SolutionId ): ConnectionIO[FactoryTree] =
     (

@@ -124,6 +124,7 @@ object forms {
         case OutputTab.CustomGroup( ix ) => s"group_$ix"
         case OutputTab.GroupIO           => "group-io"
         case OutputTab.Tree              => "tree"
+        case OutputTab.TreeAt( loc )     => s"tree_$loc"
       }
 
       def unapply( string: String ): Option[OutputTab] =
@@ -167,7 +168,7 @@ object forms {
 
       def reset: String =
         resetPath.renderString
-      
+
       def pullUp( from: TreeLoc.NonRoot, recipe: ClassName ): String =
         (pullUpPath / location( from ) / recipe.name).renderString
 

@@ -170,6 +170,8 @@ case class FactoryTree( tree: Tree ) {
 }
 
 object FactoryTree {
+  case class At( tree: FactoryTree, loc: TreeLoc )
+
   def apply( recipes: Vector[ClockedRecipe] ): FactoryTree =
     FactoryTree( Tree.addRoot( Tree.empty, recipes ) )
 }
