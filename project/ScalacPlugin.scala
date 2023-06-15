@@ -22,7 +22,8 @@ object ScalacPlugin extends AutoPlugin {
     "-Ywarn-dead-code",
     "-Ywarn-numeric-widen",
     "-Ywarn-value-discard",
-    "-Vimplicits"
+    "-Vimplicits",
+    "-Wconf:any:warning-verbose"
   )
 
   val isIdea: SettingKey[Boolean] = SettingKey( "is-idea", "Whether sbt is run from IntelliJ IDEA" )
