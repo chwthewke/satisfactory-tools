@@ -25,6 +25,7 @@ import data.GameData
 import data.GameRecipe
 import data.Item
 import data.Manufacturer
+import data.NativeClass
 import model.ExtractorType
 import model.Machine
 import model.MachineType
@@ -37,6 +38,7 @@ import model.RecipeCategory
 import model.ResourceOptions
 import model.ResourcePurity
 import model.ResourceWeights
+import net.chwthewke.satisfactorytools.data.Form
 
 private[loader] object ModelInit {
   def apply( version: ModelVersion, data: GameData, mapConfig: MapConfig ): ValidatedNel[String, Model] = {
@@ -64,7 +66,7 @@ private[loader] object ModelInit {
           Model(
             version,
             mf,
-            data.items.to( SortedMap ),
+            data.items.map { case ( cn, ( item, _ ) ) => ( cn, item ) }.to( SortedMap ),
             ex.map( _._1 ).distinct,
             ex,
             ro
@@ -72,7 +74,10 @@ private[loader] object ModelInit {
       )
   }
 
-  def initResourceOptions( modelItems: Map[ClassName, Item], config: MapConfig ): Either[String, ResourceOptions] =
+  def initResourceOptions(
+      modelItems: Map[ClassName, ( Item, NativeClass )],
+      config: MapConfig
+  ): Either[String, ResourceOptions] =
     config.resourceNodes
       .traverse(
         _.toVector
@@ -95,6 +100,7 @@ private[loader] object ModelInit {
   ): ValidatedNel[String, Countable[Double, Item]] =
     data.items
       .get( ccn.item )
+      .map( _._1 )
       .toValidNel( show"Unknown item class ${ccn.item}" )
       .map( it => Countable( it, ccn.amount / it.form.simpleAmountFactor ) )
 
@@ -129,11 +135,17 @@ private[loader] object ModelInit {
       selfExtraction: Vector[GameRecipe]
   ): ValidatedNel[String, Vector[( Item, Extractor, Machine )]] = {
     selfExtraction
-      .traverse( r => validateRecipeItems[Id]( data, r.products.head ) )
+      .traverse( r => validateRecipeItems[Id]( data, r.products.head ).map( _.item ) )
+      .map { selfExtractionItems =>
+        val ores: Vector[Item] =
+          data.items.values.collect { case ( item, NativeClass.resourceDescClass ) if item.form == Form.Solid => item }
+            .toVector
+        (ores ++ selfExtractionItems.filter( _.form == Form.Solid )).distinct
+      }
       .map(
-        selfExtractionItems =>
+        ores =>
           converterExtractors.flatMap {
-            case ( extractor, machine ) => selfExtractionItems.map( item => ( item.item, extractor, machine ) )
+            case ( extractor, machine ) => ores.map( item => ( item, extractor, machine ) )
           }
       )
   }
@@ -146,7 +158,7 @@ private[loader] object ModelInit {
       ( extractor, machine ) <- extractors
       allowedResources       <- extractor.allowedResources.toVector
       resource               <- allowedResources.toList.toVector
-      item                   <- data.items.get( resource )
+      ( item, _ )            <- data.items.get( resource )
     } yield ( item, extractor, machine )
 
   def extractorMachine( extractor: Extractor ): Either[String, Machine] =
@@ -241,12 +253,12 @@ private[loader] object ModelInit {
           )
       )
 
-  def nuclearWastePseudoRecipes( items: Map[ClassName, Item], gameData: GameData ): Vector[Recipe] =
+  def nuclearWastePseudoRecipes( items: Map[ClassName, ( Item, NativeClass )], gameData: GameData ): Vector[Recipe] =
     gameData.nuclearGenerators.values.flatMap { g =>
       g.fuels.flatMap {
         case ( src, prod ) =>
-          ( items.get( src ), items.get( prod.item ) ).mapN(
-            ( s, p ) =>
+          ( items.get( src ), items.get( prod.item ) ).mapN {
+            case ( ( s, _ ), ( p, _ ) ) =>
               Recipe(
                 ClassName( s"${g.className.name}__${s.className.name}" ),
                 p.displayName,
@@ -257,7 +269,7 @@ private[loader] object ModelInit {
                 Machine( g.className, g.displayName, MachineType( ManufacturerType.Manufacturer ), 0d ),
                 Power.Fixed( -g.powerProduction )
               )
-          )
+          }
       }
     }.toVector
 

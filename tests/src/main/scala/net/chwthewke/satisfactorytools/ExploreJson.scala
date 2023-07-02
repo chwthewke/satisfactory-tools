@@ -11,6 +11,7 @@ import cats.syntax.foldable._
 import cats.syntax.functorFilter._
 import cats.syntax.option._
 import cats.syntax.show._
+import cats.syntax.unorderedFoldable._
 import io.circe.Json
 import io.circe.JsonObject
 import io.circe.fs2.byteArrayParser
@@ -23,7 +24,7 @@ import loader.Loader
 object ExploreJson extends IOApp {
 
   def loadJson: IO[Vector[Json]] =
-    loadJsonVersion( DataVersionStorage.Update7 )
+    loadJsonVersion( DataVersionStorage.Update8 )
 
   def loadJsonVersion( version: DataVersionStorage ): IO[Vector[Json]] =
     Loader.io
@@ -59,23 +60,60 @@ object ExploreJson extends IOApp {
       _.asObject.foldMap(
         obj =>
           obj( "NativeClass" )
-            .flatMap( _.asString )
-            .map( NativeClass( _ ) )
+            .flatMap( _.as[NativeClass].toOption )
             .foldMap(
               cls => obj( "Classes" ).flatMap( _.asArray ).foldMap( _.foldMap( _.asObject.foldMap( f( cls ) ) ) )
             )
       )
     )
 
+  def exploreResources( array: Vector[Json] ): Map[String, ( Json, NonEmptyVector[String] )] =
+    exploreNativeClasses(
+      nc =>
+        obj =>
+          Option
+            .when( nc == NativeClass.resourceDescClass )( obj )
+            .toVector
+    )( array )
+      .foldMap(
+        obj =>
+          obj( "ClassName" )
+            .flatMap( _.asString )
+            .foldMap(
+              cn =>
+                obj.toIterable.toVector.foldMap {
+                  case ( k, v ) =>
+                    Map( ( k, Map( ( v, NonEmptyVector.one( cn ) ) ) ) )
+                }
+            )
+      )
+      .flatMap {
+        case ( key, classesByValue ) =>
+          classesByValue.collectFirst {
+            case ( v, classes ) if classes.contains_( "Desc_OreCopper_C" ) => ( key, ( v, classes ) )
+          }
+      }
+      .filter( _._2._2.length == 9 )
+
+  def printResources( array: Vector[Json] ): IO[Unit] =
+    IO.println(
+      exploreResources( array )
+        .map {
+          case ( field, ( value, classes ) ) =>
+            show"""$field
+                  |  $value
+                  |  ${classes.mkString_( ", " )}
+                  |""".stripMargin
+        }
+        .mkString( "RESOURCES\n", "\n", "\n" )
+    )
+
   private def extractNativeClass( json: Json ): Option[( NativeClass, Vector[Json] )] =
     json.asObject.flatMap(
       obj =>
         (
-          obj( "NativeClass" )
-            .flatMap( _.asString )
-            .map( NativeClass( _ ) ),
-          obj( "Classes" )
-            .flatMap( _.asArray )
+          obj( "NativeClass" ).flatMap( _.as[NativeClass].toOption ),
+          obj( "Classes" ).flatMap( _.asArray )
         ).tupled
     )
 
@@ -112,8 +150,9 @@ object ExploreJson extends IOApp {
   override def run( args: List[String] ): IO[ExitCode] =
     for {
       array <- loadJson
-      _     <- IO.println( showSchemas( array ) )
-//      _     <- printNativeClasses( array )
+      _     <- printResources( array )
+//      _     <- IO.println( showSchemas( array ) )
+//      _ <- printNativeClasses( array )
 //      _ <- IO.println( collectNativeClassFields( NativeClass.resourceExtractorClass )( array ).intercalate( "\n" ) )
 //      _ <- IO.println(
 //            collectNativeClassFieldValues( NativeClass.resourceExtractorClass, "mDisplayName" )( array )

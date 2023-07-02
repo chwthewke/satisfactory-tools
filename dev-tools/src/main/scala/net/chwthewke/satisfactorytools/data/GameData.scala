@@ -5,11 +5,12 @@ import alleycats.std.iterable._
 import cats.Monoid
 import cats.Show
 import cats.syntax.foldable._
+import cats.syntax.functor._
 import cats.syntax.show._
 import io.circe.Decoder
 
 final case class GameData(
-    items: Map[ClassName, Item],
+    items: Map[ClassName, ( Item, NativeClass )],
     extractors: Map[ClassName, Extractor],
     manufacturers: Map[ClassName, Manufacturer],
     recipes: Vector[GameRecipe],
@@ -19,7 +20,7 @@ final case class GameData(
 
 object GameData {
   private def init(
-      items: Map[ClassName, Item] = Map.empty,
+      items: Map[ClassName, ( Item, NativeClass )] = Map.empty,
       extractors: Map[ClassName, Extractor] = Map.empty,
       manufacturers: Map[ClassName, Manufacturer] = Map.empty,
       recipes: Vector[GameRecipe] = Vector.empty,
@@ -30,7 +31,7 @@ object GameData {
 
   val empty: GameData = init()
 
-  def items( items: Map[ClassName, Item] ): GameData                         = init( items = items )
+  def items( items: Map[ClassName, ( Item, NativeClass )] ): GameData        = init( items = items )
   def extractors( extractors: Map[ClassName, Extractor] ): GameData          = init( extractors = extractors )
   def manufacturers( manufacturers: Map[ClassName, Manufacturer] ): GameData = init( manufacturers = manufacturers )
   def recipes( recipes: Vector[GameRecipe] ): GameData                       = init( recipes = recipes )
@@ -83,7 +84,7 @@ object GameData {
           NativeClass.equipmentDescClass | NativeClass.biomassDescClass | NativeClass.resourceDescClass |
           NativeClass.ammoInstantDescClass | NativeClass.ammoInstantClassU6 | NativeClass.ammoProjDescClass |
           NativeClass.ammoProjClassU6 | NativeClass.ammoSpreadClassU6 | NativeClass.ammoColorDescClass =>
-        decodeMap( itemDecoder )( _.className ).map( GameData.items )
+        decodeMap( itemDecoder.tupleRight( nativeClass ) )( _._1.className ).map( GameData.items )
       case NativeClass.manufacturerClass | NativeClass.colliderClass =>
         decodeMap( Decoder[Manufacturer] )( _.className ).map( GameData.manufacturers )
       case NativeClass.resourceExtractorClass | NativeClass.waterPumpClass | NativeClass.frackingExtractorClass =>

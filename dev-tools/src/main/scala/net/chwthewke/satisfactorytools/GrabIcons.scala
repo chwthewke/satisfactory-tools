@@ -43,7 +43,7 @@ class GrabIcons[F[_]]( version: DataVersionStorage )( implicit S: Sync[F], F: Fi
     F.createTempDirectory.bracket(
       tmpDir =>
         gameData.items.values
-          .map( item => item.smallIcon )
+          .map( item => item._1.smallIcon )
           .toVector
           .distinct
           .traverse_( grabIcon( gameSource, tmpDir, _ ) )
@@ -98,7 +98,7 @@ class GrabIcons[F[_]]( version: DataVersionStorage )( implicit S: Sync[F], F: Fi
 }
 
 object GrabIcons {
-  val pathToUModel: String  = "C:\\Users\\Chewie\\umodel_win32\\umodel.exe"
+  val pathToUModel: String  = "C:\\Users\\Chewie\\umodel_win32_202306\\umodel.exe"
   val targetDirectory: Path = Path( "assets" ) / "src" / "main" / "resources" / "img"
 
   abstract class Program( storage: DataVersionStorage ) extends IOApp {
@@ -111,3 +111,4 @@ object GrabIconsU4 extends GrabIcons.Program( DataVersionStorage.Update4 )
 object GrabIconsU5 extends GrabIcons.Program( DataVersionStorage.Update5 )
 object GrabIconsU6 extends GrabIcons.Program( DataVersionStorage.Update6 )
 object GrabIconsU7 extends GrabIcons.Program( DataVersionStorage.Update7 )
+//object GrabIconsU8 extends GrabIcons.Program( DataVersionStorage.Update8 )
