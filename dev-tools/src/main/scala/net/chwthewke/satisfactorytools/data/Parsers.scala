@@ -21,7 +21,8 @@ object Parsers {
 
   val bpGeneratedClass: Parser[ClassName] =
     (
-      string( "BlueprintGeneratedClass'\"/Game/FactoryGame/" ) ~>
+      opt( string( "/Script/Engine." ) ) ~>
+        string( "BlueprintGeneratedClass'\"/Game/FactoryGame/" ) ~>
         (stringOf1( bpNoSep ) ~ char( '/' )).skipMany ~>
         stringOf1( bpNoSep ) ~> char( '.' ) ~>
         stringOf1( bpNoSep ) <~
@@ -31,16 +32,19 @@ object Parsers {
   val bpGeneratedClassList: Parser[Vector[ClassName]] =
     listOf1( bpGeneratedClass ).map( _.toList.toVector )
 
-  val buildableClass: Parser[ClassName] =
-    (
+  val manufacturerClass: Parser[ClassName] = {
+    val classNameParser: Parser[String] =
       string( "/" ) ~>
         (stringOf1( bpNoSep ) ~ char( '/' )).skipMany1 ~>
         stringOf1( bpNoSep ) ~> char( '.' ) ~>
         stringOf1( bpNoSep )
-    ).map( ClassName( _ ) )
 
-  val buildablesList: Parser[List[ClassName]] =
-    (char( '(' ) ~> buildableClass.sepBy1( char( ',' ) ) <~ char( ')' )).map( _.toList ) |
+    choice( classNameParser, char( '"' ) ~> classNameParser <~ char( '"' ) )
+      .map( ClassName( _ ) )
+  }
+
+  val manufacturerClassList: Parser[List[ClassName]] =
+    (char( '(' ) ~> manufacturerClass.sepBy1( char( ',' ) ) <~ char( ')' )).map( _.toList ) |
       ok( Nil )
 
   val countable: Parser[Countable[Double, ClassName]] =

@@ -45,6 +45,12 @@ object DataVersionStorage extends Enum[DataVersionStorage] {
         "u7",
         ModelVersion( 4, "Satisfactory Update 7" )
       )
+  case object Update8
+      extends DataVersionStorage(
+        Some( GameSource( experimentalPath, "ue4.27" ) ),
+        "u8",
+        ModelVersion( 5, "Satisfactory Update 8" )
+      )
 
   override val values: Vector[DataVersionStorage] = findValues.toVector
   implicit val dataVersionStorageOrder: Order[DataVersionStorage] =

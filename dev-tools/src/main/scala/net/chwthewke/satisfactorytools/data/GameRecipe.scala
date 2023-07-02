@@ -52,7 +52,7 @@ object GameRecipe {
       countableList.decoder.map( _.toList ),
       countableList.decoder,
       Decoders.doubleStringDecoder.map( _.seconds ),
-      Decoder.decodeOption( buildablesList.decoder ).map( _.orEmpty ),
+      Decoder.decodeOption( manufacturerClassList.decoder ).map( _.orEmpty ),
       Decoders.doubleStringDecoder,
       Decoders.doubleStringDecoder
     )

@@ -8,7 +8,8 @@ import io.circe.Decoder
 final case class NativeClass( value: String ) extends AnyVal
 
 object NativeClass {
-  implicit val nativeClassDecoder: Decoder[NativeClass] = Decoder[String].map( NativeClass( _ ) )
+  implicit val nativeClassDecoder: Decoder[NativeClass] =
+    Decoder[String].map( str => NativeClass( str.stripPrefix( "/Script/CoreUObject." ) ) )
 
   implicit val nativeClassShow: Show[NativeClass] = Show[String].contramap( _.value )
 

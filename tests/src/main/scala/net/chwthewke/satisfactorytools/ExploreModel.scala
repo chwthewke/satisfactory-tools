@@ -1,5 +1,6 @@
 package net.chwthewke.satisfactorytools
 
+import cats.Order.catsKernelOrderingForOrder
 import cats.effect.ExitCode
 import cats.effect.IO
 import cats.effect.IOApp
@@ -12,8 +13,16 @@ import model.Model
 object ExploreModel extends IOApp {
   override def run( args: List[String] ): IO[ExitCode] =
     Loader.io
-      .loadModel( DataVersionStorage.Update6 )
-      .flatMap( model => IO.println( model ) )
+      .loadModel( DataVersionStorage.Update7 )
+      .flatMap(
+        model =>
+          IO.println(
+            model.extractionRecipes
+              .map( _._3.className )
+              .sorted
+              .mkString_( s"EXTS (${model.extractionRecipes.size})\n", "\n", "" )
+          )
+      )
       .as( ExitCode.Success )
 
   def printManufacturers( model: Model ): IO[Unit] = {
