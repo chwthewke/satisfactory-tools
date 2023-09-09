@@ -167,7 +167,7 @@ object forms {
 
       def reset: String =
         resetPath.renderString
-      
+
       def pullUp( from: TreeLoc.NonRoot, recipe: ClassName ): String =
         (pullUpPath / location( from ) / recipe.name).renderString
 
@@ -279,6 +279,19 @@ object forms {
     val addAlts: String       = "add_alts"
     val removeAlts: String    = "remove_alts"
     val lockRecipes: String   = "lock_recipes"
+
+    object recipesUpToTier {
+      def apply( tier: Int, alternates: Boolean ): String = s"add_recipes_tier_$tier" + (if (alternates) "_alt" else "")
+      def unapply( s: String ): Option[( Int, Boolean )] = {
+        import atto.Atto._
+
+        (string( "add_recipes_tier_" ) ~> int ~ opt( string( "_alt" ) ))
+          .map { case ( tier, alt ) => ( tier, alt.isDefined ) }
+          .parseOnly( s )
+          .option
+      }
+
+    }
 
     val compute: String     = "compute"
     val addGroup: String    = "group_inc"

@@ -85,6 +85,10 @@ object WriteSolverInputs {
   def removeAllAlternatesFromRecipeList( planId: PlanId ): ConnectionIO[Unit] =
     statements.deleteAllAlternatesFromRecipeList( planId ).run.void
 
+  def addRecipesUpToTier( planId: PlanId, tier: Int, alternates: Boolean ): ConnectionIO[Unit] =
+    statements.clearRecipeList( planId ).run *>
+      statements.insertToRecipeList( planId, tier, alternates ).run.void
+
   def updateOptions( planId: PlanId, options: Options ): ConnectionIO[Unit] =
     statements.upsertOptions.run( ( planId, options ) ).void
 
@@ -260,6 +264,14 @@ object WriteSolverInputs {
       // language=SQL
       fr0"""r."display_name" ILIKE 'alternate:%'"""
 
+    private val isNotAlternate: Fragment =
+      // language=SQL
+      fr0"""r."display_name" NOT ILIKE 'alternate:%'"""
+
+    private def isAvailableAtTier( n: Int ): Fragment =
+      // language=SQL
+      fr0"""r."tier" IS NULL OR r."tier" <= $n"""
+
     def insertDefaultRecipeList( planId: PlanId ): Update0 =
       insertAllRecipes( withPlanId( planId ), notExtractionRecipe )
 
@@ -283,5 +295,19 @@ object WriteSolverInputs {
            |  AND ${Fragments.in( fr0""""recipe_id"""", recipeIds )}
            |""".stripMargin.update
 
+    def clearRecipeList( planId: PlanId ): Update0 =
+      // language=SQL
+      sql"""DELETE FROM "recipe_lists"
+           |WHERE "plan_id" = $planId
+           |""".stripMargin.update
+
+    def insertToRecipeList( planId: PlanId, maxTier: Int, alternates: Boolean ): Update0 =
+      insertAllRecipes(
+        Vector(
+          withPlanId( planId ),
+          notExtractionRecipe,
+          isAvailableAtTier( maxTier )
+        ) ++ Option.when( !alternates )( isNotAlternate ): _*
+      )
   }
 }

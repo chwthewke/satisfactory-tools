@@ -45,6 +45,30 @@ object RecipesView extends ( ( Model, RecipeList ) => Tag ) {
           "LOCK CURRENT"
         )
       ),
+      div(
+        span( width := "8em", display.`inline-block`, "WITH ALTS" ),
+        8.to( 1, -1 )
+          .map(
+            tier =>
+              button(
+                `class` := "button is-info",
+                formaction := Actions.recipesUpToTier( tier, alternates = true ),
+                s"TIER $tier"
+              )
+          )
+      ),
+      div(
+        span( width := "8em", display.`inline-block`, "NO ALTS" ),
+        8.to( 0, -1 )
+          .map(
+            tier =>
+              button(
+                `class` := "button is-info",
+                formaction := Actions.recipesUpToTier( tier, alternates = false ),
+                s"TIER $tier"
+              )
+          )
+      ),
       recipeFieldSets( model.manufacturingRecipes, list.recipes.toSet )
     )
 
