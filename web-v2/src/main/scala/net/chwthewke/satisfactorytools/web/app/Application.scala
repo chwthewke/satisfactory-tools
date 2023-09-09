@@ -372,6 +372,8 @@ class Application[F[_]](
         Some( planner.removeAllAlternatesFromRecipeList )
       case Actions.lockRecipes /: _ =>
         Some( planner.lockCurrentRecipes )
+      case Actions.recipesUpToTier( tier, withAlts ) /: _ =>
+        Some( planner.addRecipesUpToTier( _, tier, withAlts ) )
       case _ => None
     }
 

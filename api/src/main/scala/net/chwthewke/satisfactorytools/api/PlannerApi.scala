@@ -38,6 +38,8 @@ trait PlannerApi[F[_]] { self =>
 
   def removeAllAlternatesFromRecipeList( planId: PlanId ): F[Unit]
 
+  def addRecipesUpToTier( planId: PlanId, tier: Int, alternates: Boolean ): F[Unit]
+
   def setOptions( planId: PlanId, options: Options ): F[Unit]
 
   def setResourceOptions( planId: PlanId, resourceOptions: ResourceOptions ): F[Unit]
@@ -88,6 +90,9 @@ trait PlannerApi[F[_]] { self =>
 
     override def removeAllAlternatesFromRecipeList( planId: PlanId ): G[Unit] =
       f( self.removeAllAlternatesFromRecipeList( planId ) )
+
+    override def addRecipesUpToTier( planId: PlanId, tier: Int, alternates: Boolean ): G[Unit] =
+      f( self.addRecipesUpToTier( planId, tier, alternates ) )
 
     override def setOptions( planId: PlanId, options: Options ): G[Unit] =
       f( self.setOptions( planId, options ) )
