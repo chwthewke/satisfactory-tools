@@ -30,7 +30,7 @@ object Calculator {
       inputs: SolverInputs,
       solver: Solver
   ): Either[String, Factory] = {
-    val selection = RecipeSelection( model, inputs.recipeList, inputs.options, inputs.resourceOptions )
+    val selection: RecipeSelection = RecipeSelection( model, inputs.recipeList, inputs.options, inputs.resourceOptions )
 
     solver
       .solve( inputs.bill, selection )
@@ -41,30 +41,53 @@ object Calculator {
       input: Countable[Double, Item],
       tieredRecipes: List[ExtractionRecipe]
   ): Option[Vector[ClockedRecipe]] = {
+
+    // 1st pass: select resource nodes
     @tailrec
     def selectRecipes(
-        acc: Vector[Countable[Int, ExtractionRecipe]],
+        acc: List[Countable[Int, ExtractionRecipe]],
         recipes: List[ExtractionRecipe],
         produced: Double
-    ): Option[( Vector[Countable[Int, ExtractionRecipe]], Double )] =
-      if (produced >= input.amount) ( acc, produced ).some
+    ): Option[List[Countable[Int, ExtractionRecipe]]] = {
+      if (produced >= input.amount) acc.reverse.some
       else
         recipes match {
           case Nil => none
           case head :: tail =>
-            val required: Int =
-              ((input.amount - produced) / head.maxAmountPerExtractor).ceil.toInt.min( head.limit )
+            val required: Int = ((input.amount - produced) / head.maxAmountPerExtractor).ceil.toInt.min( head.limit )
 
-            selectRecipes( acc :+ Countable( head, required ), tail, produced + head.maxAmountPerExtractor * required )
+            selectRecipes( Countable( head, required ) :: acc, tail, produced + head.maxAmountPerExtractor * required )
         }
+    }
+
+    // 2nd pass: select clock speeds. Taking advantage of the fact that maxClockSpeed is increasing in recipes
+    @tailrec
+    def selectClockSpeeds(
+        acc: Vector[ClockedRecipe],
+        recipes: List[Countable[Int, ExtractionRecipe]],
+        target: Double
+    ): Vector[ClockedRecipe] = recipes match {
+      case Nil => acc
+      case head :: tail =>
+        val nominalAmount: Double =
+          recipes.foldMap {
+            case Countable( extraction, amount ) => extraction.recipe.productsPerMinute.head.amount * amount
+          }
+        val clockSpeedCandidate: Double = 100d * target / nominalAmount
+        if (clockSpeedCandidate <= head.item.maxClockSpeed)
+          acc ++ recipes.map( r => ClockedRecipe.overclocked( r.map( _.recipe ), clockSpeedCandidate ) )
+        else {
+          val picked: ClockedRecipe          = ClockedRecipe.overclocked( head.map( _.recipe ), head.item.maxClockSpeed )
+          val nextAcc: Vector[ClockedRecipe] = acc :+ picked
+          val nextTarget: Double             = target - picked.productsPerMinute.head.amount
+          selectClockSpeeds( nextAcc, tail, nextTarget )
+        }
+
+    }
 
     Option.when( input.amount > Tolerance )( () ) *>
-      selectRecipes( Vector.empty, tieredRecipes, 0d )
-        .map {
-          case ( recipes, maxAmount ) =>
-            val clockSpeed: Double = 100d * input.amount / maxAmount
-            recipes.map( extraction => ClockedRecipe.overclocked( extraction.map( _.recipe ), clockSpeed ) )
-        }
+      selectRecipes( Nil, tieredRecipes, 0d )
+        .map( selectClockSpeeds( Vector.empty, _, input.amount ) )
   }
 
   def solutionFactory(

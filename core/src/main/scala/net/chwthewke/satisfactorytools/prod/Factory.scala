@@ -20,12 +20,12 @@ final case class Factory(
 
 object Factory {
   private def showClockedRecipe( cr: ClockedRecipe ) =
-    show"${cr.machineCount} ${cr.recipe.item.displayName} @ ${cr.clockSpeed}"
+    f"${cr.machineCount}%d ${cr.recipe.item.displayName} @ ${cr.clockSpeed}%.4f"
 
-  private def showAmount( amount: Double ) = f"$amount%f4.3"
+  private def showAmount( amount: Double ) = f"$amount%4.3f"
   private def showCountables[A]( countables: Vector[Countable[Double, A]] )( s: A => String ): String =
     countables
-      .map { case Countable( item, amount ) => show"""${showAmount( amount )} ${s( item )}""" }
+      .map { case Countable( item, amount ) => show"${showAmount( amount )} ${s( item )}" }
       .mkString( "\n" )
 
   implicit val factoryShow: Show[Factory] = Show.show(
