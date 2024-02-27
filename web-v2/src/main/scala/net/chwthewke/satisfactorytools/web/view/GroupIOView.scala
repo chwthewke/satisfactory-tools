@@ -47,8 +47,9 @@ object GroupIOView extends ( ( Map[Item, ItemIO[ItemSrcDest.InterGroup]], Int ) 
         peerings: Vector[( Item, Double, Vector[Countable[Double, ItemSrcDest.InterGroup]] )]
     ): Tag =
       table(
-        peerings.flatMap {
-          case ( item, amount, peers ) =>
+        borderCollapse.collapse,
+        peerings.zipWithIndex.flatMap {
+          case ( ( item, amount, peers ), outerIx ) =>
             def itemCells( height: Int ): Frag = Seq[Frag](
               numCell4( amount )( rowspan := height, verticalAlign.middle ),
               td( rowspan := height, verticalAlign.middle, item.displayName )
@@ -60,16 +61,17 @@ object GroupIOView extends ( ( Map[Item, ItemIO[ItemSrcDest.InterGroup]], Int ) 
               peers.zipWithIndex.map {
                 case ( peer, ix ) =>
                   tr(
-                    Seq[Frag](
-                      Option.when( ix == 0 )(
-                        Seq[Frag](
-                          itemCells( peers.size ),
-                          td( rowspan := peers.size, verticalAlign.middle, dir )
-                        )
-                      ),
-                      td( ItemsView.showItemSrcDest( peer.item ) ),
-                      numCell4( peer.amount )
-                    )
+                    Option.when( outerIx > 0 && ix == 0 )(
+                      borderTop := "1px solid"
+                    ),
+                    Option.when( ix == 0 )(
+                      Seq[Frag](
+                        itemCells( peers.size ),
+                        td( rowspan := peers.size, verticalAlign.middle, dir, padding := "0 1em" )
+                      )
+                    ),
+                    td( ItemsView.showItemSrcDest( peer.item ) ),
+                    numCell4( peer.amount )
                   )
               }
         }
