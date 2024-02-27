@@ -110,6 +110,8 @@ object Calculator {
         .map { case ( item, amount ) => Countable( item, amount ) }
         .toVector
 
+    // TODO I have a theory that extraInputs must be empty, given that the max value of inputs is
+    //      computed from the `tieredExtractionRecipes` which we then use to fulfill the solution's `inputRecipes`
     val ( inputRecipes, extraInputs ): (
         Vector[ClockedRecipe],
         Vector[Countable[Double, Item]]
