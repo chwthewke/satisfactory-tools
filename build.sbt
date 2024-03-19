@@ -16,6 +16,9 @@ enablePlugins( FormatPlugin, PlatformDepsPlugin )
 ThisBuild / SettingKey[Seq[String]]( "ide-base-packages" )
   .withRank( KeyRanks.Invisible ) := Seq( "net.chwthewke.satisfactorytools" )
 
+ThisBuild / Compile / doc / sources                := Seq.empty
+ThisBuild / Compile / packageDoc / publishArtifact := false
+
 val compilerPlugins = libraryDependencies ++= kindProjector ++ betterMonadicFor
 
 val core =
@@ -48,7 +51,7 @@ val core =
     .jsSettings(
       dependencyOverrides ++= Seq( "org.scala-js" %% "scalajs-library" % "1.13.1" )
     )
-    .enablePlugins( SbtBuildInfo, ScalacPlugin )
+    .enablePlugins( ScalacPlugin )
 
 val solver = project
   .settings( compilerPlugins )
@@ -106,12 +109,21 @@ val `web-v2` = project
   .dependsOn( api, persistence )
   .enablePlugins( ScalacPlugin, DependenciesPlugin )
 
+val `web-v2-app` = project
+  .dependsOn( `web-v2` )
+  .enablePlugins( JavaServerAppPackaging )
+  .enablePlugins( LauncherJarPlugin )
+  .settings(
+    topLevelDirectory := Some( "stw2" ),
+    Compile / mainClass := Some( "net.chwthewke.satisfactorytools.web.Main" )
+  )
+
 val `production-calculator` = project
   .settings( compilerPlugins )
   .settings( mainClass.withRank( KeyRanks.Invisible ) := Some( "net.chwthewke.satisfactory.ProdCalculator" ) )
   .settings( libraryDependencies ++= decline ++ pureconfigCatsEffect )
   .dependsOn( `dev-tools` )
-  .enablePlugins( ScalacPlugin, DependenciesPlugin )
+  .enablePlugins( SbtBuildInfo, ScalacPlugin, DependenciesPlugin )
 
 val `tests` = project
   .settings( compilerPlugins )
@@ -159,6 +171,7 @@ val `satisfactory-tools` = project
     persistence,
     `dev-tools`,
     `web-v2`,
+    `web-v2-app`,
     `production-calculator`,
     `tests`
   )
