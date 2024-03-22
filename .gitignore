@@ -13,5 +13,5 @@ target/
 
 *.csv
 
-production-calculator/src/main/resources/*.conf
+production-calculator/src/main/resources/application.conf
 tests/src/main/resources/*.conf
