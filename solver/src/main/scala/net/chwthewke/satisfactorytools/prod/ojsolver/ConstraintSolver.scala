@@ -8,6 +8,7 @@ import cats.syntax.show._
 import mouse.any._
 import org.ojalgo.optimisation.Expression
 import org.ojalgo.optimisation.ExpressionsBasedModel
+import org.ojalgo.optimisation.Optimisation
 import org.ojalgo.optimisation.Variable
 
 import data.Countable
@@ -15,7 +16,7 @@ import data.Item
 import model.Bill
 import model.Recipe
 
-object ConstraintSolver extends Solver {
+object ConstraintSolver extends Solver[Either[String, *]] {
 
   private def varName( item: Item ): String     = show"I__${item.className}"
   private def varName( recipe: Recipe ): String = show"R__${recipe.className}"
@@ -23,9 +24,9 @@ object ConstraintSolver extends Solver {
 
   override def solve( bill: Bill, recipes: RecipeSelection ): Either[String, Solution] = {
 
-    val allowedRecipes = recipes.allowedRecipes.map( _._1 )
+    val allowedRecipes: Vector[Recipe] = recipes.allowedRecipes.map( _._1 )
 
-    val model = new ExpressionsBasedModel
+    val model: ExpressionsBasedModel = new ExpressionsBasedModel
 
     val recipeVars: Map[Recipe, Variable] =
       recipes.allowedRecipes.map {
@@ -64,14 +65,14 @@ object ConstraintSolver extends Solver {
 
     inputVars.foreach { case ( item, inputVar ) => itemExprs.get( item ).foreach( _.set( inputVar, 1d ) ) }
 
-    val result = model.minimise()
+    val result: Optimisation.Result = model.minimise()
 
     Option
       .when( result.getState.isSuccess )(
         Solution(
           recipeVars.flatMap {
             case ( recipe, v ) =>
-              val amount = v.getValue.doubleValue
+              val amount: Double = v.getValue.doubleValue
               Option.when( amount != 0d )( Countable( recipe, amount ) )
           }.toVector,
           inputVars.map { case ( item, v ) => Countable( item, v.getValue.doubleValue ) }.toVector

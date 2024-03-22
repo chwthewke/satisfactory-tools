@@ -12,8 +12,9 @@ import loader.Loader
 import model.ExtractorType
 import model.Options
 import prod.Calculator
-import prod.ojsolver.ConstraintSolver
+import prod.Solver
 import prod.SolverInputs
+import prod.ojsolver.ConstraintSolver
 
 object ProdCalculator
     extends CommandIOApp(
@@ -30,13 +31,12 @@ object ProdCalculator
           prodConfig <- cfg.loadF[IO, ProductionConfig]()
           bill       <- prodConfig.mkBill( model ).leftMap( Error( _ ) ).liftTo[IO]
           recipeList <- prodConfig.mkRecipeList( model ).leftMap( Error( _ ) ).liftTo[IO]
-          _ <- IO.println(
-                Calculator(
-                  model,
-                  SolverInputs( bill, recipeList, myOptions, model.defaultResourceOptions ),
-                  ConstraintSolver
-                )
-              )
+          result <- Calculator(
+                     model,
+                     SolverInputs( bill, recipeList, myOptions, model.defaultResourceOptions ),
+                     Solver.blocking[IO]( ConstraintSolver )
+                   )
+          _ <- IO.println( result )
         } yield ExitCode.Success
     )
 

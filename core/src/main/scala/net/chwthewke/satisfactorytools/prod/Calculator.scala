@@ -1,7 +1,10 @@
 package net.chwthewke.satisfactorytools
 package prod
 
+import cats.ApplicativeThrow
+import cats.Functor
 import cats.Id
+import cats.syntax.applicativeError._
 import cats.syntax.apply._
 import cats.syntax.flatMap._
 import cats.syntax.foldable._
@@ -22,14 +25,16 @@ import text.FactoryTable
 object Calculator {
   val Tolerance: Double = 1e-6
 
-  def apply( model: Model, inputs: SolverInputs, solver: Solver ): String =
-    computeFactory( model, inputs, solver ).map( FactoryTable.render( inputs.bill, _ ) ).merge
+  def apply[F[_]: ApplicativeThrow]( model: Model, inputs: SolverInputs, solver: Solver[F] ): F[String] =
+    computeFactory( model, inputs, solver )
+      .map( FactoryTable.render( inputs.bill, _ ) )
+      .handleError( _.getMessage )
 
-  def computeFactory(
+  def computeFactory[F[_]: Functor](
       model: Model,
       inputs: SolverInputs,
-      solver: Solver
-  ): Either[String, Factory] = {
+      solver: Solver[F]
+  ): F[Factory] = {
     val selection: RecipeSelection = RecipeSelection( model, inputs.recipeList, inputs.options, inputs.resourceOptions )
 
     solver

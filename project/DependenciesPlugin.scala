@@ -45,7 +45,9 @@ object DependenciesPlugin extends AutoPlugin {
     val alleycatsCore: Deps = Seq( "org.typelevel" %% "alleycats-core" % catsVersion )
     val catsTime: Deps      = Seq( "org.typelevel" %% "cats-time" % "0.5.1" )
 
-    val catsEffect: Deps = "org.typelevel" %% Seq( "cats-effect", "cats-effect-kernel", "cats-effect-std" ) % "3.4.8"
+    val catsEffectVersion = "3.4.8"
+    val catsEffect: Deps =
+      "org.typelevel" %% Seq( "cats-effect", "cats-effect-kernel", "cats-effect-std" ) % catsEffectVersion
 
     val fs2: Deps = "co.fs2" %% Seq( "fs2-core", "fs2-io" ) % "3.6.1"
 
