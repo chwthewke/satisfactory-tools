@@ -2,8 +2,12 @@ package net.chwthewke.satisfactorytools
 package prod.planning
 
 import cats.Id
+import cats.data.EitherT
+import cats.effect.kernel.Sync
 import scala.annotation.tailrec
 import scala.collection.immutable.SortedMap
+
+import prod.ojsolver.OptimizedAssignmentSolver
 
 trait AssignmentSolver[F[_]] {
   def solve(
@@ -13,42 +17,56 @@ trait AssignmentSolver[F[_]] {
   ): F[AssignmentSolution]
 }
 
-object AssignmentSolver extends AssignmentSolver[Id] {
-  import FlowBalancer.Tolerance
+object AssignmentSolver {
+  class Combined[F[_]]( implicit val F: Sync[F] ) extends AssignmentSolver[F] {
+    override def solve(
+        ins: Vector[Double],
+        outs: Vector[Double],
+        prefs: Vector[( Int, Int )]
+    ): F[AssignmentSolution] =
+      EitherT( F.interruptible( Optimized.solve( ins, outs, prefs ) ) )
+        .foldF( _ => F.interruptible( Naive.solve( ins, outs, prefs ) ), F.pure )
+  }
 
-  override def solve(
-      ins: Vector[Double],
-      outs: Vector[Double],
-      prefs: Vector[( Int, Int )]
-  ): AssignmentSolution =
-    selectPreferred( ins, outs, prefs.toSet, SortedMap.empty )
+  private object Naive extends AssignmentSolver[Id] {
 
-  @tailrec
-  private def selectPreferred(
-      ins: Vector[Double],
-      outs: Vector[Double],
-      prefs: Set[( Int, Int )],
-      acc: SortedMap[( Int, Int ), Double]
-  ): AssignmentSolution = {
-    // NOTE this has bias and is possibly non optimal I guess
-    //      we have a linear programming implementation... and can use this as a fallback
-    val selection: Option[( Int, Int, Double )] =
-      prefs
-        .map { case ( i, j ) => ( i, j, ins( i ) min outs( j ) ) }
-        .maxByOption( _._3 )
-        .filter( _._3 > Tolerance )
+    import FlowBalancer.Tolerance
 
-    selection match {
-      case Some( ( i, j, amt ) ) =>
-        selectPreferred(
-          ins.updated( i, ins( i ) - amt ),
-          outs.updated( j, outs( j ) - amt ),
-          prefs - ( ( i, j ) ),
-          acc + (( i, j ) -> amt)
-        )
+    override def solve(
+        ins: Vector[Double],
+        outs: Vector[Double],
+        prefs: Vector[( Int, Int )]
+    ): AssignmentSolution =
+      selectPreferred( ins, outs, prefs.toSet, SortedMap.empty )
 
-      case None => AssignmentSolution( ins, outs, acc )
+    @tailrec
+    private def selectPreferred(
+        ins: Vector[Double],
+        outs: Vector[Double],
+        prefs: Set[( Int, Int )],
+        acc: SortedMap[( Int, Int ), Double]
+    ): AssignmentSolution = {
+      // NOTE this has bias and is possibly non optimal I guess
+      //      we have a linear programming implementation... and can use this as a fallback
+      val selection: Option[( Int, Int, Double )] =
+        prefs
+          .map { case ( i, j ) => ( i, j, ins( i ) min outs( j ) ) }
+          .maxByOption( _._3 )
+          .filter( _._3 > Tolerance )
+
+      selection match {
+        case Some( ( i, j, amt ) ) =>
+          selectPreferred(
+            ins.updated( i, ins( i ) - amt ),
+            outs.updated( j, outs( j ) - amt ),
+            prefs - ( ( i, j ) ),
+            acc + (( i, j ) -> amt)
+          )
+
+        case None => AssignmentSolution( ins, outs, acc )
+      }
     }
   }
 
+  private object Optimized extends OptimizedAssignmentSolver
 }
