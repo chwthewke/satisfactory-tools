@@ -36,7 +36,7 @@ case class ClockedRecipe(
 
   def power: Power = recipe.item.power.map( _ * machineCount * math.pow( clockSpeedMillionth / 1e6d, 1.6d ) )
 
-  val mainProductAmount: Double = recipe.flatMap( _.productsPerMinute.head ).amount
+  val mainProductAmount: Double        = recipe.flatMap( _.productsPerMinute.head ).amount
   val mainProductAmountPerUnit: Double = mainProductAmount / machineCount
 
   val ingredientsPerMinute: List[Countable[Double, Item]] = recipe.flatTraverse( _.ingredientsPerMinute )

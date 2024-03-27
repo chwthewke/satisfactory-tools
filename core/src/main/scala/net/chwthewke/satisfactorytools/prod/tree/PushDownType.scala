@@ -21,6 +21,6 @@ object PushDownType {
 
   implicit val pushDownTypeDecoder: Decoder[PushDownType] = deriveDecoder[PushDownType]
   implicit val pushDownTypeEncoder: Encoder[PushDownType] = deriveEncoder[PushDownType]
-  
+
   implicit val pushDownTypeShow: Show[PushDownType] = semiauto.show[PushDownType]
 }
