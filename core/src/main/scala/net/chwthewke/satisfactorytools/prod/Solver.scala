@@ -18,7 +18,7 @@ object Solver {
 
   private class Blocking[F[_]]( val delegate: Solver[Either[String, *]] )( implicit F: Sync[F] ) extends Solver[F] {
     def solve( bill: Bill, recipes: RecipeSelection ): F[Solution] =
-      F.blocking( delegate.solve( bill, recipes ) )
+      F.interruptible( delegate.solve( bill, recipes ) )
         .flatMap( _.leftMap( Error ).liftTo[F] )
   }
 
