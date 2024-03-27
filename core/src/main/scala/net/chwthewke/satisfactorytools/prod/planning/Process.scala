@@ -15,13 +15,13 @@ sealed abstract class Process extends Product {
   def producedPerMinute: Vector[Countable[Double, Item]]
   def consumedPerMinute: Vector[Countable[Double, Item]]
 
-  final def produced( item: Item ): Option[Double] =
-    producedPerMinute.find( _.item == item ).map( _.amount )
-  final def consumed( item: Item ): Option[Double] =
-    consumedPerMinute.find( _.item == item ).map( _.amount )
+  final def produced( item: Item ): Double =
+    producedPerMinute.find( _.item == item ).map( _.amount ).orEmpty
+  final def consumed( item: Item ): Double =
+    consumedPerMinute.find( _.item == item ).map( _.amount ).orEmpty
 
   def amountOf( item: Item ): Countable[Double, Item] =
-    Countable( item, produced( item ).orEmpty - consumed( item ).orEmpty )
+    Countable( item, produced( item ) - consumed( item ) )
 }
 
 object Process {
