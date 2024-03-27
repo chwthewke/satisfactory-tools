@@ -2,20 +2,22 @@ package net.chwthewke.satisfactorytools
 package prod
 package planning
 
+import cats.Functor
+import cats.Monad
+import cats.MonadThrow
 import cats.Order.catsKernelOrderingForOrder
 import cats.data.Ior
 import cats.data.NonEmptyMap
 import cats.data.NonEmptyVector
 import cats.data.State
+import cats.data.StateT
 import cats.syntax.align._
 import cats.syntax.flatMap._
 import cats.syntax.foldable._
 import cats.syntax.functor._
 import cats.syntax.option._
-import cats.syntax.traverse._
 import cats.syntax.vector._
 import scala.collection.immutable.SortedMap
-import scala.collection.immutable.SortedSet
 
 import data.Countable
 import data.Item
@@ -25,57 +27,89 @@ import model.Bill
 //  between "split the producers" and "split the producers' output"?
 case class FactoryPlan(
     processes: SortedMap[ProcessId, Process],
+    // below is the persisted part
     itemFlows: SortedMap[Item, FactoryPlan.ItemFlow]
 ) {
 
-  import FactoryPlan._
-
-  def splitProducersOf( item: Item ): State[Env, FactoryPlan] = {
-    val _ = Env.pure(
-      itemFlows
-        .get( item )
-        .map {
-          case ItemFlow( consumers, producers, priorities ) =>
-            ???
-        }
-    )
-
-    ???
-  }
+//  def splitProducersOf( item: Item ): State[Env, FactoryPlan] = {
+//    val _ = Env.pure(
+//      itemFlows
+//        .get( item )
+//        .map {
+//          case ItemFlow( consumers, producers, priorities ) =>
+//            ???
+//        }
+//    )
+//
+//    ???
+//  }
 
   def unsplitProducersOf( item: Item ): FactoryPlan = ???
 }
 
 object FactoryPlan {
-  case class Env( nextId: ProcessId.Synthetic, balancer: FlowBalancer ) {
-    private def incrId: Env = copy( nextId = nextId.copy( id = nextId.id + 1 ) )
+  case class Env[F[_]]( nextId: ProcessId.Synthetic, balancer: FlowBalancer[F] ) {
+    private def incrId: Env[F] = copy( nextId = nextId.copy( id = nextId.id + 1 ) )
   }
 
   object Env {
-    def withBalancer[A]( k: FlowBalancer => A ): State[Env, A] =
-      State.get[Env].map( env => k( env.balancer ) )
+    def withBalancer[F[_]: Monad, A]( k: FlowBalancer[F] => F[A] ): StateT[F, Env[F], A] =
+      StateT.inspectF[F, Env[F], A]( env => k( env.balancer ) )
 
-    def getNextId: State[Env, ProcessId.Synthetic] =
+    def getNextId[F[_]]: State[Env[F], ProcessId.Synthetic] =
       State( env => ( env.incrId, env.nextId ) )
 
-    def pure[A]( a: A ): State[Env, A] = State.pure( a )
+    def pure[F[_], A]( a: A ): State[Env[F], A] = State.pure( a )
   }
 
   case class ConsumerGroup( processes: NonEmptyVector[ProcessId] )
   object ConsumerGroup {}
 
   /**
-   * @param consumers Groups of processes (full block or part)
-   * @param producers Map of recipe block to processes (partial blocks, or just the whole block if None)
-   * @param priorities Preferred assignments of producers to consumers
-   */
+    * @param consumers Groups of processes (full block or part)
+    * @param producers Map of recipe block to processes (partial blocks, or just the whole block if None)
+    * @param priorities Preferred assignments of producers to consumers
+    */
   case class ItemFlow(
       consumers: NonEmptyVector[ConsumerGroup],
-      producers: NonEmptyMap[ProcessId.Natural, Option[Vector[ProcessId.Synthetic]]],
+      producers: NonEmptyMap[ProcessId.Natural, Option[NonEmptyVector[ProcessId.Synthetic]]],
       priorities: Vector[NonEmptyVector[( Int, Int )]] // indexes into (producers.keySet x consumers)
   ) {
-    def transports(balancer: FlowBalancer): NonEmptyVector[Transport[ProcessId]] =
-      ???
+
+    def transports[F[_]: MonadThrow]: StateT[F, ItemFlow.Env[F], NonEmptyVector[Transport[ProcessId]]] =
+      StateT.inspectF[F, ItemFlow.Env[F], NonEmptyVector[Transport[ProcessId]]] { env =>
+        val producersV: Vector[( ProcessId.Natural, Option[NonEmptyVector[ProcessId.Synthetic]] )] =
+          producers.toSortedMap.toVector
+
+        env.planEnv.balancer
+          .balance(
+            producersV
+              .map { case ( id, _ ) => env.processes.get( id ).foldMap( _.produced( env.item ) ) },
+            consumers.toVector
+              .map( _.processes.foldMap( id => env.processes.get( id ).foldMap( _.consumed( env.item ) ) ) ),
+            priorities
+          )
+          .flatMap(
+            flows =>
+              flows.zipWithIndex
+                .flatMap { case ( m, i ) => m.map { case ( j, d ) => ( i, j, d ) } }
+                .toNev
+                .map( _.map {
+                  case ( i, j, amt ) =>
+                    Transport( amt, producersV( i ) match {
+                      case ( id, idsOpt ) => idsOpt.getOrElse( NonEmptyVector.one( id ) )
+                    }, consumers.toVector( j ).processes )
+                } )
+                .liftTo[F]( ItemFlow.DummyError )
+          )
+      }
+    //      ItemFlow.Env.withBalancer { fb =>
+//        producers.toSortedMap.keys.toVector
+//          .traverse( id => ItemFlow.Env.getProcess( id ).map( _.foldMap( _.produced() ) ) )
+//        fb(
+//          )
+//      }
+
 //    def moveConsumer( id: ProcessId, to: Int ): ItemFlow =
 //      consumers.zipWithIndex
 //        .traverse {
@@ -93,31 +127,30 @@ object FactoryPlan {
 
 //    def splitProducer
 
-    def unassign( producer: ProcessId.Natural, consumerGroupIndex: Int ): ItemFlow = ???
-
-    def assign( producer: ProcessId.Natural, consumerGroupIndex: Int ): ItemFlow = {
-      ???
-    }
-
   }
 
   object ItemFlow {
-    case class Env( processes: SortedMap[ProcessId, Process], planEnv: FactoryPlan.Env )
+
+    private object DummyError extends Throwable( "", null, false, false )
+
+    case class Env[F[_]]( item: Item, processes: SortedMap[ProcessId, Process], planEnv: FactoryPlan.Env[F] )
 
     object Env {
-      def removeProcesses( ids: Iterable[ProcessId] ): State[Env, Unit] =
+      def getProcess[F[_]]( id: ProcessId ): StateT[F, Env[F], Option[Process]] = ???
+
+      def removeProcesses[F[_]]( ids: Iterable[ProcessId] ): State[Env[F], Unit] =
         State.modify( env => env.copy( processes = env.processes.removedAll( ids ) ) )
 
-      def register( process: Process ): State[Env, ProcessId] = {
-        lift( FactoryPlan.Env.getNextId )
+      def register[F[_]]( process: Process ): State[Env[F], ProcessId] = {
+        lift( FactoryPlan.Env.getNextId[F] )
           .flatTap( id => State.modify( env => env.copy( processes = env.processes.updated( id, process ) ) ) )
-          .widen
+          .widen[ProcessId]
       }
 
-      def withBalancer[A]( k: FlowBalancer => A ): State[Env, A] =
+      def withBalancer[F[_]: Monad, A]( k: FlowBalancer[F] => F[A] ): StateT[F, Env[F], A] =
         lift( FactoryPlan.Env.withBalancer( k ) )
 
-      private def lift[A]( fa: State[FactoryPlan.Env, A] ): State[Env, A] =
+      private def lift[F[_], G[_]: Functor, A]( fa: StateT[G, FactoryPlan.Env[F], A] ): StateT[G, Env[F], A] =
         fa.transformS( _.planEnv, ( env, _ ) => env )
     }
   }
