@@ -13,7 +13,7 @@ import scala.collection.immutable.SortedMap
 import prod.planning.AssignmentSolution
 import prod.planning.AssignmentSolver
 
-object OptimizedAssignmentSolver extends AssignmentSolver[Either[String, *]] {
+trait OptimizedAssignmentSolver extends AssignmentSolver[Either[String, *]] {
 
   private def edgeVarName( i: Int, j: Int ): String = show"E_${i}_$j"
   private def inExprName( i: Int ): String          = show"I_$i"
