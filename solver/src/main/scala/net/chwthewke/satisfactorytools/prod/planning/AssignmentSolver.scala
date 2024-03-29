@@ -9,7 +9,7 @@ import scala.collection.immutable.SortedMap
 
 import prod.ojsolver.OptimizedAssignmentSolver
 
-trait AssignmentSolver[F[_]] {
+trait AssignmentSolver[F[_]] { self =>
   def solve(
       ins: Vector[Double],
       outs: Vector[Double],
@@ -28,7 +28,7 @@ object AssignmentSolver {
         .foldF( _ => F.interruptible( Naive.solve( ins, outs, prefs ) ), F.pure )
   }
 
-  private object Naive extends AssignmentSolver[Id] {
+  private[planning] object Naive extends AssignmentSolver[Id] {
 
     import FlowBalancer.Tolerance
 
@@ -68,5 +68,5 @@ object AssignmentSolver {
     }
   }
 
-  private object Optimized extends OptimizedAssignmentSolver
+  private[planning] object Optimized extends OptimizedAssignmentSolver
 }

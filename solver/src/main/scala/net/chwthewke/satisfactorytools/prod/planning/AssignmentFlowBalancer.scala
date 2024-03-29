@@ -35,18 +35,17 @@ class AssignmentFlowBalancer[F[_]: Monad]( val solver: AssignmentSolver[F] ) ext
       ins: Vector[Double],
       outs: Vector[Double],
       prefs: Vector[NonEmptyVector[( Int, Int )]]
-  ): F[Vector[SortedMap[Int, Double]]] =
+  ): F[Vector[SortedMap[Int, Double]]] = {
+    val starting: Double = ins.sum
+
     ( ins, outs, prefs, Vector.empty[SortedMap[Int, Double]] ).tailRecM {
       case ( remIns, remOuts, remPrefs, acc ) =>
         val total: Double = remIns.sum
-        if (total < Tolerance * ins.sum)
+        if (total < Tolerance * starting)
           Right( acc ).pure[F].widen
-        else if (prefs.isEmpty)
-          Left(
-            ins.as( 0d ),
-            outs.as( 0d ),
-            remPrefs,
-            combine( acc, balanceNoPrefs( total, ins, outs ) )
+        else if (remPrefs.isEmpty)
+          Right(
+            combine( acc, balanceNoPrefs( total, remIns, remOuts ) )
           ).pure[F].widen
         else
           solver
@@ -54,13 +53,16 @@ class AssignmentFlowBalancer[F[_]: Monad]( val solver: AssignmentSolver[F] ) ext
             .map(
               tierSolution =>
                 Left(
-                  tierSolution.remainingIns,
-                  tierSolution.remainingOuts,
-                  prefs.tail,
-                  combine( acc, tierSolution.preferred )
+                  (
+                    tierSolution.remainingIns,
+                    tierSolution.remainingOuts,
+                    remPrefs.tail,
+                    combine( acc, tierSolution.preferred )
+                  )
                 )
             )
     }
+  }
 
   private def combine(
       lhs: Vector[SortedMap[Int, Double]],

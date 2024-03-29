@@ -2,19 +2,22 @@ package net.chwthewke.satisfactorytools
 package prod
 package planning
 
+import cats.data.EitherT
+import cats.data.NonEmptyVector
+import cats.effect.IO
+import cats.effect.unsafe.implicits.global
+import cats.syntax.flatMap._
 import cats.syntax.foldable._
 import cats.syntax.functor._
-import cats.syntax.traverse._
+import cats.syntax.vector._
 import org.scalacheck.Gen
 import org.scalacheck.cats.implicits._
 import org.scalatest.Assertion
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
+import scala.annotation.tailrec
 import scala.collection.immutable.SortedMap
-import scala.collection.immutable.SortedSet
-
-import net.chwthewke.satisfactorytools.prod.ojsolver.OptimizedAssignmentSolver
 
 class AssignmentFlowBalancerSpec extends AnyWordSpec with Matchers with ScalaCheckDrivenPropertyChecks {
 
@@ -37,25 +40,53 @@ class AssignmentFlowBalancerSpec extends AnyWordSpec with Matchers with ScalaChe
       doubles.map( _ / total )
     }
 
-  def genPrefs( countGen: Int => Gen[Int] )( m: Int, n: Int ): Gen[SortedMap[Int, SortedSet[Int]]] =
-    0.until( m )
-      .toVector
-      .traverse(
-        i =>
-          countGen( n )
-            .flatMap( Gen.pick( _, 0.until( n ) ) )
-            .map( js => ( i, js.to( SortedSet ) ) )
-      )
-      .map( _.to( SortedMap ) )
+  def genPrefs(
+      tierCountGen: Gen[Int],
+      tierSizeGen: Gen[Int]
+  )( m: Int, n: Int ): Gen[Vector[NonEmptyVector[( Int, Int )]]] =
+    for {
+      tierCount <- tierCountGen.map( _.min( m * n ).max( 0 ) )
+      tierSizes <- ( tierCount, n * m, List.empty[Int] ).tailRecM[Gen, List[Int]] {
+                    case ( r, av, ts ) =>
+                      if (r <= 0) Gen.const( Right( ts ) )
+                      else {
+                        tierSizeGen
+                          .map( _.max( av - r + 1 ).min( 1 ) )
+                          .map( t => Left( ( r - 1, av - t, t :: ts ) ) )
+                      }
+                  }
+      selected <- Gen.pick( tierSizes.sum, 0.until( m ).flatMap( i => 0.until( n ).map( j => ( i, j ) ) ) )
+    } yield {
 
-  def genAnyPrefs( m: Int, n: Int ): Gen[SortedMap[Int, SortedSet[Int]]] =
+      @tailrec
+      def popPrefs(
+          sizes: List[Int],
+          assignments: Vector[( Int, Int )],
+          acc: Vector[NonEmptyVector[( Int, Int )]]
+      ): Vector[NonEmptyVector[( Int, Int )]] = {
+        sizes match {
+          case Nil => acc
+          case s :: t =>
+            popPrefs(
+              t,
+              assignments.drop( s ),
+              acc.prependedAll( assignments.take( s ).toNev )
+            )
+        }
+      }
+
+      popPrefs( tierSizes, selected.toVector, Vector.empty )
+
+    }
+
+  def genAnyPrefs( m: Int, n: Int ): Gen[Vector[NonEmptyVector[( Int, Int )]]] =
     Gen.oneOf(
-      genPrefs( k => Gen.choose( 0, k.min( 2 ) ) )( m, n ), // few prefs
-      genPrefs( k => Gen.choose( k / 2, k ) )( m, n ),      // many prefs
-      Gen.const( SortedMap.empty[Int, SortedSet[Int]] )     // no prefs
+      genPrefs( Gen.choose( 1, 2 ), Gen.choose( 1, 2 ) )( m, n ),                   // few prefs
+      genPrefs( Gen.choose( 1, n.min( m ) ), Gen.choose( 1, n.max( m ) ) )( m, n ), // many prefs
+      Gen.const( Vector.empty )                                                     // no prefs
     )
 
-  val genParams: Gen[( Vector[Double], Vector[Double], SortedMap[Int, SortedSet[Int]] )] = for {
+  val genParams: Gen[( Vector[Double], Vector[Double], Vector[NonEmptyVector[( Int, Int )]] )] = for {
     ins   <- genInOuts
     outs  <- genNormalizedInOuts
     prefs <- genAnyPrefs( ins.size, outs.size )
@@ -124,14 +155,15 @@ class AssignmentFlowBalancerSpec extends AnyWordSpec with Matchers with ScalaChe
 
   }
 
-  def balancerProperties( balancer: AssignmentFlowBalancer ): Unit = {
+  def balancerProperties( balancer: AssignmentFlowBalancer[IO] ): Unit = {
 
     def testNormalizedNoPrefs(
         assertion: ( Vector[Double], Vector[Double] ) => Vector[SortedMap[Int, Double]] => Assertion
     ): Assertion =
       forAll( genParams ) {
         case ( ins, outs, prefs ) =>
-          val square: Vector[SortedMap[Int, Double]] = balancer.balance( ins, outs, prefs )
+          val square: Vector[SortedMap[Int, Double]] =
+            balancer.balance( ins, outs, prefs ).unsafeRunSync()
 
           assertion( ins, outs )( square )
       }
@@ -150,12 +182,20 @@ class AssignmentFlowBalancerSpec extends AnyWordSpec with Matchers with ScalaChe
 
   }
 
-  "the general balancer" must {
-    behave like balancerProperties( new AssignmentFlowBalancer( None ) )
+  "the naive balancer" must {
+    val solver: AssignmentSolver[IO] =
+      ( ins, outs, prefs ) => IO.delay( AssignmentSolver.Naive.solve( ins, outs, prefs ) )
+
+    behave like balancerProperties( new AssignmentFlowBalancer( solver ) )
   }
 
   "the optimized balancer" must {
-    behave like balancerProperties( new AssignmentFlowBalancer( Some( OptimizedAssignmentSolver ) ) )
+    val solver: AssignmentSolver[IO] = ( ins, outs, prefs ) =>
+      EitherT( IO.delay( AssignmentSolver.Optimized.solve( ins, outs, prefs ) ) )
+        .leftMap( new RuntimeException( _ ) )
+        .rethrowT
+
+    behave like balancerProperties( new AssignmentFlowBalancer( solver ) )
   }
 
 }
