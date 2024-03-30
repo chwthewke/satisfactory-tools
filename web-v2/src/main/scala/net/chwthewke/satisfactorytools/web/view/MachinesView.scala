@@ -18,12 +18,11 @@ object MachinesView extends ( ( Vector[Countable[Int, Machine]], Int ) => Tag ) 
       table(
         machines.gather
           .sortBy( m => ( m.item.machineType, m.item.powerConsumption ) )
-          .map(
-            m =>
-              tr(
-                td( f"${m.amount}%3d", textAlign.right ),
-                td( m.item.displayName )
-              )
+          .map( m =>
+            tr(
+              td( f"${m.amount}%3d", textAlign.right ),
+              td( m.item.displayName )
+            )
           )
       )
     )

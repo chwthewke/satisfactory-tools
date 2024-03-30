@@ -20,12 +20,12 @@ object RecipeCategory {
   private val catNuclearWaste: String = "nuc"
 
   def of( tier: Int, `type`: String ): Either[String, RecipeCategory.Manufacturing] =
-    (`type` match {
+    ( `type` match {
       case `catMilestone`    => Some( Milestone( tier ) )
       case `catAlternate`    => Some( Alternate( tier ) )
       case `catNuclearWaste` => Some( NuclearWaste )
       case catResearch       => ResearchCategory.withNameOption( catResearch ).map( Mam( tier, _ ) )
-    }).toRight( s"Unknown recipe category type ${`type`}" )
+    } ).toRight( s"Unknown recipe category type ${`type`}" )
 
   def of( tierOpt: Option[Int], typeOpt: Option[String] ): Either[String, RecipeCategory] =
     ( tierOpt, typeOpt ).traverseN( of ).map( _.getOrElse( RecipeCategory.Extraction ) )

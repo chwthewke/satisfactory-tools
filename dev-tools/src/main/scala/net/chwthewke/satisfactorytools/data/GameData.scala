@@ -66,9 +66,8 @@ object GameData {
       "mEnergyValue",
       "mResourceSinkPoints",
       "mSmallIcon"
-    )(
-      ( cn: ClassName, dn: String, fm: Form, ev: Double, pts: Option[Int], ico: IconData ) =>
-        Item( cn, dn, fm, ev, pts.getOrElse( 0 ), ico )
+    )( ( cn: ClassName, dn: String, fm: Form, ev: Double, pts: Option[Int], ico: IconData ) =>
+      Item( cn, dn, fm, ev, pts.getOrElse( 0 ), ico )
     )(
       Decoder[ClassName],
       Decoder[String],
@@ -101,32 +100,30 @@ object GameData {
   implicit val gameDataDecoder: Decoder[GameData] =
     for {
       nativeClass <- Decoder[NativeClass].prepare( _.downField( "NativeClass" ) )
-      gameData <- modelClassDecoder( nativeClass )
-                   .prepare( _.downField( "Classes" ) )
-                   .handleErrorWith(
-                     f => Decoder.failed( f.withMessage( show"in NativeClass $nativeClass: ${f.message}" ) )
-                   )
+      gameData <-
+        modelClassDecoder( nativeClass )
+          .prepare( _.downField( "Classes" ) )
+          .handleErrorWith( f => Decoder.failed( f.withMessage( show"in NativeClass $nativeClass: ${f.message}" ) ) )
     } yield gameData
 
-  implicit val gameDataShow: Show[GameData] = Show(
-    model => show"""Recipes:
-                   |
-                   |${model.recipes.map( _.show ).intercalate( "\n" )}
-                   |
-                   |
-                   |Items:
-                   |
-                   |${model.items.values.map( _.show ).intercalate( "\n" )}
-                   |
-                   |
-                   |Extractors:
-                   |
-                   |${model.extractors.values.map( _.show ).intercalate( "\n" )}
-                   |
-                   |Manufacturers:
-                   |
-                   |${model.manufacturers.values.map( _.show ).intercalate( "\n" )}
-                   |
-                   |""".stripMargin
-  )
+  implicit val gameDataShow: Show[GameData] =
+    Show( model => show"""Recipes:
+                         |
+                         |${model.recipes.map( _.show ).intercalate( "\n" )}
+                         |
+                         |
+                         |Items:
+                         |
+                         |${model.items.values.map( _.show ).intercalate( "\n" )}
+                         |
+                         |
+                         |Extractors:
+                         |
+                         |${model.extractors.values.map( _.show ).intercalate( "\n" )}
+                         |
+                         |Manufacturers:
+                         |
+                         |${model.manufacturers.values.map( _.show ).intercalate( "\n" )}
+                         |
+                         |""".stripMargin )
 }

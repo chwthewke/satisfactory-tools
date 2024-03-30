@@ -21,18 +21,17 @@ object CustomGroups {
   def readCustomGroupSelection( planId: PlanId ): ConnectionIO[Map[ClassName, Int]] =
     Headers
       .readPlanHeader( planId )
-      .semiflatMap(
-        header =>
-          (
-            readPlanCustomGroups( header ),
-            ReadModel.readRecipes( header.modelVersionId )
-          ).mapN {
-            case ( groups, recipes ) =>
-              groups.assignments
-                .flatMap {
-                  case ( recipeId, ix ) => recipes.get( recipeId ).map( _.className ).tupleRight( ix )
-                }
-          }
+      .semiflatMap( header =>
+        (
+          readPlanCustomGroups( header ),
+          ReadModel.readRecipes( header.modelVersionId )
+        ).mapN {
+          case ( groups, recipes ) =>
+            groups.assignments
+              .flatMap {
+                case ( recipeId, ix ) => recipes.get( recipeId ).map( _.className ).tupleRight( ix )
+              }
+        }
       )
       .getOrElse( Map.empty )
 
@@ -75,12 +74,12 @@ object CustomGroups {
             recipes       <- statements.selectUngroupedManufacturingRecipes.toQuery0( solutionId ).to[Vector]
 
             _ <- WriteSolution.writeManufacturingRecipesIds(
-                  solutionId,
-                  currentGroups.update(
-                    recipes.mapFilter( cr => assignments.get( cr.item ).tupleLeft( cr.item ) ).toMap
-                  ),
-                  recipes
-                )
+                   solutionId,
+                   currentGroups.update(
+                     recipes.mapFilter( cr => assignments.get( cr.item ).tupleLeft( cr.item ) ).toMap
+                   ),
+                   recipes
+                 )
           } yield ()
       }
       .value
@@ -157,6 +156,6 @@ object CustomGroups {
            |  AND r."custom_group" = $groupIndex
            |  AND "group_order"    IN ( $groupRow, ${groupRow + 1} )
            |""".stripMargin //
-      .update
+        .update
   }
 }

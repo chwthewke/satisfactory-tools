@@ -58,12 +58,11 @@ object Plans extends PlannerApi[ConnectionIO] {
   override def lockCurrentRecipes( planId: PlanId ): ConnectionIO[Unit] =
     plans.Headers
       .readPlanHeader( planId )
-      .mproduct(
-        header =>
-          OptionT
-            .fromOption[ConnectionIO]( header.solution.value )
-            .semiflatMap( plans.ReadSolution.readPlanResult( planId, _, OutputTab.Steps ) )
-            .map( _._1 )
+      .mproduct( header =>
+        OptionT
+          .fromOption[ConnectionIO]( header.solution.value )
+          .semiflatMap( plans.ReadSolution.readPlanResult( planId, _, OutputTab.Steps ) )
+          .map( _._1 )
       )
       .flatMap {
         case ( header, factory ) => ReadModel.getModel( header.modelVersionId ).tupleRight( factory )
@@ -89,11 +88,10 @@ object Plans extends PlannerApi[ConnectionIO] {
   override def setResourceOptions( planId: PlanId, resourceOptions: ResourceOptions ): ConnectionIO[Unit] =
     plans.Headers
       .readPlanHeader( planId )
-      .semiflatMap(
-        header =>
-          ReadModel
-            .readItemIds( header.modelVersionId )
-            .flatMap( plans.WriteSolverInputs.updateResourceOptions( planId, _, resourceOptions ) )
+      .semiflatMap( header =>
+        ReadModel
+          .readItemIds( header.modelVersionId )
+          .flatMap( plans.WriteSolverInputs.updateResourceOptions( planId, _, resourceOptions ) )
       )
       .getOrElse( () )
 
@@ -122,14 +120,13 @@ object Plans extends PlannerApi[ConnectionIO] {
   override def computePlan( planId: PlanId ): ConnectionIO[Unit] =
     plans.Headers
       .readPlanHeader( planId )
-      .semiflatMap(
-        header =>
-          for {
-            model        <- ReadModel.readModel( header.modelVersionId ) // TODO actually uses only extraction recipes
-            solverInputs <- plans.ReadSolverInputs.getSolverInputs( planId )
-            _ <- plans.WriteSolution
-                  .writeSolution( planId, Calculator.computeFactory( model, solverInputs, ConstraintSolver ) )
-          } yield ()
+      .semiflatMap( header =>
+        for {
+          model        <- ReadModel.readModel( header.modelVersionId ) // TODO actually uses only extraction recipes
+          solverInputs <- plans.ReadSolverInputs.getSolverInputs( planId )
+          _ <- plans.WriteSolution
+                 .writeSolution( planId, Calculator.computeFactory( model, solverInputs, ConstraintSolver ) )
+        } yield ()
       )
       .getOrElse( () )
 

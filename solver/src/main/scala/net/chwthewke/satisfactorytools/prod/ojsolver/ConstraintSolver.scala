@@ -33,8 +33,8 @@ object ConstraintSolver extends Solver {
       }.toMap
 
     def inputVar( item: Item ): Variable = {
-      val setUpper  = (v: Variable) => recipes.resourceCaps.get( item ).fold( v )( v.upper )
-      val setWeight = (v: Variable) => v.weight( recipes.resourceWeights.getOrElse( item, 1d ) )
+      val setUpper  = ( v: Variable ) => recipes.resourceCaps.get( item ).fold( v )( v.upper )
+      val setWeight = ( v: Variable ) => v.weight( recipes.resourceWeights.getOrElse( item, 1d ) )
 
       model.addVariable( varName( item ) ).lower( 0d ) |> setUpper |> setWeight
     }
@@ -46,20 +46,18 @@ object ConstraintSolver extends Solver {
       allowedRecipes
         .foldMap( _.itemsPerMinuteMap.keySet )
         .toVector
-        .fproduct(
-          item =>
-            model
-              .addExpression( exprName( item ) )
-              .lower( bill.items.find( _.item == item ).fold( 0d )( _.amount ) )
+        .fproduct( item =>
+          model
+            .addExpression( exprName( item ) )
+            .lower( bill.items.find( _.item == item ).fold( 0d )( _.amount ) )
         )
         .toMap
 
-    allowedRecipes.foreach(
-      recipe =>
-        recipe.itemsPerMinuteMap.foreach {
-          case ( item, amount ) =>
-            itemExprs( item ).set( recipeVars( recipe ), amount )
-        }
+    allowedRecipes.foreach( recipe =>
+      recipe.itemsPerMinuteMap.foreach {
+        case ( item, amount ) =>
+          itemExprs( item ).set( recipeVars( recipe ), amount )
+      }
     )
 
     inputVars.foreach { case ( item, inputVar ) => itemExprs.get( item ).foreach( _.set( inputVar, 1d ) ) }

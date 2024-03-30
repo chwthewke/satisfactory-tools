@@ -216,7 +216,7 @@ object WriteModel {
            |DO UPDATE SET
            |    "description" = "excluded"."description"
            |""".stripMargin //
-      .update
+        .update
 
     def deleteUnusedExtractionRecipes[F[_]: Reducible](
         modelVersionId: ModelVersionId,
@@ -230,7 +230,7 @@ object WriteModel {
            |  AND i."model_version_id" = $modelVersionId
            |  ${andOpt( itemPurities.map( notIn( fr"""(r."item_id", r."purity", r."recipe_id")""", _ ) ) )}
            |""".stripMargin //
-      .update
+        .update
 
     def deleteUnusedResourceNodes[F[_]: Reducible](
         modelVersionId: ModelVersionId,
@@ -244,7 +244,7 @@ object WriteModel {
            |  AND i."model_version_id" = $modelVersionId
            |  ${andOpt( extractorItems.map( notIn( fr"""(n."extractor_type", n."item_id")""", _ ) ) )}
            |""".stripMargin //
-      .update
+        .update
 
     def deleteUnusedRecipeIngredients[F[_]: Reducible: Functor](
         modelVersionId: ModelVersionId,
@@ -258,7 +258,7 @@ object WriteModel {
            |  AND i."model_version_id" = $modelVersionId
            |  ${andOpt( ingredientIds.map( Fragments.notIn( fr0"""x."id" """, _ ) ) )}
            |""".stripMargin //
-      .update
+        .update
 
     def deleteUnusedRecipeProducts[F[_]: Reducible: Functor](
         modelVersionId: ModelVersionId,
@@ -272,7 +272,7 @@ object WriteModel {
            |  AND i."model_version_id" = $modelVersionId
            |  ${andOpt( productIds.map( Fragments.notIn( fr0"""x."id" """, _ ) ) )}
            |""".stripMargin //
-      .update
+        .update
 
     def deleteUnusedRecipes[F[_]: Reducible: Functor](
         modelVersionId: ModelVersionId,
@@ -283,7 +283,7 @@ object WriteModel {
            |WHERE "model_version_id" = $modelVersionId
            |  ${andOpt( recipeIds.map( Fragments.notIn( fr0""""id" """, _ ) ) )}
            |""".stripMargin //
-      .update
+        .update
 
     def deleteUnusedItems[F[_]: Reducible: Functor](
         modelVersionId: ModelVersionId,
@@ -294,7 +294,7 @@ object WriteModel {
            |WHERE "model_version_id" = $modelVersionId
            |  ${andOpt( itemIds.map( Fragments.notIn( fr0""""id" """, _ ) ) )}
            |""".stripMargin //
-      .update
+        .update
 
     def deleteUnusedMachines[F[_]: Reducible: Functor](
         modelVersionId: ModelVersionId,
@@ -305,7 +305,7 @@ object WriteModel {
            |WHERE "model_version_id" = $modelVersionId
            |  ${andOpt( machineIds.map( Fragments.notIn( fr0""""id" """, _ ) ) )}
            |""".stripMargin //
-      .update
+        .update
 
   }
 
@@ -338,10 +338,10 @@ object WriteModel {
 
     for {
       recipeIds <- insertRecipe( version )
-                    .updateManyWithGeneratedKeys[RecipeId]( "id" )( recipesWithIds )
-                    .compile
-                    .toVector
-                    .map( recipesWithIds.map( _._1 ).zip )
+                     .updateManyWithGeneratedKeys[RecipeId]( "id" )( recipesWithIds )
+                     .compile
+                     .toVector
+                     .map( recipesWithIds.map( _._1 ).zip )
       ingredientIds <- writeRecipeIngredients( recipeIds, itemIds )
       productIds    <- writeRecipeProducts( recipeIds, itemIds )
     } yield ( recipeIds.map { case ( recipe, id ) => ( recipe.className, id ) }.toMap, ingredientIds, productIds )
@@ -420,21 +420,21 @@ object WriteModel {
       _ <- deleteUnusedRecipeIngredients( modelVersionId, ingredientIds.toNev ).run
       _ <- deleteUnusedRecipeProducts( modelVersionId, productIds.toNev ).run
       _ <- deleteUnusedExtractionRecipes(
-            modelVersionId,
-            model.extractionRecipes.flatMap {
-              case ( item, purity, recipe ) =>
-                ( itemIds.get( item.className ), recipeIds.get( recipe.className ) ).mapN( ( _, purity, _ ) )
-            }.toNev
-          ).run
+             modelVersionId,
+             model.extractionRecipes.flatMap {
+               case ( item, purity, recipe ) =>
+                 ( itemIds.get( item.className ), recipeIds.get( recipe.className ) ).mapN( ( _, purity, _ ) )
+             }.toNev
+           ).run
       _ <- deleteUnusedResourceNodes(
-            modelVersionId,
-            model.defaultResourceOptions.resourceNodes.toVector.flatMap {
-              case ( extractorType, byItem ) =>
-                byItem.toVector
-                  .flatMap { case ( item, _ ) => itemIds.get( item ) }
-                  .tupleLeft( extractorType )
-            }.toNev
-          ).run
+             modelVersionId,
+             model.defaultResourceOptions.resourceNodes.toVector.flatMap {
+               case ( extractorType, byItem ) =>
+                 byItem.toVector
+                   .flatMap { case ( item, _ ) => itemIds.get( item ) }
+                   .tupleLeft( extractorType )
+             }.toNev
+           ).run
       _ <- deleteUnusedRecipes( modelVersionId, recipeIds.values.toVector.toNev ).run
       _ <- deleteUnusedMachines( modelVersionId, machineIds.values.toVector.toNev ).run
       _ <- deleteUnusedItems( modelVersionId, itemIds.values.toVector.toNev ).run
@@ -444,13 +444,13 @@ object WriteModel {
     val allRecipes  = model.manufacturingRecipes ++ model.extractionRecipes.map( _._3 )
     val allMachines = allRecipes.map( _.producedIn ).distinctBy( _.className )
     for {
-      modelVersionId                           <- upsertModelVersion( version ).withUniqueGeneratedKeys[ModelVersionId]( "id" )
-      itemIds                                  <- writeItems( model.items.values.toVector, modelVersionId )
-      machineIds                               <- writeMachines( allMachines, modelVersionId )
+      modelVersionId <- upsertModelVersion( version ).withUniqueGeneratedKeys[ModelVersionId]( "id" )
+      itemIds        <- writeItems( model.items.values.toVector, modelVersionId )
+      machineIds     <- writeMachines( allMachines, modelVersionId )
       ( recipeIds, ingredientIds, productIds ) <- writeRecipes( allRecipes, machineIds, itemIds, modelVersionId )
       _                                        <- writeExtractionRecipes( model.extractionRecipes, recipeIds, itemIds )
-      _                                        <- writeResourceNodes( model.defaultResourceOptions.resourceNodes, itemIds, modelVersionId )
-      _                                        <- pruneModel( modelVersionId, itemIds, machineIds, recipeIds, ingredientIds, productIds, model )
+      _ <- writeResourceNodes( model.defaultResourceOptions.resourceNodes, itemIds, modelVersionId )
+      _ <- pruneModel( modelVersionId, itemIds, machineIds, recipeIds, ingredientIds, productIds, model )
     } yield modelVersionId
   }
 

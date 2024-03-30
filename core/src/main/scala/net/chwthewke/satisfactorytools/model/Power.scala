@@ -35,7 +35,7 @@ object Power {
   }
 
   final case class Variable( min: Double, max: Double ) extends Power {
-    override def average: Double = (min + max) / 2d
+    override def average: Double = ( min + max ) / 2d
 
     override def map( f: Double => Double ): Power = Variable( f( min ), f( max ) )
 

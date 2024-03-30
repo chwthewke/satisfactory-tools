@@ -23,21 +23,20 @@ object ProdCalculator
     ) {
 
   override def main: Opts[IO[ExitCode]] =
-    Program.configOpt.map(
-      cfg =>
-        for {
-          model      <- Loader.io.loadModel( DataVersionStorage.Update5 )
-          prodConfig <- cfg.loadF[IO, ProductionConfig]()
-          bill       <- prodConfig.mkBill( model ).leftMap( Error( _ ) ).liftTo[IO]
-          recipeList <- prodConfig.mkRecipeList( model ).leftMap( Error( _ ) ).liftTo[IO]
-          _ <- IO.println(
-                Calculator(
-                  model,
-                  SolverInputs( bill, recipeList, myOptions, model.defaultResourceOptions ),
-                  ConstraintSolver
-                )
-              )
-        } yield ExitCode.Success
+    Program.configOpt.map( cfg =>
+      for {
+        model      <- Loader.io.loadModel( DataVersionStorage.Update5 )
+        prodConfig <- cfg.loadF[IO, ProductionConfig]()
+        bill       <- prodConfig.mkBill( model ).leftMap( Error( _ ) ).liftTo[IO]
+        recipeList <- prodConfig.mkRecipeList( model ).leftMap( Error( _ ) ).liftTo[IO]
+        _ <- IO.println(
+               Calculator(
+                 model,
+                 SolverInputs( bill, recipeList, myOptions, model.defaultResourceOptions ),
+                 ConstraintSolver
+               )
+             )
+      } yield ExitCode.Success
     )
 
   private val myOptions = Options(

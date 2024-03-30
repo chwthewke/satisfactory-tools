@@ -9,8 +9,7 @@ import org.http4s.headers.`Content-Type`
 import scalatags.generic.Frag
 
 package object app {
-  implicit def scalatagsEncoder[F[_], C <: Frag[_, String]](
-      implicit
+  implicit def scalatagsEncoder[F[_], C <: Frag[_, String]]( implicit
       charset: Charset = `UTF-8`
   ): EntityEncoder[F, C] =
     contentEncoder( MediaType.text.html )

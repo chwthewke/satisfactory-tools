@@ -18,19 +18,18 @@ case class SolverInputs(
 
 object SolverInputs {
   implicit val solverInputsShow: Show[SolverInputs] =
-    Show.show(
-      inputs => //
-        show"""BILL
-              |${inputs.bill}
-              |
-              |RECIPES
-              |${inputs.recipeList}
-              |
-              |OPTIONS
-              |${inputs.options}
-              |
-              |MAP
-              |${inputs.resourceOptions}
-              |""".stripMargin
+    Show.show( inputs => //
+      show"""BILL
+            |${inputs.bill}
+            |
+            |RECIPES
+            |${inputs.recipeList}
+            |
+            |OPTIONS
+            |${inputs.options}
+            |
+            |MAP
+            |${inputs.resourceOptions}
+            |""".stripMargin
     )
 }

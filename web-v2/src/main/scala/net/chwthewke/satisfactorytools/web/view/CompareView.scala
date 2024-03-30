@@ -79,7 +79,7 @@ object CompareView {
 
   def itemIODiff( before: Map[Item, ItemIO[ItemSrcDest.Global]], after: Map[Item, ItemIO[ItemSrcDest.Global]] ): Tag = {
     val byItem: Vector[( Item, Option[ItemIO[ItemSrcDest.Global]], Option[ItemIO[ItemSrcDest.Global]] )] =
-      (before.keySet ++ after.keySet).toVector.sorted
+      ( before.keySet ++ after.keySet ).toVector.sorted
         .map( item => ( item, before.get( item ), after.get( item ) ) )
 
     fieldset(
@@ -110,7 +110,7 @@ object CompareView {
         changeValue: ChangeValue
     ): Seq[Tag] = {
       val allIO: Vector[ItemSrcDest] =
-        (before.foldMap( i => f( i ).map( _.item ) ) ++ after.foldMap( i => f( i ).map( _.item ) )).distinct.sorted
+        ( before.foldMap( i => f( i ).map( _.item ) ) ++ after.foldMap( i => f( i ).map( _.item ) ) ).distinct.sorted
 
       def amountOf( isd: ItemSrcDest, in: Option[ItemIO[ItemSrcDest.Global]] ): Option[Double] =
         in.flatMap( i => f( i ).find( _.item == isd ).map( _.amount ) )
@@ -141,11 +141,10 @@ object CompareView {
   def inputOutputs( factory: Factory ): ( SortedMap[Item, Double], SortedMap[Item, Double] ) = {
     val ( in, out ) =
       factory.manufacturing
-        .foldMap(
-          cr =>
-            cr.flatTraverse( rec => rec.itemsPerMinute )
-              .map { case Countable( item, amount ) => ( item, amount ) }
-              .to( SortedMap )
+        .foldMap( cr =>
+          cr.flatTraverse( rec => rec.itemsPerMinute )
+            .map { case Countable( item, amount ) => ( item, amount ) }
+            .to( SortedMap )
         )
         .filter( _._2.abs > AmountTolerance )
         .partition( _._2 < 0 )
@@ -228,7 +227,7 @@ object CompareView {
             b => ( Vector( b ), Vector.empty, Vector.empty, Vector.empty, Vector.empty ),
             a => ( Vector.empty, Vector( a ), Vector.empty, Vector.empty, Vector.empty ),
             ( b, a ) =>
-              if ((a.fractionalAmount - b.fractionalAmount).abs < AmountTolerance)
+              if (( a.fractionalAmount - b.fractionalAmount ).abs < AmountTolerance)
                 ( Vector.empty, Vector.empty, Vector.empty, Vector.empty, Vector( a ) )
               else if (b.machineCount != a.machineCount)
                 ( Vector.empty, Vector.empty, Vector( ( b, a ) ), Vector.empty, Vector.empty )
@@ -312,13 +311,13 @@ object CompareView {
   // Style
 
   def styleDiffD3( diff: Double, changeValue: ChangeValue ): Tag =
-    if (diff > 0 == (changeValue == HigherIsBetter)) Better.applyD3( diff ) else Worse.applyD3( diff )
+    if (diff > 0 == ( changeValue == HigherIsBetter )) Better.applyD3( diff ) else Worse.applyD3( diff )
 
   def styleDiffD4( diff: Double, changeValue: ChangeValue ): Tag =
-    if (diff > 0 == (changeValue == HigherIsBetter)) Better.applyD4( diff ) else Worse.applyD4( diff )
+    if (diff > 0 == ( changeValue == HigherIsBetter )) Better.applyD4( diff ) else Worse.applyD4( diff )
 
   def styleDiffI( diff: Int, changeValue: ChangeValue ): Tag =
-    if (diff > 0 == (changeValue == HigherIsBetter)) Better.applyI( diff ) else Worse.applyI( diff )
+    if (diff > 0 == ( changeValue == HigherIsBetter )) Better.applyI( diff ) else Worse.applyI( diff )
 
   sealed abstract class ChangeValue
   final case object HigherIsBetter extends ChangeValue
@@ -328,7 +327,7 @@ object CompareView {
     def applyD3( diff: Double ): Tag =
       span(
         backgroundColor := bc,
-        color := c,
+        color           := c,
         if (diff.abs < AmountTolerance) "=" else if (diff > 0) "\u25b2" else "\u25bc",
         " ",
         f"$diff%+.3f"
@@ -337,7 +336,7 @@ object CompareView {
     def applyD4( diff: Double ): Tag =
       span(
         backgroundColor := bc,
-        color := c,
+        color           := c,
         if (diff.abs < AmountTolerance) "=" else if (diff > 0) "\u25b2" else "\u25bc",
         " ",
         f"$diff%+.4f"
@@ -346,7 +345,7 @@ object CompareView {
     def applyI( diff: Int ): Tag =
       span(
         backgroundColor := bc,
-        color := c,
+        color           := c,
         if (diff == 0) "=" else if (diff > 0) "\u25b2" else "\u25bc",
         " ",
         f"$diff%+d"

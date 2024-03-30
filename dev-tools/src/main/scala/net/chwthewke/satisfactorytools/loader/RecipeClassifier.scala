@@ -96,14 +96,13 @@ case class RecipeClassifier( data: GameData ) {
         currentAnalyses.toVector.foldMap {
           case ( cn, toAnalyze ) =>
             toAnalyze
-              .flatTraverse(
-                reqs =>
-                  reqs
-                    .foldMapM( item => currentAnalyses.get( item.className ).flatMap( _.left.toOption ) )
-                    .cata(
-                      milestones => ( true, Left( milestones ) ),
-                      ( false, Right( reqs ) )
-                    )
+              .flatTraverse( reqs =>
+                reqs
+                  .foldMapM( item => currentAnalyses.get( item.className ).flatMap( _.left.toOption ) )
+                  .cata(
+                    milestones => ( true, Left( milestones ) ),
+                    ( false, Right( reqs ) )
+                  )
               )
               .map( analyzed => Map( ( cn, analyzed ) ) )
         }
@@ -146,17 +145,16 @@ case class RecipeClassifier( data: GameData ) {
 
         recipeSchematics
           .get( recipe.className )
-          .flatMap[RecipeCategory](
-            s =>
-              s.`type` match {
-                case SchematicType.Milestone | SchematicType.Tutorial | SchematicType.Custom =>
-                  Some( RecipeCategory.Milestone( tier ) )
-                case SchematicType.Alternate =>
-                  Some( RecipeCategory.Alternate( tier ) )
-                case SchematicType.Mam =>
-                  MilestoneAnalyzer.researchCategoryOf( s ).map( RecipeCategory.Mam( tier, _ ) )
-                case SchematicType.HardDrive | SchematicType.Shop => None
-              }
+          .flatMap[RecipeCategory]( s =>
+            s.`type` match {
+              case SchematicType.Milestone | SchematicType.Tutorial | SchematicType.Custom =>
+                Some( RecipeCategory.Milestone( tier ) )
+              case SchematicType.Alternate =>
+                Some( RecipeCategory.Alternate( tier ) )
+              case SchematicType.Mam =>
+                MilestoneAnalyzer.researchCategoryOf( s ).map( RecipeCategory.Mam( tier, _ ) )
+              case SchematicType.HardDrive | SchematicType.Shop => None
+            }
           )
           .tupleLeft( recipe.className )
 
@@ -176,9 +174,7 @@ case class RecipeClassifier( data: GameData ) {
 
     private def canonicalUnlocks( data: GameData ): Map[ClassName /*GameRecipe*/, Schematic] = {
       val allRecipeUnlocks: Map[ClassName, NonEmptyVector[Schematic]] =
-        data.schematics.foldMap(
-          s => s.unlocks.tupleRight( NonEmptyVector.one( s ) ).toMap
-        )
+        data.schematics.foldMap( s => s.unlocks.tupleRight( NonEmptyVector.one( s ) ).toMap )
 
       def schematicPriority( schematic: Schematic ) =
         schematic.`type` match {
@@ -195,8 +191,8 @@ case class RecipeClassifier( data: GameData ) {
     }
 
     def init: MilestoneAnalyzer = {
-      val manufacturingRecipes: Vector[GameRecipe] = data.recipes.filter(
-        recipe => recipe.producedIn.intersect[ClassName]( data.manufacturers.keys.toSeq ).size == 1
+      val manufacturingRecipes: Vector[GameRecipe] = data.recipes.filter( recipe =>
+        recipe.producedIn.intersect[ClassName]( data.manufacturers.keys.toSeq ).size == 1
       )
 
       val manufacturingRecipeClasses: Set[ClassName] = manufacturingRecipes.map( _.className ).toSet
@@ -237,26 +233,23 @@ case class RecipeClassifier( data: GameData ) {
 
       val baseRecipes: Map[ClassName /*Item*/, GameRecipe] =
         manufacturingRecipes
-          .filter(
-            recipe =>
-              !recipe.displayName.toLowerCase.startsWith( "alternate" ) &&
-                recipeSchematics.get( recipe.className ).forall( _.`type` != SchematicType.Alternate )
+          .filter( recipe =>
+            !recipe.displayName.toLowerCase.startsWith( "alternate" ) &&
+              recipeSchematics.get( recipe.className ).forall( _.`type` != SchematicType.Alternate )
           )
           .map( recipe => ( recipe.products.head.item, recipe ) )
           .toMap
 
       val manufacturerSchematics: Map[ClassName, Schematic] =
         data.manufacturers.values.toVector
-          .mapFilter(
-            manu =>
-              data.recipes
-                .find( _.products.exists( _.item == alterClassName( manu.className ) ) )
-                .flatMap(
-                  recipe =>
-                    data.schematics
-                      .find( schem => schem.unlocks.contains( recipe.className ) )
-                )
-                .tupleLeft( manu.className )
+          .mapFilter( manu =>
+            data.recipes
+              .find( _.products.exists( _.item == alterClassName( manu.className ) ) )
+              .flatMap( recipe =>
+                data.schematics
+                  .find( schem => schem.unlocks.contains( recipe.className ) )
+              )
+              .tupleLeft( manu.className )
           )
           .toMap
 

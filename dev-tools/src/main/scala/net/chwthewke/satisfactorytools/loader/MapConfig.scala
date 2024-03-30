@@ -18,17 +18,16 @@ case class MapConfig( resourceNodes: Map[ExtractorType, Map[ClassName, ResourceD
 object MapConfig {
   private implicit val resourceDistribReader: ConfigReader[ResourceDistrib] =
     ConfigReader[Vector[Int]]
-      .emap(
-        counts =>
-          ( counts.lift( 0 ), counts.lift( 1 ), counts.lift( 2 ) )
-            .mapN( ResourceDistrib( _, _, _ ) )
-            .toRight(
-              CannotConvert( counts.mkString( "[", ", ", "]" ), "ResourceDistrib", "the array must have 3 elements" )
-            )
+      .emap( counts =>
+        ( counts.lift( 0 ), counts.lift( 1 ), counts.lift( 2 ) )
+          .mapN( ResourceDistrib( _, _, _ ) )
+          .toRight(
+            CannotConvert( counts.mkString( "[", ", ", "]" ), "ResourceDistrib", "the array must have 3 elements" )
+          )
       )
 
-  private implicit def extractorTypeMapReader[A](
-      implicit reader: ConfigReader[Map[String, A]]
+  private implicit def extractorTypeMapReader[A]( implicit
+      reader: ConfigReader[Map[String, A]]
   ): ConfigReader[Map[ExtractorType, A]] =
     reader.emap(
       _.toVector

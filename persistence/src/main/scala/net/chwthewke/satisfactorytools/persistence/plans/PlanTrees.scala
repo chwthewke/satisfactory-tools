@@ -43,7 +43,7 @@ object PlanTrees {
            |FROM   "plans"
            |WHERE "id" = $planId
            |""".stripMargin //
-      .query
+        .query
 
     def updatePlanTreeCommands( planId: PlanId, commandsJson: Json ): Update0 =
       // language=SQL
@@ -51,6 +51,6 @@ object PlanTrees {
            |SET "tree_commands" = $commandsJson
            |WHERE "id" = $planId 
            |""".stripMargin //
-      .update
+        .update
   }
 }

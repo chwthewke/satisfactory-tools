@@ -82,14 +82,13 @@ object Main extends IOApp {
       case ( signal, app ) =>
         Ref[IO]
           .of( ExitCode.Success )
-          .flatMap(
-            exitRef =>
-              BlazeServerBuilder[IO]
-                .withHttpApp( app )
-                .bindHttp( port = 7282 )
-                .serveWhile( signal, exitRef )
-                .compile
-                .lastOrError
+          .flatMap( exitRef =>
+            BlazeServerBuilder[IO]
+              .withHttpApp( app )
+              .bindHttp( port = 7282 )
+              .serveWhile( signal, exitRef )
+              .compile
+              .lastOrError
           )
     }
 }

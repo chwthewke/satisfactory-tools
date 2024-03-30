@@ -11,21 +11,19 @@ object MapConfigSet {
   implicit val mapConfigSetShow: Show[MapConfigSet] = cats.derived.semiauto.show[MapConfigSet]
   implicit val mapConfigSetReader: ConfigReader[MapConfigSet] = {
     implicit val versionedMapConfigReader: ConfigReader[( Int, MapConfig )] =
-      ConfigReader.fromCursor(
-        cc =>
-          (
-            cc.fluent.at( "version" ).asInt,
-            ConfigReader[MapConfig].from( cc )
-          ).tupled
+      ConfigReader.fromCursor( cc =>
+        (
+          cc.fluent.at( "version" ).asInt,
+          ConfigReader[MapConfig].from( cc )
+        ).tupled
       )
 
-    ConfigReader.fromCursor(
-      cc =>
-        cc.fluent
-          .at( "configs" )
-          .cursor
-          .flatMap( ConfigReader[Vector[( Int, MapConfig )]].from( _ ) )
-          .map( cfgs => MapConfigSet( cfgs.toMap ) )
+    ConfigReader.fromCursor( cc =>
+      cc.fluent
+        .at( "configs" )
+        .cursor
+        .flatMap( ConfigReader[Vector[( Int, MapConfig )]].from( _ ) )
+        .map( cfgs => MapConfigSet( cfgs.toMap ) )
     )
   }
 

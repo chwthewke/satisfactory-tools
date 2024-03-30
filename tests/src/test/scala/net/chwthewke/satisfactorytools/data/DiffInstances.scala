@@ -13,7 +13,7 @@ trait DiffInstances {
   private def doubleEq( x: Double, y: Double ) = {
     val mag = x.abs.max( y.abs )
 
-    (x - y).abs < Tolerance * mag || mag * Tolerance < Double.MinPositiveValue
+    ( x - y ).abs < Tolerance * mag || mag * Tolerance < Double.MinPositiveValue
   }
 
   implicit val doubleDiff: Diff[Double] =

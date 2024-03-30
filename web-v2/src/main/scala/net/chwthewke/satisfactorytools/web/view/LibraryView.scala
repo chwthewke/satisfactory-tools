@@ -24,7 +24,7 @@ object LibraryView {
       form(
         method := "POST",
         table(
-          id := "library",
+          id      := "library",
           `class` := "table is-striped",
           tr(
             td( colspan := 5, textAlign.left, show"${plans.size} plan${if (plans.size != 1) "s" else ""}" )
@@ -40,7 +40,7 @@ object LibraryView {
                 }
               ),
               button(
-                `class` := "button is-success",
+                `class`    := "button is-success",
                 formaction := "/new",
                 "New plan"
               )
@@ -48,27 +48,26 @@ object LibraryView {
             td(
               colspan := 2,
               button(
-                `class` := "button is-info",
+                `class`    := "button is-info",
                 formaction := "/compare",
                 "Compare"
               )
             )
           ),
-          plans.map(
-            plan =>
-              tr(
-                td( a( href := show"/plan/${plan.id}", planDisplayName( plan.title ).show ) ),
-                td( plan.updated.atZone( ZoneId.systemDefault() ).format( DateTimeFormatter.RFC_1123_DATE_TIME ) ),
-                td(
-                  button(
-                    `class` := "button is-danger",
-                    formaction := show"/delete/${plan.id}/",
-                    "Delete"
-                  )
-                ),
-                td( input( `type` := "radio", name := forms.Keys.compareBefore, value := show"${plan.id}" ) ),
-                td( input( `type` := "radio", name := forms.Keys.compareAfter, value := show"${plan.id}" ) )
-              )
+          plans.map( plan =>
+            tr(
+              td( a( href := show"/plan/${plan.id}", planDisplayName( plan.title ).show ) ),
+              td( plan.updated.atZone( ZoneId.systemDefault() ).format( DateTimeFormatter.RFC_1123_DATE_TIME ) ),
+              td(
+                button(
+                  `class`    := "button is-danger",
+                  formaction := show"/delete/${plan.id}/",
+                  "Delete"
+                )
+              ),
+              td( input( `type` := "radio", name := forms.Keys.compareBefore, value := show"${plan.id}" ) ),
+              td( input( `type` := "radio", name := forms.Keys.compareAfter, value := show"${plan.id}" ) )
+            )
           )
         )
       )
@@ -92,12 +91,12 @@ object LibraryView {
           div(
             alignContent.center,
             button(
-              `class` := "button",
+              `class`    := "button",
               formaction := "confirm",
               "Yes"
             ),
             button(
-              `class` := "button",
+              `class`    := "button",
               formaction := "cancel",
               "No"
             )

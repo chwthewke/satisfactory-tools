@@ -57,10 +57,9 @@ object forms {
 
   implicit def enumQueryParamDecoder[E <: EnumEntry]( implicit E: Enum[E] ): QueryParamDecoder[E] =
     QueryParamDecoder[String]
-      .emap(
-        s =>
-          E.withNameOption( s )
-            .toRight( ParseFailure( s"Invalid enum string", s"Invalid enum string '$s'" ) )
+      .emap( s =>
+        E.withNameOption( s )
+          .toRight( ParseFailure( s"Invalid enum string", s"Invalid enum string '$s'" ) )
       )
 
   object Keys {
@@ -169,16 +168,16 @@ object forms {
         resetPath.renderString
 
       def pullUp( from: TreeLoc.NonRoot, recipe: ClassName ): String =
-        (pullUpPath / location( from ) / recipe.name).renderString
+        ( pullUpPath / location( from ) / recipe.name ).renderString
 
       def destroy( at: TreeLoc.NonRoot ): String =
-        (destroyPath / location( at )).renderString
+        ( destroyPath / location( at ) ).renderString
 
       def pushDown( from: TreeLoc, ix: Int, recipe: ClassName ): String =
-        (pushDownPath / location( from ) / ix.toString / recipe.name).renderString
+        ( pushDownPath / location( from ) / ix.toString / recipe.name ).renderString
 
       def pushDownFor( from: TreeLoc, ix: Int, recipe: ClassName ): String =
-        (pushDownForPath / location( from ) / ix.toString / recipe.name).renderString
+        ( pushDownForPath / location( from ) / ix.toString / recipe.name ).renderString
 
       def pushDownTargetDropdown( loc: TreeLoc, ix: Int ): String =
         s"push_down_target_${ix}_$loc"
@@ -210,13 +209,15 @@ object forms {
           FormDataDecoder.field[Int]( pushDownFractionDropdown( loc, ix ) ),
           FormDataDecoder.field[Double]( pushDownAmountInput( loc, ix ) ),
           FormDataDecoder.field[Int]( pushDownTargetDropdown( loc, ix ) )
-        ).mapN(
-          ( t, frac, am, tgt ) =>
-            ( t match {
+        ).mapN( ( t, frac, am, tgt ) =>
+          (
+            t match {
               case RegularPushDownTypeChoice.All      => PushDownType.Full
               case RegularPushDownTypeChoice.Fraction => PushDownType.Fraction( frac )
               case RegularPushDownTypeChoice.Amount   => PushDownType.Amount( am )
-            }, tgt )
+            },
+            tgt
+          )
         )
 
       case class PushDownForTargetData( className: ClassName, childIndex: Int ) {
@@ -236,12 +237,11 @@ object forms {
       def pushDownForDecoder( loc: TreeLoc, ix: Int ): FormDataDecoder[PushDownForTargetData] =
         FormDataDecoder
           .field[String]( pushDownForDropdown( loc, ix ) )
-          .mapValidated(
-            str =>
-              PushDownForTargetData.parser
-                .parseAll( str )
-                .leftMap( err => ParseFailure( s"$str as PushDownForTargetData", err.toString() ) )
-                .toValidatedNel
+          .mapValidated( str =>
+            PushDownForTargetData.parser
+              .parseAll( str )
+              .leftMap( err => ParseFailure( s"$str as PushDownForTargetData", err.toString() ) )
+              .toValidatedNel
           )
 
       def command[F[_]: Async]( path: Uri.Path, request: Request[F] ): Option[F[TreeCommand]] =
@@ -281,11 +281,12 @@ object forms {
     val lockRecipes: String   = "lock_recipes"
 
     object recipesUpToTier {
-      def apply( tier: Int, alternates: Boolean ): String = s"add_recipes_tier_$tier" + (if (alternates) "_alt" else "")
+      def apply( tier: Int, alternates: Boolean ): String =
+        s"add_recipes_tier_$tier" + ( if (alternates) "_alt" else "" )
       def unapply( s: String ): Option[( Int, Boolean )] = {
         import atto.Atto._
 
-        (string( "add_recipes_tier_" ) ~> int ~ opt( string( "_alt" ) ))
+        ( string( "add_recipes_tier_" ) ~> int ~ opt( string( "_alt" ) ) )
           .map { case ( tier, alt ) => ( tier, alt.isDefined ) }
           .parseOnly( s )
           .option
@@ -333,14 +334,13 @@ object forms {
         .map( items => Bill( items.unite ) )
 
     def recipeList( model: Model ): FormDataDecoder[RecipeList] =
-      FormDataDecoder(
-        fd =>
-          Valid(
-            fd.get( Keys.recipes )
-              .fold( model.manufacturingRecipes )(
-                _.mapFilter( s => model.manufacturingRecipes.find( _.className.name == s ) ).toVector
-              )
-          )
+      FormDataDecoder( fd =>
+        Valid(
+          fd.get( Keys.recipes )
+            .fold( model.manufacturingRecipes )(
+              _.mapFilter( s => model.manufacturingRecipes.find( _.className.name == s ) ).toVector
+            )
+        )
       ).map( RecipeList( _ ) )
 
     val options: FormDataDecoder[Options] =
@@ -357,40 +357,39 @@ object forms {
 
     def resourceNodes( model: Model ): FormDataDecoder[Map[ExtractorType, Map[ClassName, ResourceDistrib]]] =
       ( ExtractorType.values, model.extractedItems, ResourcePurity.values )
-        .traverseN(
-          ( exT, item, purity ) =>
-            FormDataDecoder
-              .fieldOptional[Int]( Keys.extractorItemPurityKey( exT, item, purity ) )
-              .map( n => n.map( ( exT, item.className, purity, _ ) ) )
+        .traverseN( ( exT, item, purity ) =>
+          FormDataDecoder
+            .fieldOptional[Int]( Keys.extractorItemPurityKey( exT, item, purity ) )
+            .map( n => n.map( ( exT, item.className, purity, _ ) ) )
         )
-        .map(
-          m =>
-            m.foldMap(
-                _.foldMap { case ( exT, item, purity, n ) => Map( exT -> Map( item -> Map( purity -> n ) ) ) }
-              )
-              .map {
-                case ( exT, items ) =>
-                  ( exT, items.map {
-                    case ( item, purities ) =>
-                      (
-                        item,
-                        ResourceDistrib(
-                          purities.getOrElse( ResourcePurity.Impure, 0 ),
-                          purities.getOrElse( ResourcePurity.Normal, 0 ),
-                          purities.getOrElse( ResourcePurity.Pure, 0 )
-                        )
+        .map( m =>
+          m.foldMap(
+            _.foldMap { case ( exT, item, purity, n ) => Map( exT -> Map( item -> Map( purity -> n ) ) ) }
+          ).map {
+            case ( exT, items ) =>
+              (
+                exT,
+                items.map {
+                  case ( item, purities ) =>
+                    (
+                      item,
+                      ResourceDistrib(
+                        purities.getOrElse( ResourcePurity.Impure, 0 ),
+                        purities.getOrElse( ResourcePurity.Normal, 0 ),
+                        purities.getOrElse( ResourcePurity.Pure, 0 )
                       )
-                  } )
-              }
+                    )
+                }
+              )
+          }
         )
 
     def resourceWeights( model: Model ): FormDataDecoder[ResourceWeights] =
       model.extractedItems
-        .traverse(
-          item =>
-            FormDataDecoder
-              .fieldOptional[Int]( Keys.resourceWeightKey( item ) )
-              .map( o => ( item.className, o.getOrElse( ResourceWeights.range ) ) )
+        .traverse( item =>
+          FormDataDecoder
+            .fieldOptional[Int]( Keys.resourceWeightKey( item ) )
+            .map( o => ( item.className, o.getOrElse( ResourceWeights.range ) ) )
         )
         .map( v => ResourceWeights( v.toMap ) )
 
@@ -398,19 +397,18 @@ object forms {
       ( resourceNodes( model ), resourceWeights( model ) ).mapN( ResourceOptions( _, _ ) )
 
     def customGroups: FormDataDecoder[Map[ClassName, Int]] =
-      FormDataDecoder(
-        fd =>
-          Valid(
-            fd.toVector.foldMap {
-              case ( k, Chain( v, _* ) ) =>
-                (
-                  Keys.outputGroup.unapply( k ),
-                  Numeric[Int].parseString( v )
-                ).tupled.toVector
-                  .filter( _._2 != 0 )
-              case _ => Vector.empty
-            }.toMap
-          )
+      FormDataDecoder( fd =>
+        Valid(
+          fd.toVector.foldMap {
+            case ( k, Chain( v, _* ) ) =>
+              (
+                Keys.outputGroup.unapply( k ),
+                Numeric[Int].parseString( v )
+              ).tupled.toVector
+                .filter( _._2 != 0 )
+            case _ => Vector.empty
+          }.toMap
+        )
       )
 
     val comparePlans: FormDataDecoder[Option[( PlanId, PlanId )]] =

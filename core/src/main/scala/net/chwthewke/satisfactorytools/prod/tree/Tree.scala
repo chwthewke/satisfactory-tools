@@ -10,7 +10,7 @@ object Tree {
 
   def addRoot( tree: Tree, recipes: Vector[ClockedRecipe] ): Tree =
     Cofree(
-      (tree.head ++ recipes).map( _.recipe ).gather.map( ClockedRecipe.roundUp ),
+      ( tree.head ++ recipes ).map( _.recipe ).gather.map( ClockedRecipe.roundUp ),
       tree.tail
     )
 

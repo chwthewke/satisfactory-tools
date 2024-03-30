@@ -42,17 +42,16 @@ object TreeView extends ( ( FactoryTree, Int ) => Tag ) {
 
     div(
       at.indices.toNev.fold[Frag]( "Root" )( _.map( _ + 1 ).mkString_( "." ) ),
-      at.nonRoot.map(
-        loc =>
-          button(
-            `class` := "button is-danger",
-            formaction := Actions.tree.destroy( loc ),
-            "Destroy"
-          )
+      at.nonRoot.map( loc =>
+        button(
+          `class`    := "button is-danger",
+          formaction := Actions.tree.destroy( loc ),
+          "Destroy"
+        )
       ),
       Option.when( at == TreeLoc.Root )(
         button(
-          `class` := "button is-danger",
+          `class`    := "button is-danger",
           formaction := Actions.tree.reset,
           "Reset tree"
         )
@@ -74,9 +73,9 @@ object TreeView extends ( ( FactoryTree, Int ) => Tag ) {
   private def radio[A <: EnumEntry]( radioName: String, radioValue: A ): Tag =
     input(
       `type` := "radio",
-      name := radioName,
-      id := radioId( radioName, radioValue ),
-      value := radioValue.entryName
+      name   := radioName,
+      id     := radioId( radioName, radioValue ),
+      value  := radioValue.entryName
     )
 
   def renderRecipe( at: TreeLoc, recipe: ClockedRecipe, ix: Int, children: Vector[Tree] ): Tag =
@@ -85,7 +84,7 @@ object TreeView extends ( ( FactoryTree, Int ) => Tag ) {
         display.flex,
         flexWrap.nowrap,
         div(
-          flex := "1",
+          flex    := "1",
           padding := "0.25em",
           f"${recipe.mainProductAmount}%4.3f",
           title := recipe.mainProductAmount.toString
@@ -94,7 +93,7 @@ object TreeView extends ( ( FactoryTree, Int ) => Tag ) {
           val altPrefix   = "Alternate: "
           val isAlternate = recipeName.startsWith( altPrefix )
           div(
-            flex := "1",
+            flex    := "1",
             padding := "0.25em",
             display.flex,
             flexWrap.nowrap,
@@ -104,31 +103,30 @@ object TreeView extends ( ( FactoryTree, Int ) => Tag ) {
           )
         },
         div(
-          flex := "1",
+          flex    := "1",
           padding := "0.25em",
           f"${recipe.machineCount}%3d × ${recipe.machine.displayName}"
         ),
         div(
-          flex := "1",
+          flex    := "1",
           padding := "0.25em",
           f"${recipe.mainProductAmountPerUnit}%3.3f / unit @ ${recipe.clockSpeedMillionth / 10000}%3d.${recipe.clockSpeedMillionth % 10000}%04d %%",
           title := recipe.mainProductAmountPerUnit.toString
         ),
         div(
-          flex := "1",
+          flex    := "1",
           padding := "0.25em",
           show"${recipe.power} MW"
         )
       ),
-      at.nonRoot.map(
-        loc =>
-          div(
-            button(
-              `class` := "button",
-              "Pull up",
-              formaction := Actions.tree.pullUp( loc, recipe.recipe.item.className )
-            )
+      at.nonRoot.map( loc =>
+        div(
+          button(
+            `class` := "button",
+            "Pull up",
+            formaction := Actions.tree.pullUp( loc, recipe.recipe.item.className )
           )
+        )
       ),
       div(
         button(
@@ -166,10 +164,10 @@ object TreeView extends ( ( FactoryTree, Int ) => Tag ) {
           "amount"
         ),
         input(
-          `type` := "text",
+          `type`              := "text",
           attr( "inputmode" ) := "numeric",
-          name := Actions.tree.pushDownAmountInput( at, ix ),
-          value := "0.0"
+          name                := Actions.tree.pushDownAmountInput( at, ix ),
+          value               := "0.0"
         )
       ),
       pushDownForControl( at, recipe, ix, children )
@@ -186,25 +184,24 @@ object TreeView extends ( ( FactoryTree, Int ) => Tag ) {
           sub.head.mapFilter( asTarget ).tupleRight( subIx )
       }.toNev
 
-    targets.map(
-      ts =>
-        div(
-          button(
-            `class` := "button",
-            "Push down for",
-            formaction := Actions.tree.pushDownFor( at, ix, recipe.recipe.item.className )
-          ),
-          select(
-            name := Actions.tree.pushDownForDropdown( at, ix ),
-            ts.toVector.map {
-              case ( recipe, subIx ) =>
-                option(
-                  value := PushDownForTargetData( recipe.className, subIx ).renderString,
-                  s"${recipe.displayName} (${at.append( subIx )})"
-                )
-            }
-          )
+    targets.map( ts =>
+      div(
+        button(
+          `class` := "button",
+          "Push down for",
+          formaction := Actions.tree.pushDownFor( at, ix, recipe.recipe.item.className )
+        ),
+        select(
+          name := Actions.tree.pushDownForDropdown( at, ix ),
+          ts.toVector.map {
+            case ( recipe, subIx ) =>
+              option(
+                value := PushDownForTargetData( recipe.className, subIx ).renderString,
+                s"${recipe.displayName} (${at.append( subIx )})"
+              )
+          }
         )
+      )
     )
   }
 

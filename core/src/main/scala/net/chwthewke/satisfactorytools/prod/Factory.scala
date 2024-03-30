@@ -28,19 +28,18 @@ object Factory {
       .map { case Countable( item, amount ) => show"${showAmount( amount )} ${s( item )}" }
       .mkString( "\n" )
 
-  implicit val factoryShow: Show[Factory] = Show.show(
-    factory => //
-      show"""EXTRACTION
-            |${factory.extraction.map( showClockedRecipe ).mkString( "\n" )}
-            |
-            |MANUFACTURING
-            |${showCountables( factory.manufacturing )( _.displayName )}
-            |
-            |EXTRA INPUTS
-            |${showCountables( factory.extraInputs )( _.displayName )}
-            |
-            |EXTRA OUTPUTS
-            |${showCountables( factory.extraOutputs )( _.displayName )}
-            |""".stripMargin
+  implicit val factoryShow: Show[Factory] = Show.show( factory => //
+    show"""EXTRACTION
+          |${factory.extraction.map( showClockedRecipe ).mkString( "\n" )}
+          |
+          |MANUFACTURING
+          |${showCountables( factory.manufacturing )( _.displayName )}
+          |
+          |EXTRA INPUTS
+          |${showCountables( factory.extraInputs )( _.displayName )}
+          |
+          |EXTRA OUTPUTS
+          |${showCountables( factory.extraOutputs )( _.displayName )}
+          |""".stripMargin
   )
 }

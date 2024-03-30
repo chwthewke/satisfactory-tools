@@ -21,11 +21,11 @@ object Headers {
   ): ConnectionIO[PlanId] =
     for {
       planId <- statements.insertUnnamedPlan
-                 .withUniqueGeneratedKeys[PlanId]( "id" )( ( userId, modelVersion ) )
-                 .adaptErr {
-                   case UnexpectedEnd =>
-                     Error( s"Unable to create unnamed plan for user #$userId, model version $modelVersion" )
-                 }
+                  .withUniqueGeneratedKeys[PlanId]( "id" )( ( userId, modelVersion ) )
+                  .adaptErr {
+                    case UnexpectedEnd =>
+                      Error( s"Unable to create unnamed plan for user #$userId, model version $modelVersion" )
+                  }
       itemIds         <- ReadModel.readItemIds( modelVersion )
       resourceOptions <- ReadModel.readDefaultResourceOptions( modelVersion )
       _               <- WriteSolverInputs.setDefaultRecipeList( planId )

@@ -17,9 +17,7 @@ object Manufacturer {
       "ClassName",
       "mDisplayName",
       "mPowerConsumption"
-    )(
-      ( cn: ClassName, dn: String, pc: Double ) => Manufacturer( cn, dn, pc )
-    )(
+    )( ( cn: ClassName, dn: String, pc: Double ) => Manufacturer( cn, dn, pc ) )(
       Decoder[ClassName],
       Decoder[String],
       Decoders.doubleStringDecoder

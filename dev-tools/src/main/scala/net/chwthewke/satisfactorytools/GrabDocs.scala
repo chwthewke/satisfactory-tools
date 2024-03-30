@@ -34,18 +34,18 @@ class GrabDocs[F[_]: Async]( implicit F: Files[F] ) {
 
       for {
         contents <- F.readAll( docsPath )
-                     .through( text.decodeWithCharset[F]( StandardCharsets.UTF_16 ) )
-                     .compile
-                     .foldMonoid
+                      .through( text.decodeWithCharset[F]( StandardCharsets.UTF_16 ) )
+                      .compile
+                      .foldMonoid
         json <- parser.parse( contents ).liftTo[F]
         _    <- console.println( show"Loaded ${docsPath.toString} and parsed as JSON." )
         _    <- F.createDirectories( destDir )
         _ <- Stream
-              .emit[F, String]( json.spaces2SortKeys )
-              .through( utf8.encode[F] )
-              .through( F.writeAll( destPath ) )
-              .compile
-              .drain
+               .emit[F, String]( json.spaces2SortKeys )
+               .through( utf8.encode[F] )
+               .through( F.writeAll( destPath ) )
+               .compile
+               .drain
         _ <- console.println( show"Prettified and wrote ${destPath.toString} as UTF-8." )
       } yield ()
     }

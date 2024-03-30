@@ -57,7 +57,7 @@ object ReadModel extends ModelApi[ConnectionIO] {
            |FROM "items"
            |WHERE "model_version_id" = $version
            |""".stripMargin //
-      .query
+        .query
 
     def selectMachines( version: ModelVersionId ): Query0[( MachineId, Machine )] =
       // language=SQL
@@ -70,7 +70,7 @@ object ReadModel extends ModelApi[ConnectionIO] {
            |FROM "machines"
            |WHERE "model_version_id" = $version
            |""".stripMargin //
-      .query
+        .query
 
     type RecipeRow = (
         RecipeId,
@@ -97,7 +97,7 @@ object ReadModel extends ModelApi[ConnectionIO] {
            |WHERE r."model_version_id" = $version
            |ORDER BY r."id", p."id"
            |""".stripMargin //
-      .query
+        .query
 
     def selectRecipeIngredients( version: ModelVersionId ): Query0[( RecipeId, Countable[Double, ItemId] )] =
       // language=SQL
@@ -110,7 +110,7 @@ object ReadModel extends ModelApi[ConnectionIO] {
            |WHERE  r."model_version_id" = $version
            |ORDER BY i."recipe_id", i."id"
            |""".stripMargin //
-      .query
+        .query
 
     def selectExtractionRecipes( version: ModelVersionId ): Query0[( ItemId, ResourcePurity, RecipeId )] =
       // language=SQL
@@ -123,7 +123,7 @@ object ReadModel extends ModelApi[ConnectionIO] {
            |WHERE r."model_version_id" = $version
            |ORDER BY "item_id"
            |""".stripMargin //
-      .query
+        .query
 
     def selectResourceNodes( version: ModelVersionId ): Query0[( ExtractorType, ( ItemId, ResourceDistrib ) )] =
       // language=SQL
@@ -137,7 +137,7 @@ object ReadModel extends ModelApi[ConnectionIO] {
            |WHERE "model_version_id" = $version
            |ORDER BY "extractor_type"
            |""".stripMargin //
-      .query
+        .query
 
     def selectItemIds( version: ModelVersionId ): Query0[( ClassName, ItemId )] =
       // language=SQL
@@ -145,7 +145,7 @@ object ReadModel extends ModelApi[ConnectionIO] {
            |FROM "items"
            |WHERE "model_version_id" = $version
            |""".stripMargin //
-      .query
+        .query
 
     def selectRecipeIds( version: ModelVersionId ): Query0[( ClassName, RecipeId )] =
       // language=SQL
@@ -153,7 +153,7 @@ object ReadModel extends ModelApi[ConnectionIO] {
            |FROM "recipes"
            |WHERE "model_version_id" = $version
            |""".stripMargin //
-      .query
+        .query
 
     def selectModelVersion( version: ModelVersionId ): Query0[ModelVersion] =
       // language=SQL
@@ -162,7 +162,7 @@ object ReadModel extends ModelApi[ConnectionIO] {
            |WHERE "family" = 'SATISFACTORY' :: T_MODEL_FAMILY
            |  AND "id" = $version 
            |""".stripMargin //
-      .query
+        .query
 
     val selectModelVersions: Query0[( ModelVersionId, ModelVersion )] =
       // language=SQL
@@ -171,7 +171,7 @@ object ReadModel extends ModelApi[ConnectionIO] {
            |WHERE "family" = 'SATISFACTORY' :: T_MODEL_FAMILY
            |ORDER BY "version"
            |""".stripMargin //
-      .query
+        .query
   }
 
   import statements._
@@ -184,9 +184,9 @@ object ReadModel extends ModelApi[ConnectionIO] {
     for {
       rows <- Streams.groupAdjacentRows( selectRecipes( version ).stream ).compile.toVector
       ingredientRows <- selectRecipeIngredients( version ).stream
-                         .map { case ( recipeId, ing ) => Map( recipeId -> Vector( ing ) ) }
-                         .compile
-                         .foldMonoid
+                          .map { case ( recipeId, ing ) => Map( recipeId -> Vector( ing ) ) }
+                          .compile
+                          .foldMonoid
     } yield for {
       (
         recipeId,
@@ -197,8 +197,8 @@ object ReadModel extends ModelApi[ConnectionIO] {
       products   <- productIds.traverse( _.traverse( itemsById.get ) )
       producedIn <- machinesById.get( machineId )
       ingredients <- ingredientRows
-                      .getOrElse( recipeId, Vector.empty )
-                      .traverse( _.traverse( itemsById.get ) )
+                       .getOrElse( recipeId, Vector.empty )
+                       .traverse( _.traverse( itemsById.get ) )
     } yield recipeId ->
       Recipe(
         className,
@@ -248,10 +248,10 @@ object ReadModel extends ModelApi[ConnectionIO] {
   def readModel( version: ModelVersionId ): ConnectionIO[Model] =
     for {
       modelVersion <- selectModelVersion( version ).unique
-                       .adaptErr {
-                         case UnexpectedEnd          => Error( s"No model version $version" )
-                         case UnexpectedContinuation => Error( s"Multiple model versions $version" )
-                       }
+                        .adaptErr {
+                          case UnexpectedEnd          => Error( s"No model version $version" )
+                          case UnexpectedContinuation => Error( s"Multiple model versions $version" )
+                        }
       itemsById         <- selectItems( version ).toMap
       machinesById      <- selectMachines( version ).toMap
       recipesById       <- buildRecipes( itemsById, machinesById, version ).map( _.to( SortedMap ) )
@@ -283,12 +283,11 @@ object ReadModel extends ModelApi[ConnectionIO] {
   override def getModel( version: ModelVersionId ): OptionT[ConnectionIO, Model] =
     OptionT
       .liftF( readModel( version ) )
-      .filter(
-        model =>
-          model.manufacturingRecipes.nonEmpty &&
-            model.items.nonEmpty &&
-            model.extractedItems.nonEmpty &&
-            model.extractionRecipes.nonEmpty
+      .filter( model =>
+        model.manufacturingRecipes.nonEmpty &&
+          model.items.nonEmpty &&
+          model.extractedItems.nonEmpty &&
+          model.extractionRecipes.nonEmpty
       )
 
   def readItemIds( version: ModelVersionId ): ConnectionIO[Map[ClassName, ItemId]] =

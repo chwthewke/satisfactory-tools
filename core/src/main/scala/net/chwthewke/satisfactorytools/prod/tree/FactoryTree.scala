@@ -21,8 +21,8 @@ case class FactoryTree( tree: Tree ) {
 
   def run( command: TreeCommand ): Option[FactoryTree] = command match {
     case TreeCommand.PushDown( to, recipe, pdt ) =>
-      modify( to.init )(
-        sub => pushDown( sub, sub.head.indexWhere( _.recipe.item.className == recipe ), to.last, pdt )
+      modify( to.init )( sub =>
+        pushDown( sub, sub.head.indexWhere( _.recipe.item.className == recipe ), to.last, pdt )
       )
 
     case TreeCommand.PullUp( from, recipe ) =>
@@ -48,8 +48,8 @@ case class FactoryTree( tree: Tree ) {
 
         children.lift( at.last ).map { child =>
           val pulled: Vector[ClockedRecipe] = Cofree
-            .cata[Vector, Vector[ClockedRecipe], Vector[ClockedRecipe]]( child )(
-              ( recipes, children ) => Eval.now( recipes ++ children.flatten )
+            .cata[Vector, Vector[ClockedRecipe], Vector[ClockedRecipe]]( child )( ( recipes, children ) =>
+              Eval.now( recipes ++ children.flatten )
             )
             .value
 
@@ -79,8 +79,8 @@ case class FactoryTree( tree: Tree ) {
               sub.head.patch( ix, remaining, 1 ),
               Eval.now[Vector[Tree]](
                 target
-                  .fold( children :+ Tree.addRoot( Tree.empty, pushed ) )(
-                    t => children.updated( to, Tree.addRoot( t, pushed ) )
+                  .fold( children :+ Tree.addRoot( Tree.empty, pushed ) )( t =>
+                    children.updated( to, Tree.addRoot( t, pushed ) )
                   )
               )
             )
@@ -90,9 +90,9 @@ case class FactoryTree( tree: Tree ) {
   }
 
   /**
-    * tries to select what part of the source `recipe` to push down, according to the `PushDownType` `type` and
-    *     the target node `target` (used when `type` is `PushDownType.For( consumer )`)
-    */
+   * tries to select what part of the source `recipe` to push down, according to the `PushDownType` `type` and the
+   * target node `target` (used when `type` is `PushDownType.For( consumer )`)
+   */
   private def pushedAndRemaining(
       recipe: ClockedRecipe,
       `type`: PushDownType,
@@ -123,7 +123,7 @@ case class FactoryTree( tree: Tree ) {
                   .sequence
                   .map {
                     case Countable( Countable( _, perUnit ), unitCount ) =>
-                      (ingredient.amount / perUnit).min( unitCount )
+                      ( ingredient.amount / perUnit ).min( unitCount )
                   }
               }
               .maximumOption

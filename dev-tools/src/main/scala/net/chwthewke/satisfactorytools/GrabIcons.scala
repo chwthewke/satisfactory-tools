@@ -30,23 +30,21 @@ class GrabIcons[F[_]]( version: DataVersionStorage )( implicit S: Async[F], F: F
   private val target: Path = GrabIcons.targetDirectory / version.docsKey
 
   def run: F[Unit] =
-    version.gameSource.fold( console.println( s"No icon source for ${version.entryName}" ) )(
-      gs =>
-        for {
-          gameData <- new Loader[F].loadGameData( version )
-          _        <- F.createDirectories( target )
-          _        <- grabIcons( gs, gameData )
-        } yield ()
+    version.gameSource.fold( console.println( s"No icon source for ${version.entryName}" ) )( gs =>
+      for {
+        gameData <- new Loader[F].loadGameData( version )
+        _        <- F.createDirectories( target )
+        _        <- grabIcons( gs, gameData )
+      } yield ()
     )
 
   def grabIcons( gameSource: DataVersionStorage.GameSource, gameData: GameData ): F[Unit] = {
-    F.createTempDirectory.bracket(
-      tmpDir =>
-        gameData.items.values
-          .map( item => item._1.smallIcon )
-          .toVector
-          .distinct
-          .traverse_( grabIcon( gameSource, tmpDir, _ ) )
+    F.createTempDirectory.bracket( tmpDir =>
+      gameData.items.values
+        .map( item => item._1.smallIcon )
+        .toVector
+        .distinct
+        .traverse_( grabIcon( gameSource, tmpDir, _ ) )
     )(
       F.deleteRecursively
     )

@@ -9,22 +9,21 @@ import pureconfig.ConfigWriter
 import pureconfig.generic.semiauto
 
 /**
-  * Given a texture name and a version, get the path to the icon
-  */
+ * Given a texture name and a version, get the path to the icon
+ */
 case class IconIndex( icons: Map[( String, Int ), String] ) {
   def getIconPath( version: Int, textureName: String ): Option[String] =
     icons.get( ( textureName, version ) )
 }
 
 object IconIndex {
-  implicit val iconIndexShow: Show[IconIndex] = Show.show(
-    index =>
-      s"""IconIndex(
-         |  ${index.icons.toVector
-           .sortBy { case ( ( n, v ), _ ) => ( v, n ) }
-           .map { case ( ( n, v ), p ) => s"$v/${n.padTo( 40, ' ' )} => $p" }
-           .mkString( "\n" )}
-         |)""".stripMargin
+  implicit val iconIndexShow: Show[IconIndex] = Show.show( index =>
+    s"""IconIndex(
+       |  ${index.icons.toVector
+        .sortBy { case ( ( n, v ), _ ) => ( v, n ) }
+        .map { case ( ( n, v ), p ) => s"$v/${n.padTo( 40, ' ' )} => $p" }
+        .mkString( "\n" )}
+       |)""".stripMargin
   )
 
   private case class IconConfig( textureName: String, iconPath: String )
@@ -44,28 +43,26 @@ object IconIndex {
 
   implicit def iconIndexConfigWriter: ConfigWriter[IconIndex] =
     ConfigWriter[VersionConfigSet]
-      .contramap(
-        iconIndex =>
-          VersionConfigSet(
-            iconIndex.icons.toVector
-              .groupMap { case ( ( _, v ), _ ) => v } { case ( ( n, _ ), p ) => IconConfig( n, p ) }
-              .toVector
-              .map { case ( v, nps ) => VersionConfig( v, nps.sortBy( _.textureName ) ) }
-              .sortBy( _.version )
-          )
+      .contramap( iconIndex =>
+        VersionConfigSet(
+          iconIndex.icons.toVector
+            .groupMap { case ( ( _, v ), _ ) => v } { case ( ( n, _ ), p ) => IconConfig( n, p ) }
+            .toVector
+            .map { case ( v, nps ) => VersionConfig( v, nps.sortBy( _.textureName ) ) }
+            .sortBy( _.version )
+        )
       )
 
   implicit def iconIndexConfigReader: ConfigReader[IconIndex] =
     ConfigReader[VersionConfigSet]
-      .map(
-        configSet =>
-          IconIndex( configSet.configs.foldMap {
-            case VersionConfig( version, icons ) =>
-              icons.foldMap {
-                case IconConfig( textureName, iconPath ) =>
-                  Map( ( textureName, version ) -> iconPath )
-              }
-          } )
+      .map( configSet =>
+        IconIndex( configSet.configs.foldMap {
+          case VersionConfig( version, icons ) =>
+            icons.foldMap {
+              case IconConfig( textureName, iconPath ) =>
+                Map( ( textureName, version ) -> iconPath )
+            }
+        } )
       )
 
 }

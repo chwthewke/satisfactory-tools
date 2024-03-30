@@ -64,18 +64,16 @@ object WriteSolverInputs {
     val usedRecipes: Set[ClassName]    = factoryRecipes.map( _.className ).toSet
 
     val recipesToDelete: Vector[Recipe] =
-      model.manufacturingRecipes.filter(
-        recipe =>
-          producedItems.contains( recipe.products.head.item.className ) &&
-            !usedRecipes.contains( recipe.className )
+      model.manufacturingRecipes.filter( recipe =>
+        producedItems.contains( recipe.products.head.item.className ) &&
+          !usedRecipes.contains( recipe.className )
       )
 
-    readModelIds( planId, ReadModel.readRecipeIds ).flatMap(
-      recipeIds =>
-        recipesToDelete
-          .mapFilter( recipe => recipeIds.get( recipe.className ) )
-          .toNev
-          .traverse_( statements.deleteUnusedRecipes( planId, _ ).run )
+    readModelIds( planId, ReadModel.readRecipeIds ).flatMap( recipeIds =>
+      recipesToDelete
+        .mapFilter( recipe => recipeIds.get( recipe.className ) )
+        .toNev
+        .traverse_( statements.deleteUnusedRecipes( planId, _ ).run )
     )
   }
 
@@ -125,10 +123,10 @@ object WriteSolverInputs {
       ( extractor, dists ) <- resourceDistribOptions
       ( item, dist )       <- dists
       ( purity, amount ) <- Vector(
-                             ( ResourcePurity.Impure, dist.impureNodes ),
-                             ( ResourcePurity.Normal, dist.normalNodes ),
-                             ( ResourcePurity.Pure, dist.pureNodes )
-                           )
+                              ( ResourcePurity.Impure, dist.impureNodes ),
+                              ( ResourcePurity.Normal, dist.normalNodes ),
+                              ( ResourcePurity.Pure, dist.pureNodes )
+                            )
       itemId <- itemIds.get( item )
     } yield ( planId, extractor, itemId, purity, amount )
 
@@ -250,7 +248,7 @@ object WriteSolverInputs {
            |ON CONFLICT ON CONSTRAINT "recipe_list_unique"
            |DO NOTHING
            |""".stripMargin //
-      .update
+        .update
 
     private def withPlanId( planId: PlanId ): Fragment =
       // language=SQL
@@ -286,7 +284,7 @@ object WriteSolverInputs {
            |  AND r."id" = l."recipe_id"
            |  AND $isAlternate
            |""".stripMargin //
-      .update
+        .update
 
     def deleteUnusedRecipes( planId: PlanId, recipeIds: NonEmptyVector[RecipeId] ): Update0 =
       // language=SQL

@@ -27,7 +27,7 @@ final case class ProductionConfig(
     items
       .traverseFilter {
         case Countable( itemClass, amount ) =>
-          (amount != 0d)
+          ( amount != 0d )
             .option(
               model.items
                 .get( itemClass )
@@ -56,7 +56,7 @@ object ProductionConfig {
     implicit val classNameReader: ConfigReader[ClassName] = ConfigReader[String].map( ClassName( _ ) )
     implicit val itemsReader: ConfigReader[Vector[Countable[Double, ClassName]]] =
       ConfigReader[Map[ClassName, Double]]
-        .map( _.map( (Countable.apply[Double, ClassName] _).tupled ).toVector )
+        .map( _.map( ( Countable.apply[Double, ClassName] _ ).tupled ).toVector )
 
     semiauto.deriveReader[ProductionConfig]
   }

@@ -85,13 +85,12 @@ case class SessionMiddleware[F[_]: Sync]( sessions: SessionApi[F] ) extends Cont
   override def apply(
       svc: Kleisli[OptionT[F, *], ContextRequest[F, Session], Response[F]]
   ): Kleisli[OptionT[F, *], Request[F], Response[F]] =
-    Kleisli(
-      req =>
-        OptionT.liftF( getSession( req ).value ).flatMap {
-          case Left( resp ) => OptionT.pure[F]( resp )
-          case Right( session ) =>
-            svc.run( ContextRequest( session, req ) ).map( _.putHeaders( setCookie( session ) ) )
-        }
+    Kleisli( req =>
+      OptionT.liftF( getSession( req ).value ).flatMap {
+        case Left( resp ) => OptionT.pure[F]( resp )
+        case Right( session ) =>
+          svc.run( ContextRequest( session, req ) ).map( _.putHeaders( setCookie( session ) ) )
+      }
     )
 
 }

@@ -12,31 +12,34 @@ import model.Power
 import model.Recipe
 
 /**
-  * Represents a while number of machines producing a recipe at a clock speed allowing for a given target production
-  *
-  * - For extraction recipes, the number and clock speed are computed at once, going through the available resource nodes
-  * in order of decreasing purity
-  *
-  * - For manufacturing recipes, calculated from the required amount.
-  *
-  * @param recipe the fractional amount of machines producing the recipe
-  * @param clockSpeed the clock speed of the machines
-  * @param machineCount the integer amount of machines
-  */
+ * Represents a while number of machines producing a recipe at a clock speed allowing for a given target production
+ *
+ *   - For extraction recipes, the number and clock speed are computed at once, going through the available resource
+ *     nodes in order of decreasing purity
+ *
+ *   - For manufacturing recipes, calculated from the required amount.
+ *
+ * @param recipe
+ *   the fractional amount of machines producing the recipe
+ * @param clockSpeed
+ *   the clock speed of the machines
+ * @param machineCount
+ *   the integer amount of machines
+ */
 case class ClockedRecipe(
     recipe: Countable[Double, Recipe],
     clockSpeed: Double,
     machineCount: Int
 ) {
 
-  val clockSpeedMillionth: Int = (clockSpeed * 10000d).ceil.toInt
+  val clockSpeedMillionth: Int = ( clockSpeed * 10000d ).ceil.toInt
   val machine: Machine         = recipe.item.producedIn
 
   val fractionalAmount: Double = recipe.amount
 
   def power: Power = recipe.item.power.map( _ * machineCount * math.pow( clockSpeedMillionth / 1e6d, 1.6d ) )
 
-  val mainProductAmount: Double = recipe.flatMap( _.productsPerMinute.head ).amount
+  val mainProductAmount: Double        = recipe.flatMap( _.productsPerMinute.head ).amount
   val mainProductAmountPerUnit: Double = mainProductAmount / machineCount
 
   val ingredientsPerMinute: List[Countable[Double, Item]] = recipe.flatTraverse( _.ingredientsPerMinute )
@@ -44,7 +47,7 @@ case class ClockedRecipe(
   val productsPerMinute: NonEmptyList[Countable[Double, Item]] = recipe.flatTraverse( _.productsPerMinute )
 
   def multipleOf( n: Int ): ClockedRecipe =
-    ClockedRecipe.fixed( recipe.item, fractionalAmount, 1 + n * ((machineCount - 1) / n) )
+    ClockedRecipe.fixed( recipe.item, fractionalAmount, 1 + n * ( ( machineCount - 1 ) / n ) )
 
 }
 

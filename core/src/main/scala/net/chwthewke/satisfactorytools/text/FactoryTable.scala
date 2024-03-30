@@ -120,8 +120,8 @@ object FactoryTable {
     val tableRows = factory.allRecipes.map( tableColumns )
     val columnWidths: Vector[( Int, Alignment )] =
       tableRows
-        .foldLeft( ZipVector( Vector.fill( alignment.size )( 0 ) ) )(
-          ( acc, row ) => ( acc, ZipVector( row ) ).mapN( ( sz, col ) => sz max col.length )
+        .foldLeft( ZipVector( Vector.fill( alignment.size )( 0 ) ) )( ( acc, row ) =>
+          ( acc, ZipVector( row ) ).mapN( ( sz, col ) => sz max col.length )
         )
         .value
         .zip( alignment )
@@ -133,7 +133,7 @@ object FactoryTable {
 
     val powerLine: String =
       formatLine(
-        ("TOTAL POWER" +: Vector.fill( 11 )( "" )) ++ Vector( factory.allRecipes.foldMap( _.power ).show, " MW" )
+        ( "TOTAL POWER" +: Vector.fill( 11 )( "" ) ) ++ Vector( factory.allRecipes.foldMap( _.power ).show, " MW" )
       )
 
     val headersLine: String =
@@ -146,7 +146,7 @@ object FactoryTable {
 
     val sepLine: String = "-" * columnWidths.map( _._1 ).sum
 
-    (headersLine +: sepLine +: (rowLines :+ "" :+ powerLine)).intercalate( "\n" )
+    ( headersLine +: sepLine +: ( rowLines :+ "" :+ powerLine ) ).intercalate( "\n" )
 
   }
 
@@ -165,7 +165,7 @@ object FactoryTable {
     }
 
     show"""${item.displayName}
-          |${destinations.toVector.map( (destinationLine _).tupled ).intercalate( "\n" )}
+          |${destinations.toVector.map( ( destinationLine _ ).tupled ).intercalate( "\n" )}
           |""".stripMargin
   }
 
@@ -212,8 +212,8 @@ object FactoryTable {
         }
         .to( SortedMap )
 
-    (internalDestinations |+| billDestinations |+| extraOutputDestinations)
-      .map( (ingredientTree _).tupled )
+    ( internalDestinations |+| billDestinations |+| extraOutputDestinations )
+      .map( ( ingredientTree _ ).tupled )
       .to( Iterable )
       .intercalate( "\n" )
   }

@@ -46,7 +46,7 @@ object JsonSchema {
   case class JObject[+A]( fields: SortedMap[String, JField[A]] ) {
     def combine[AA >: A: Semigroup]( other: JObject[AA] ): JObject[AA] =
       JObject(
-        (fields.keySet ++ other.fields.keySet).toVector
+        ( fields.keySet ++ other.fields.keySet ).toVector
           .mapFilter( k => JField.combineOptions( fields.get( k ), other.fields.get( k ) ).tupleLeft( k ) )
           .to( SortedMap )
       )
@@ -64,8 +64,8 @@ object JsonSchema {
     def combine[AA >: A: Monoid]( other: SchemasF[AA] ): SchemasF[AA] =
       SchemasF(
         leaves ++ other.leaves,
-        (asArray: Option[JArray[AA]]) |+| other.asArray,
-        (asObject: Option[JObject[AA]]) |+| other.asObject
+        ( asArray: Option[JArray[AA]] ) |+| other.asArray,
+        ( asObject: Option[JObject[AA]] ) |+| other.asObject
       )
   }
 
@@ -112,43 +112,41 @@ object JsonSchema {
 
   def renderSchemas( schemas: Cofree[SchemasF, Unit] ): String =
     Cofree
-      .cata( schemas )(
-        ( _, node: SchemasF[Chain[IndLine]] ) =>
-          Eval.later {
-            val valueTypes: Chain[IndLine] =
-              if (node.asArray.isEmpty && node.asObject.isEmpty)
-                Chain.one( IndLine( node.leaves.map( _.typeName ).mkString( " | " ) ) )
+      .cata( schemas )( ( _, node: SchemasF[Chain[IndLine]] ) =>
+        Eval.later {
+          val valueTypes: Chain[IndLine] =
+            if (node.asArray.isEmpty && node.asObject.isEmpty)
+              Chain.one( IndLine( node.leaves.map( _.typeName ).mkString( " | " ) ) )
+            else
+              Chain.fromIterableOnce( node.leaves ).map( l => IndLine( l.typeName ) )
+
+          val arraySchema: Chain[IndLine] =
+            node.asArray.foldMap { arr =>
+              val header: String = s"<array>${if (arr.nonEmpty) " (non-empty)" else ""}"
+              if (arr.items.size > 1)
+                Chain.one( IndLine( header ) ) ++ arr.items.map( _.indent( 2 ) )
               else
-                Chain.fromIterableOnce( node.leaves ).map( l => IndLine( l.typeName ) )
+                arr.items.headOption.fold( Chain.one( IndLine( "<empty array>" ) ) )( item =>
+                  Chain.one( IndLine( s"$header of ${item.line}" ) )
+                )
+            }
 
-            val arraySchema: Chain[IndLine] =
-              node.asArray.foldMap { arr =>
-                val header: String = s"<array>${if (arr.nonEmpty) " (non-empty)" else ""}"
-                if (arr.items.size > 1)
-                  Chain.one( IndLine( header ) ) ++ arr.items.map( _.indent( 2 ) )
-                else
-                  arr.items.headOption.fold( Chain.one( IndLine( "<empty array>" ) ) )(
-                    item => Chain.one( IndLine( s"$header of ${item.line}" ) )
-                  )
-              }
+          val objectSchema: Chain[IndLine] = node.asObject.foldMap( obj =>
+            Chain.one( IndLine( "<object>" ) ) ++
+              obj.fields.toVector
+                .foldMap {
+                  case ( name, JField( value, optional ) ) =>
+                    val key: String = s"$name${if (optional) " (opt)" else ""}"
+                    if (value.size > 1)
+                      Chain.one( IndLine( key ) ) ++ value.map( _.indent( 2 ) )
+                    else
+                      Chain.one( IndLine( s"$key ${value.headOption.fold( "" )( _.line )}" ) )
+                }
+                .map( _.indent( 2 ) )
+          )
 
-            val objectSchema: Chain[IndLine] = node.asObject.foldMap(
-              obj =>
-                Chain.one( IndLine( "<object>" ) ) ++
-                  obj.fields.toVector
-                    .foldMap {
-                      case ( name, JField( value, optional ) ) =>
-                        val key: String = s"$name${if (optional) " (opt)" else ""}"
-                        if (value.size > 1)
-                          Chain.one( IndLine( key ) ) ++ value.map( _.indent( 2 ) )
-                        else
-                          Chain.one( IndLine( s"$key ${value.headOption.fold( "" )( _.line )}" ) )
-                    }
-                    .map( _.indent( 2 ) )
-            )
-
-            valueTypes ++ arraySchema ++ objectSchema
-          }
+          valueTypes ++ arraySchema ++ objectSchema
+        }
       )
       .map( _.mkString_( "\n" ) )
       .value
@@ -158,16 +156,15 @@ object JsonSchema {
   def extractSchema( json: Json ): Schemas = extractSchema( Vector( json ) )
 
   private def step( jsons: Vector[Json] ): SchemasF[Vector[Json]] = {
-    jsons.foldMap(
-      json =>
-        json.fold(
-          SchemasF.jNull,
-          _ => SchemasF.jBoolean,
-          _ => SchemasF.jNumber,
-          _ => SchemasF.jString,
-          arr => SchemasF.jArray( arr ),
-          obj => SchemasF.jObject( obj.toVector )
-        )
+    jsons.foldMap( json =>
+      json.fold(
+        SchemasF.jNull,
+        _ => SchemasF.jBoolean,
+        _ => SchemasF.jNumber,
+        _ => SchemasF.jString,
+        arr => SchemasF.jArray( arr ),
+        obj => SchemasF.jObject( obj.toVector )
+      )
     )
   }
 }

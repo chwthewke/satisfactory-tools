@@ -9,11 +9,10 @@ object Program {
       .argument[String]( "CONFIG" )
       .orNone
       .map(
-        _.fold( ConfigSource.default )(
-          name =>
-            ConfigSource
-              .resources( s"$name.conf" )
-              .withFallback( ConfigSource.defaultReference )
+        _.fold( ConfigSource.default )( name =>
+          ConfigSource
+            .resources( s"$name.conf" )
+            .withFallback( ConfigSource.defaultReference )
         )
       )
 }

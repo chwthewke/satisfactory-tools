@@ -25,8 +25,8 @@ object ResourceOptionsView extends ( ( Model, ResourceOptions ) => Tag ) {
   override def apply( model: Model, resourceOptions: ResourceOptions ): Tag =
     div(
       viewResourceWeights( model, resourceOptions.resourceWeights ),
-      zipMap( resourceOptions.resourceNodes, model.defaultResourceOptions.resourceNodes )(
-        ( byEx, defaultByEx ) => zipMap( byEx, defaultByEx )( ( _, _ ) )
+      zipMap( resourceOptions.resourceNodes, model.defaultResourceOptions.resourceNodes )( ( byEx, defaultByEx ) =>
+        zipMap( byEx, defaultByEx )( ( _, _ ) )
       ).toVector
         .sortBy( _._1 )
         .map {
@@ -61,10 +61,10 @@ object ResourceOptionsView extends ( ( Model, ResourceOptions ) => Tag ) {
   ): Tag =
     input(
       `type` := "number",
-      name := Keys.extractorItemPurityKey( extractorType, item, purity ),
-      value := resourceDistrib.get( purity ),
-      min := 0,
-      max := default.get( purity )
+      name   := Keys.extractorItemPurityKey( extractorType, item, purity ),
+      value  := resourceDistrib.get( purity ),
+      min    := 0,
+      max    := default.get( purity )
     )
 
   def extractorTypeSectionHeader( extractorType: ExtractorType ): String = {
@@ -105,22 +105,21 @@ object ResourceOptionsView extends ( ( Model, ResourceOptions ) => Tag ) {
         tbody(
           model.extractedItems
             .sortBy( _.displayName )
-            .map(
-              item =>
-                tr(
-                  td( item.displayName ),
-                  td(
-                    colspan := 2,
-                    input(
-                      `type` := "range",
-                      name := Keys.resourceWeightKey( item ),
-                      min := 0,
-                      max := (2 * ResourceWeights.range),
-                      step := 1,
-                      value := weights.weights.getOrElse( item.className, ResourceWeights.range )
-                    )
+            .map( item =>
+              tr(
+                td( item.displayName ),
+                td(
+                  colspan := 2,
+                  input(
+                    `type` := "range",
+                    name   := Keys.resourceWeightKey( item ),
+                    min    := 0,
+                    max    := ( 2 * ResourceWeights.range ),
+                    step   := 1,
+                    value  := weights.weights.getOrElse( item.className, ResourceWeights.range )
                   )
                 )
+              )
             )
         )
       )
