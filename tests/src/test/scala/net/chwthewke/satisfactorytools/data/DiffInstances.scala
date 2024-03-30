@@ -28,8 +28,6 @@ trait DiffInstances {
   }
 
   implicit def countableDiff[N: Diff, A: Diff]: Diff[Countable[N, A]] = {
-    import derived.auto._
-
     derived.semi.diff[Countable[N, A]]
   }
 

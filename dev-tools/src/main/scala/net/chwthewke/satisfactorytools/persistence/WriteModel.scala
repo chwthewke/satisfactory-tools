@@ -1,11 +1,12 @@
 package net.chwthewke.satisfactorytools
 package persistence
 
+import cats.Functor
 import cats.Reducible
-import cats.syntax.alternative._
 import cats.syntax.apply._
 import cats.syntax.foldable._
 import cats.syntax.functor._
+import cats.syntax.functorFilter._
 import cats.syntax.list._
 import cats.syntax.traverse._
 import cats.syntax.vector._
@@ -52,7 +53,7 @@ object WriteModel {
 
     /** Returns `AND (f1) AND (f2) AND ... (fn)` for all defined fragments. */
     def andOpt( fs: Option[Fragment]* ): Fragment =
-      fs.toList.unite.toNel.foldMap( fs => fr"AND" ++ Fragments.and( fs.toList: _* ) )
+      fs.toList.flattenOption.toNel.foldMap( fs => fr"AND" ++ Fragments.and( fs ) )
 
     def insertItem( version: ModelVersionId ): Update[Item] =
       Update[( Item, ModelVersionId )](
@@ -245,7 +246,7 @@ object WriteModel {
            |""".stripMargin //
       .update
 
-    def deleteUnusedRecipeIngredients[F[_]: Reducible](
+    def deleteUnusedRecipeIngredients[F[_]: Reducible: Functor](
         modelVersionId: ModelVersionId,
         ingredientIds: Option[F[RecipeIngredientId]]
     ): Update0 =
@@ -259,7 +260,7 @@ object WriteModel {
            |""".stripMargin //
       .update
 
-    def deleteUnusedRecipeProducts[F[_]: Reducible](
+    def deleteUnusedRecipeProducts[F[_]: Reducible: Functor](
         modelVersionId: ModelVersionId,
         productIds: Option[F[RecipeProductId]]
     ): Update0 =
@@ -273,7 +274,7 @@ object WriteModel {
            |""".stripMargin //
       .update
 
-    def deleteUnusedRecipes[F[_]: Reducible](
+    def deleteUnusedRecipes[F[_]: Reducible: Functor](
         modelVersionId: ModelVersionId,
         recipeIds: Option[F[RecipeId]]
     ): Update0 =
@@ -284,7 +285,7 @@ object WriteModel {
            |""".stripMargin //
       .update
 
-    def deleteUnusedItems[F[_]: Reducible](
+    def deleteUnusedItems[F[_]: Reducible: Functor](
         modelVersionId: ModelVersionId,
         itemIds: Option[F[ItemId]]
     ): Update0 =
@@ -295,7 +296,7 @@ object WriteModel {
            |""".stripMargin //
       .update
 
-    def deleteUnusedMachines[F[_]: Reducible](
+    def deleteUnusedMachines[F[_]: Reducible: Functor](
         modelVersionId: ModelVersionId,
         machineIds: Option[F[MachineId]]
     ): Update0 =

@@ -13,8 +13,6 @@ import data.Item
 
 trait DiffInstances extends data.DiffInstances {
   implicit val machineDiff: Diff[Machine] = {
-    import derived.auto._
-
     derived.semi.diff[Machine]
   }
 

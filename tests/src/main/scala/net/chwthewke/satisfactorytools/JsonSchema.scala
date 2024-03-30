@@ -22,8 +22,8 @@ object JsonSchema {
     def combineOptions[A: Semigroup]( left: Option[JField[A]], right: Option[JField[A]] ): Option[JField[A]] =
       ( left, right ) match {
         case ( None, None )                   => None
-        case ( Some( JField( a, _ ) ), None ) => Some( JField( a, true ) )
-        case ( None, Some( JField( a, _ ) ) ) => Some( JField( a, true ) )
+        case ( Some( JField( a, _ ) ), None ) => Some( JField( a, optional = true ) )
+        case ( None, Some( JField( a, _ ) ) ) => Some( JField( a, optional = true ) )
         case ( Some( JField( a1, o1 ) ), Some( JField( a2, o2 ) ) ) =>
           Some( JField( a1 |+| a2, o1 || o2 ) )
       }
@@ -84,7 +84,7 @@ object JsonSchema {
         None,
         Some(
           JObject(
-            a.map { case ( name, value ) => ( name, JField( Vector( value ), false ) ) }
+            a.map { case ( name, value ) => ( name, JField( Vector( value ), optional = false ) ) }
               .to( SortedMap )
           )
         )

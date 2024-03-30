@@ -1,10 +1,10 @@
 package net.chwthewke.satisfactorytools
 
 import cats.data.NonEmptyVector
+import cats.effect.Async
 import cats.effect.ExitCode
 import cats.effect.IO
 import cats.effect.IOApp
-import cats.effect.Sync
 import cats.effect.std.Console
 import cats.syntax.flatMap._
 import cats.syntax.foldable._
@@ -23,7 +23,7 @@ import model.ModelVersion
 import assets.IconIndex
 import loader.Loader
 
-class IndexIcons[F[_]]( implicit S: Sync[F], F: Files[F] ) {
+class IndexIcons[F[_]]( implicit S: Async[F], F: Files[F] ) {
 
   private val console: Console[F] = Console.make[F]
 

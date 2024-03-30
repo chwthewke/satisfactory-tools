@@ -5,70 +5,48 @@ import sbt.Keys._
 
 ThisBuild / organization       := "net.chwthewke"
 ThisBuild / scalaOrganization  := "org.scala-lang"
-ThisBuild / scalaVersion       := "2.13.10"
+ThisBuild / scalaVersion       := "2.13.13"
 // TODO when I can make sense of lm-coursier
 ThisBuild / conflictManager                         := ConflictManager.strict
 ThisBuild / updateSbtClassifiers / conflictManager  := ConflictManager.default
 // format: on
 
-enablePlugins( FormatPlugin, PlatformDepsPlugin )
+enablePlugins( FormatPlugin )
 
 ThisBuild / SettingKey[Seq[String]]( "ide-base-packages" )
   .withRank( KeyRanks.Invisible ) := Seq( "net.chwthewke.satisfactorytools" )
 
-ThisBuild / Compile / doc / sources                := Seq.empty
+ThisBuild / Compile / doc / sources := Seq.empty
 ThisBuild / Compile / packageDoc / publishArtifact := false
 
 val compilerPlugins = libraryDependencies ++= kindProjector ++ betterMonadicFor
 
 val core =
-  crossProject( JVMPlatform, JSPlatform )
-    .crossType( CrossType.Pure )
+  project
     .settings( compilerPlugins )
     .settings(
-      libraryDependencies ++= Seq(
-        "org.typelevel" %%% "cats-core"        % catsVersion,
-        "org.typelevel" %%% "cats-free"        % catsVersion,
-        "org.typelevel" %%% "alleycats-core"   % catsVersion,
-        "org.typelevel" %%% "kittens"          % "3.0.0",
-        "org.typelevel" %%% "mouse"            % "1.2.1",
-        "org.tpolecat"  %%% "atto-core"        % "0.9.5",
-        "io.circe"      %%% "circe-core"       % circeVersion,
-        "io.circe"      %%% "circe-generic"    % circeVersion,
-        "io.circe"      %%% "circe-parser"     % circeVersion,
-        "com.beachape"  %%% "enumeratum"       % enumeratumVersion,
-        "com.beachape"  %%% "enumeratum-cats"  % enumeratumVersion,
-        "com.beachape"  %%% "enumeratum-circe" % enumeratumVersion
-      ),
-      dependencyOverrides ++= Seq(
-        "org.typelevel" %%% "cats-core"      % catsVersion,
-        "org.typelevel" %%% "cats-free"      % catsVersion,
-        "org.typelevel" %%% "alleycats-core" % catsVersion,
-        "io.circe"      %%% "circe-core"     % circeVersion,
-        "com.chuusai"   %%% "shapeless"      % "2.3.9"
-      )
-    )
-    .jsSettings(
-      dependencyOverrides ++= Seq( "org.scala-js" %% "scalajs-library" % "1.13.1" )
+      libraryDependencies ++=
+        cats ++ catsFree ++ alleycatsCore ++ kittens ++ mouse ++
+          atto ++ circe ++ enumeratum ++ enumeratumCirce
     )
     .enablePlugins( ScalacPlugin )
 
 val solver = project
   .settings( compilerPlugins )
   .settings( libraryDependencies ++= ojAlgo )
-  .dependsOn( core.jvm )
+  .dependsOn( core )
   .enablePlugins( ScalacPlugin, DependenciesPlugin )
 
 val api = project
   .settings( compilerPlugins )
   .settings( libraryDependencies ++= catsTime ++ circe )
-  .dependsOn( core.jvm )
+  .dependsOn( core )
   .enablePlugins( ScalacPlugin, DependenciesPlugin )
 
 val assets = project
   .settings( compilerPlugins )
   .settings( libraryDependencies ++= catsEffect ++ pureconfig )
-  .dependsOn( core.jvm )
+  .dependsOn( core )
   .enablePlugins( ScalacPlugin, DependenciesPlugin )
 
 val persistence = project
@@ -163,8 +141,7 @@ val `tests` = project
 val `satisfactory-tools` = project
   .in( file( "." ) )
   .aggregate(
-    core.jvm,
-    core.js,
+    core,
     api,
     assets,
     solver,
