@@ -1,9 +1,9 @@
 package net.chwthewke.satisfactorytools
 
+import cats.effect.Async
 import cats.effect.ExitCode
 import cats.effect.IO
 import cats.effect.IOApp
-import cats.effect.Sync
 import cats.effect.std.Console
 import cats.syntax.either._
 import cats.syntax.flatMap._
@@ -17,7 +17,7 @@ import fs2.text.utf8
 import io.circe.parser
 import java.nio.charset.StandardCharsets
 
-class GrabDocs[F[_]: Sync]( implicit F: Files[F] ) {
+class GrabDocs[F[_]: Async]( implicit F: Files[F] ) {
   import GrabDocs._
 
   private val console: Console[F] = Console.make[F]

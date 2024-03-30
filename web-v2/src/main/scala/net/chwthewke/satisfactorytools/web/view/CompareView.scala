@@ -31,11 +31,11 @@ object CompareView {
     page(
       "Compare plans",
       ( before, after ) match {
-        case ( ( b, bio ), ( a, aio ) ) =>
+        case ( ( bef, bio ), ( aft, aio ) ) =>
           div(
-            powerDiff( b, a ),
-            inputOutputsDiff( b, a ),
-            recipeDiff( b, a ),
+            powerDiff( bef, aft ),
+            inputOutputsDiff( bef, aft ),
+            recipeDiff( bef, aft ),
             itemIODiff( bio, aio )
           )
       }
@@ -61,8 +61,8 @@ object CompareView {
       legend( "Power" ),
       table(
         ( powerBefore, powerAfter, diff ) match {
-          case ( Power.Fixed( b ), Power.Fixed( a ), Power.Fixed( d ) ) =>
-            tr( powerPartDiff( b, a, d ) )
+          case ( Power.Fixed( bef ), Power.Fixed( aft ), Power.Fixed( d ) ) =>
+            tr( powerPartDiff( bef, aft, d ) )
           case _ =>
             Seq[Frag](
               tr( "Average", powerPartDiff( powerBefore.average, powerAfter.average, diff.average ) ),

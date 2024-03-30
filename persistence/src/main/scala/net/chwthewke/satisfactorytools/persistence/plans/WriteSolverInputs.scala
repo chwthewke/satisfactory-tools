@@ -236,7 +236,7 @@ object WriteSolverInputs {
           |""".stripMargin
       )
 
-    private def insertAllRecipes( conditions: Fragment* ): Update0 =
+    private def insertAllRecipes( condition: Fragment, moreConditions: Fragment* ): Update0 =
       // language=SQL
       sql"""INSERT INTO "recipe_lists"
            |  ( "plan_id", "recipe_id" )
@@ -246,7 +246,7 @@ object WriteSolverInputs {
            |  FROM       "plans"              p
            |  INNER JOIN "recipes"            r ON r."model_version_id" = p."model_version_id"
            |  LEFT  JOIN "extraction_recipes" x on r."id" = x."recipe_id"
-           |  ${Fragments.whereAnd( conditions: _* )}
+           |  ${Fragments.whereAnd( NonEmptyVector( condition, moreConditions.toVector ) )}
            |ON CONFLICT ON CONSTRAINT "recipe_list_unique"
            |DO NOTHING
            |""".stripMargin //
@@ -303,11 +303,9 @@ object WriteSolverInputs {
 
     def insertToRecipeList( planId: PlanId, maxTier: Int, alternates: Boolean ): Update0 =
       insertAllRecipes(
-        Vector(
-          withPlanId( planId ),
-          notExtractionRecipe,
-          isAvailableAtTier( maxTier )
-        ) ++ Option.when( !alternates )( isNotAlternate ): _*
+        withPlanId( planId ),
+        Vector( notExtractionRecipe, isAvailableAtTier( maxTier ) )
+          ++ Option.when( !alternates )( isNotAlternate ): _*
       )
   }
 }

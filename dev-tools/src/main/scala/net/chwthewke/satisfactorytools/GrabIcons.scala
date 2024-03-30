@@ -1,9 +1,9 @@
 package net.chwthewke.satisfactorytools
 
+import cats.effect.Async
 import cats.effect.ExitCode
 import cats.effect.IO
 import cats.effect.IOApp
-import cats.effect.kernel.Sync
 import cats.effect.std.Console
 import cats.effect.syntax.monadCancel._
 import cats.syntax.applicative._
@@ -23,7 +23,7 @@ import data.GameData
 import data.IconData
 import loader.Loader
 
-class GrabIcons[F[_]]( version: DataVersionStorage )( implicit S: Sync[F], F: Files[F] ) {
+class GrabIcons[F[_]]( version: DataVersionStorage )( implicit S: Async[F], F: Files[F] ) {
 
   private val console: Console[F] = Console.make[F]
 
