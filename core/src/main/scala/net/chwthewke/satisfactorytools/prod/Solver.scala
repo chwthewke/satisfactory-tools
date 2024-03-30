@@ -3,6 +3,6 @@ package prod
 
 import model.Bill
 
-trait Solver {
-  def solve( bill: Bill, recipes: RecipeSelection ): Either[String, Solution]
+trait Solver[F[_]] {
+  def solve( bill: Bill, recipes: RecipeSelection ): F[Solution]
 }

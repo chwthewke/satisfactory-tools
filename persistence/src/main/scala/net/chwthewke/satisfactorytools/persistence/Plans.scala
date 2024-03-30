@@ -2,6 +2,7 @@ package net.chwthewke.satisfactorytools
 package persistence
 
 import cats.data.OptionT
+import cats.syntax.applicativeError._
 import cats.syntax.flatMap._
 import cats.syntax.functor._
 import doobie._
@@ -9,11 +10,15 @@ import doobie._
 import api.PlannerApi
 import data.ClassName
 import model.Bill
+import model.Model
 import model.Options
 import model.RecipeList
 import model.ResourceOptions
 import persistence.plans.PlanTrees
 import prod.Calculator
+import prod.Factory
+import prod.Solver
+import prod.SolverInputs
 import prod.ojsolver.ConstraintSolver
 import prod.tree.TreeCommand
 import protocol.InputTab
@@ -117,6 +122,14 @@ object Plans extends PlannerApi[ConnectionIO] {
   override def setCustomGroupOrder( planId: PlanId, group: Int, groupRow: Int ): ConnectionIO[Unit] =
     plans.CustomGroups.writeCustomGroupOrder( planId, group, groupRow )
 
+  private val solver: Solver[ConnectionIO] = ConstraintSolver[ConnectionIO]
+
+  private def computeFactory( model: Model, solverInputs: SolverInputs ): ConnectionIO[Either[String, Factory]] =
+    Calculator
+      .computeFactory( model, solverInputs, solver )
+      .map[Either[String, Factory]]( Right( _ ) )
+      .recover { case ConstraintSolver.Error( message ) => Left( message ) }
+
   override def computePlan( planId: PlanId ): ConnectionIO[Unit] =
     plans.Headers
       .readPlanHeader( planId )
@@ -124,8 +137,8 @@ object Plans extends PlannerApi[ConnectionIO] {
         for {
           model        <- ReadModel.readModel( header.modelVersionId ) // TODO actually uses only extraction recipes
           solverInputs <- plans.ReadSolverInputs.getSolverInputs( planId )
-          _ <- plans.WriteSolution
-                 .writeSolution( planId, Calculator.computeFactory( model, solverInputs, ConstraintSolver ) )
+          factory      <- computeFactory( model, solverInputs )
+          _            <- plans.WriteSolution.writeSolution( planId, factory )
         } yield ()
       )
       .getOrElse( () )

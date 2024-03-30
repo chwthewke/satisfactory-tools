@@ -33,7 +33,7 @@ val core =
 
 val solver = project
   .settings( compilerPlugins )
-  .settings( libraryDependencies ++= ojAlgo )
+  .settings( libraryDependencies ++= ojAlgo ++ catsEffectKernel )
   .dependsOn( core )
   .enablePlugins( ScalacPlugin, DependenciesPlugin )
 
