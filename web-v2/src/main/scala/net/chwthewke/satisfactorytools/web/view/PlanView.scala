@@ -131,7 +131,8 @@ object PlanView {
           ( "Manufacturing machines", OutputTab.Machines ),
           ( "Item I/O", OutputTab.Items ),
           ( "Inter-group Item I/O", OutputTab.GroupIO ),
-          ( "Tree (beta)", OutputTab.Tree )
+          ( "Tree (beta)", OutputTab.Tree ),
+          ( "Planning", OutputTab.PlanItemFlow( None ) )
         ) ++
           ( 1 to solution.groupCount )
             .map( ix => ( ix.show, OutputTab.CustomGroup( ix ) ) )
@@ -169,13 +170,14 @@ object PlanView {
 
   private def outputView[O]( outputTab: OutputTab.Aux[O] ): ( O, Int ) => Tag =
     outputTab match {
-      case OutputTab.CustomGroup( _ ) => CustomGroupView
-      case OutputTab.GroupIO          => GroupIOView
-      case OutputTab.Steps            => StepsView
-      case OutputTab.Items            => ItemsView
-      case OutputTab.Machines         => MachinesView
-      case OutputTab.Inputs           => InputsView
-      case OutputTab.Tree             => TreeView
+      case OutputTab.CustomGroup( _ )  => CustomGroupView
+      case OutputTab.GroupIO           => GroupIOView
+      case OutputTab.Steps             => StepsView
+      case OutputTab.Items             => ItemsView
+      case OutputTab.Machines          => MachinesView
+      case OutputTab.Inputs            => InputsView
+      case OutputTab.Tree              => TreeView
+      case OutputTab.PlanItemFlow( _ ) => ItemFlowsView
     }
 
 }

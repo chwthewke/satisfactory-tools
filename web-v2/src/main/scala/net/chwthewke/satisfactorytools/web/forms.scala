@@ -116,16 +116,18 @@ object forms {
 
     object output {
       def apply( tab: OutputTab ): String = tab match {
-        case OutputTab.Steps             => "steps"
-        case OutputTab.Items             => "items"
-        case OutputTab.Machines          => "machines"
-        case OutputTab.Inputs            => "inputs"
-        case OutputTab.CustomGroup( ix ) => s"group_$ix"
-        case OutputTab.GroupIO           => "group-io"
-        case OutputTab.Tree              => "tree"
+        case OutputTab.Steps                        => "steps"
+        case OutputTab.Items                        => "items"
+        case OutputTab.Machines                     => "machines"
+        case OutputTab.Inputs                       => "inputs"
+        case OutputTab.CustomGroup( ix )            => s"group_$ix"
+        case OutputTab.GroupIO                      => "group-io"
+        case OutputTab.Tree                         => "tree"
+        case OutputTab.PlanItemFlow( None )         => "flow"
+        case OutputTab.PlanItemFlow( Some( name ) ) => s"flow_${name.name}"
       }
 
-      def unapply( string: String ): Option[OutputTab] =
+      private val constActions: Map[String, OutputTab] =
         Vector(
           OutputTab.Steps,
           OutputTab.Items,
@@ -133,12 +135,21 @@ object forms {
           OutputTab.Inputs,
           OutputTab.GroupIO,
           OutputTab.Tree
-        ).find( apply( _ ) == string )
+        ).fproductLeft( apply ).toMap
+
+      def unapply( string: String ): Option[OutputTab] =
+        constActions
+          .get( string )
           .orElse(
             Option
               .when( string.startsWith( "group_" ) )( string.stripPrefix( "group_" ) )
               .flatMap( Numeric[Int].parseString )
               .map( OutputTab.CustomGroup )
+          )
+          .orElse(
+            Option.when( string.startsWith( "flow_" ) )(
+              OutputTab.PlanItemFlow( Some( ClassName( string.stripPrefix( "flow_" ) ) ) )
+            )
           )
     }
 

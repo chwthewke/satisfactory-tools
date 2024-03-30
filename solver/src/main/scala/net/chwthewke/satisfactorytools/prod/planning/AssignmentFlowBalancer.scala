@@ -4,6 +4,7 @@ package planning
 
 import cats.Monad
 import cats.data.NonEmptyVector
+import cats.effect.kernel.Sync
 import cats.syntax.align._
 import cats.syntax.applicative._
 import cats.syntax.flatMap._
@@ -13,6 +14,9 @@ import cats.syntax.nested._
 import scala.collection.immutable.SortedMap
 
 object AssignmentFlowBalancer {
+
+  def apply[F[_]: Sync]: AssignmentFlowBalancer[F] =
+    new AssignmentFlowBalancer( new AssignmentSolver.Combined[F] )
 
   def normalizedNoPrefs( ins: Vector[Double], outs: Vector[Double] ): Vector[SortedMap[Int, Double]] =
     ins.map( in =>

@@ -126,7 +126,7 @@ class Application[F[_]](
           req @ POST -> "plan" /: segment.PlanId( planId ) /: segment.InputTab( inputTab ) /:
           segment.OutputTab( outputTab ) /: rest
         ) =>
-      updatePlan[inputTab.Data, outputTab.Data]( planId, inputTab, outputTab, req, rest )
+      updatePlan[inputTab.Data, outputTab.Data]( planId, inputTab.typed, outputTab.typed, req, rest )
 
     case ContextRequest( session, GET -> Root / "compare" / segment.PlanId( before ) / segment.PlanId( after ) ) =>
       comparePlans( before, after )
@@ -171,7 +171,7 @@ class Application[F[_]](
       .mproduct( header => models.getModel( header.modelVersionId ).toRightF( NotFound() ) )
 
   private def viewPlan( planId: PlanId, inputTab: InputTab, outputTab: OutputTab ): F[Response[F]] =
-    viewPlanAux[inputTab.Data, outputTab.Data]( planId, inputTab, outputTab )
+    viewPlanAux[inputTab.Data, outputTab.Data]( planId, inputTab.typed, outputTab.typed )
 
   private def viewPlanAux[I, O](
       planId: PlanId,

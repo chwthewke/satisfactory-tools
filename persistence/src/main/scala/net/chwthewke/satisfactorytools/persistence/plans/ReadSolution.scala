@@ -13,14 +13,18 @@ import cats.syntax.traverse._
 import doobie._
 import doobie.implicits._
 
+import data.ClassName
 import data.Countable
 import data.Item
 import model.Bill
 import model.GroupAssignments
 import model.Machine
+import model.Options
 import model.Recipe
 import prod.ClockedRecipe
 import prod.Factory
+import prod.planning.AssignmentFlowBalancer
+import prod.planning.FactoryPlan
 import prod.tree.FactoryTree
 import protocol.CustomGroupResult
 import protocol.ItemIO
@@ -37,14 +41,30 @@ object ReadSolution {
       outputTab: OutputTab.Aux[D]
   ): ConnectionIO[D] =
     outputTab match {
-      case OutputTab.CustomGroup( ix ) => getGroupResult( planId, solutionId, ix )
-      case OutputTab.GroupIO           => getGroupIO( planId, solutionId )
-      case OutputTab.Steps             => getSolution( planId, solutionId )
-      case OutputTab.Items             => getItems( planId, solutionId )
-      case OutputTab.Machines          => getMachines( planId, solutionId )
-      case OutputTab.Inputs            => getRawInputs( planId, solutionId )
-      case OutputTab.Tree              => getPlanTree( planId, solutionId )
+      case OutputTab.Steps                    => getSolution( planId, solutionId )
+      case OutputTab.Inputs                   => getRawInputs( planId, solutionId )
+      case OutputTab.Machines                 => getMachines( planId, solutionId )
+      case OutputTab.Items                    => getItems( planId, solutionId )
+      case OutputTab.GroupIO                  => getGroupIO( planId, solutionId )
+      case OutputTab.Tree                     => getPlanTree( planId, solutionId )
+      case OutputTab.PlanItemFlow( classOpt ) => getItemFlow( planId, solutionId, classOpt )
+      case OutputTab.CustomGroup( ix )        => getGroupResult( planId, solutionId, ix )
     }
+
+  private def getItemFlow(
+      planId: PlanId,
+      solutionId: SolutionId,
+      classOpt: Option[ClassName]
+  ): ConnectionIO[( FactoryPlan, Options, Option[Item] )] = for {
+    ( factory, _ ) <- getSolution( planId, solutionId )
+    bill           <- ReadSolverInputs.getBill( planId )
+    options        <- ReadSolverInputs.getOptions( planId )
+    factoryPlan    <- FactoryPlan.from( AssignmentFlowBalancer[ConnectionIO] )( bill, factory )
+  } yield {
+    val itemOpt: Option[Item] =
+      classOpt.flatMap( className => factoryPlan.itemFlows.keySet.find( _.className == className ) )
+    ( factoryPlan, options, itemOpt )
+  }
 
   private def getPlanTree( planId: PlanId, solutionId: SolutionId ): ConnectionIO[FactoryTree] =
     (

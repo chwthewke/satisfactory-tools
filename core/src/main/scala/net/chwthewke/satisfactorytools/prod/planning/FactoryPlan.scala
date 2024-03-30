@@ -7,6 +7,7 @@ import cats.Monad
 import cats.MonadThrow
 import cats.Order.catsKernelOrderingForOrder
 import cats.data.Ior
+import cats.data.Kleisli
 import cats.data.NonEmptyMap
 import cats.data.NonEmptyVector
 import cats.data.State
@@ -16,6 +17,7 @@ import cats.syntax.flatMap._
 import cats.syntax.foldable._
 import cats.syntax.functor._
 import cats.syntax.option._
+import cats.syntax.traverse._
 import cats.syntax.vector._
 import scala.collection.immutable.SortedMap
 
@@ -27,8 +29,7 @@ import model.Bill
 //  between "split the producers" and "split the producers' output"?
 case class FactoryPlan(
     processes: SortedMap[ProcessId, Process],
-    // below is the persisted part
-    itemFlows: SortedMap[Item, FactoryPlan.ItemFlow]
+    itemFlows: SortedMap[Item, FactoryPlan.ItemFlow#WithTransports]
 ) {
 
 //  def splitProducersOf( item: Item ): State[Env, FactoryPlan] = {
@@ -77,10 +78,20 @@ object FactoryPlan {
       consumers: NonEmptyVector[ConsumerGroup],
       producers: NonEmptyMap[ProcessId.Natural, Option[NonEmptyVector[ProcessId.Synthetic]]],
       priorities: Vector[NonEmptyVector[( Int, Int )]] // indexes into (producers.keySet x consumers)
-  ) {
 
-    def transports[F[_]: MonadThrow]: StateT[F, ItemFlow.Env[F], NonEmptyVector[Transport[ProcessId]]] =
-      StateT.inspectF[F, ItemFlow.Env[F], NonEmptyVector[Transport[ProcessId]]] { env =>
+  ) { self =>
+
+    case class WithTransports( transports: NonEmptyVector[Transport[ProcessId]] ) {
+      val consumers: NonEmptyVector[ConsumerGroup]                                               = self.consumers
+      val producers: NonEmptyMap[ProcessId.Natural, Option[NonEmptyVector[ProcessId.Synthetic]]] = self.producers
+      val priorities: Vector[NonEmptyVector[( Int, Int )]]                                       = self.priorities
+    }
+
+    def withTransports[F[_]: MonadThrow]: Kleisli[F, ItemFlow.Env[F], WithTransports] =
+      transports[F].map( WithTransports )
+
+    def transports[F[_]: MonadThrow]: Kleisli[F, ItemFlow.Env[F], NonEmptyVector[Transport[ProcessId]]] =
+      Kleisli { env =>
         val producersV: Vector[( ProcessId.Natural, Option[NonEmptyVector[ProcessId.Synthetic]] )] =
           producers.toSortedMap.toVector
 
@@ -173,7 +184,7 @@ object FactoryPlan {
 //    def unassigned: ProducerTargets = SingleProducerTargets( SortedSet.empty )
 //  }
 
-  def from( bill: Bill, factory: Factory ): FactoryPlan = {
+  def from[F[_]: MonadThrow]( balancer: FlowBalancer[F] )( bill: Bill, factory: Factory ): F[FactoryPlan] = {
 
     val processes: Vector[( ProcessId.Natural, Process )] =
       factory.extraction.map( r => ( ProcessId.recipe( r ), Process.Extraction( r ) ) ) ++
@@ -212,7 +223,19 @@ object FactoryPlan {
           )
       }
 
-    FactoryPlan( processes.to( SortedMap ), itemFlows )
+    val processesMap: SortedMap[ProcessId, Process] = processes.to( SortedMap )
+
+    val itemFlowsWithTransports: F[SortedMap[Item, ItemFlow#WithTransports]] =
+      itemFlows.toVector
+        .traverse[F, ( Item, ItemFlow#WithTransports )] {
+          case ( item, flow ) =>
+            val env: ItemFlow.Env[F] =
+              ItemFlow.Env( item, processesMap, FactoryPlan.Env( ProcessId.Synthetic( 1 ), balancer ) )
+            flow.withTransports[F].run( env ).tupleLeft( item ).widen
+        }
+        .map( _.to( SortedMap ) )
+
+    itemFlowsWithTransports.map( FactoryPlan( processesMap, _ ) )
   }
 
 }

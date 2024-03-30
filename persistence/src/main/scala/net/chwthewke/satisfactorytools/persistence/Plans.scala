@@ -107,14 +107,14 @@ object Plans extends PlannerApi[ConnectionIO] {
     plans.Headers.readPlanHeader( planId )
 
   override def getPlanQuery( planId: PlanId, inputTab: InputTab ): ConnectionIO[inputTab.Data] =
-    plans.ReadSolverInputs.readPlanInput( planId, inputTab )
+    plans.ReadSolverInputs.readPlanInput( planId, inputTab.typed )
 
   override def getPlanResult(
       planId: PlanId,
       solutionId: SolutionId,
       outputTab: OutputTab
   ): ConnectionIO[outputTab.Data] =
-    plans.ReadSolution.readPlanResult( planId, solutionId, outputTab )
+    plans.ReadSolution.readPlanResult( planId, solutionId, outputTab.typed )
 
   override def getCustomGroupSelection( planId: PlanId ): ConnectionIO[Map[ClassName, Int]] =
     plans.CustomGroups.readCustomGroupSelection( planId )

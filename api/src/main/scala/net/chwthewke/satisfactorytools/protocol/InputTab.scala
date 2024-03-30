@@ -9,17 +9,22 @@ import model.Options
 import model.RecipeList
 import model.ResourceOptions
 
-sealed abstract class InputTab extends EnumEntry with Product {
+sealed abstract class InputTab extends EnumEntry with Product { self =>
   type Data
+
+  def typed: InputTab.Aux[Data] =
+    ( this: InputTab { type Data = self.Data } ) match {
+      case aux: InputTab.Aux[d] => implicitly[d =:= Data].liftCo( aux )
+    }
 }
 
 object InputTab extends Enum[InputTab] {
-  type Aux[D] = InputTab { type Data = D }
+  sealed abstract class Aux[D] extends InputTab { type Data = D }
 
-  final case object Bill            extends InputTab { type Data = Bill            }
-  final case object Recipes         extends InputTab { type Data = RecipeList      }
-  final case object Options         extends InputTab { type Data = Options         }
-  final case object ResourceOptions extends InputTab { type Data = ResourceOptions }
+  final case object Bill            extends Aux[Bill]
+  final case object Recipes         extends Aux[RecipeList]
+  final case object Options         extends Aux[Options]
+  final case object ResourceOptions extends Aux[ResourceOptions]
 
   override val values: IndexedSeq[InputTab] = findValues
 }
