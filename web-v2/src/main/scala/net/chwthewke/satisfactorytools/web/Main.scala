@@ -7,13 +7,13 @@ import cats.effect.IO
 import cats.effect.IOApp
 import cats.effect.Ref
 import cats.effect.Resource
-import cats.syntax.apply._
 import cats.syntax.semigroupk._
 import doobie.Transactor
 import fs2.concurrent.Signal
 import fs2.concurrent.SignallingRef
 import org.http4s.HttpApp
 import org.http4s.HttpRoutes
+import org.http4s.StaticFile
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.dsl.Http4sDsl
 import org.http4s.server.middleware.AutoSlash
@@ -25,17 +25,9 @@ import persistence.Plans
 import persistence.ReadModel
 import persistence.Sessions
 import web.app.Application
+import web.app.ShutdownRoute
 
-class Main[F[_]: Async] {
-  val dsl: Http4sDsl[F] = new Http4sDsl[F] {}
-  import dsl._
-
-  private def shutdown( shutdownCommand: Ref[F, Boolean] ): HttpRoutes[F] = {
-
-    HttpRoutes.of[F] {
-      case _ -> Root / "shutdown" => shutdownCommand.set( true ) *> Ok()
-    }
-  }
+class Main[F[_]: Async] extends Http4sDsl[F] {
 
   private val mkShutdownSignal: Resource[F, SignallingRef[F, Boolean]] =
     Resource.eval( SignallingRef[F, Boolean]( false ) )
@@ -46,13 +38,8 @@ class Main[F[_]: Async] {
       .flatMap( cfg => persistence.Resources.managedTransactor[F]( cfg.db ) )
 
   private val static: HttpRoutes[F] = HttpRoutes.of[F] {
-    case GET -> Root / "style.css" =>
-      Ok(
-        fs2.io.readInputStream(
-          Async[F].delay( getClass.getClassLoader.getResourceAsStream( "style.css" ) ),
-          32768
-        )
-      )
+    case req @ GET -> Root / (f @ _ ~ "css") =>
+      StaticFile.fromResource[F]( f, Some( req ) ).getOrElseF( NotFound() )
   }
 
   val httpApp: Resource[F, ( Signal[F, Boolean], HttpApp[F] )] =
@@ -69,7 +56,7 @@ class Main[F[_]: Async] {
 
       (
         shutdownSignal,
-        AutoSlash.httpRoutes( static <+> app.routes <+> shutdown( shutdownSignal ) ).orNotFound
+        AutoSlash.httpRoutes( static <+> app.routes <+> ShutdownRoute( shutdownSignal ) ).orNotFound
       )
 
     }
