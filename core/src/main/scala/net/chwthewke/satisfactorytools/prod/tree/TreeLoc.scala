@@ -35,12 +35,11 @@ object TreeLoc {
       .map( TreeLoc( _ ) )
 
   implicit val treeLocPartialOrder: PartialOrder[TreeLoc] =
-    PartialOrder.from(
-      ( l, m ) =>
-        if (l == m) 0d
-        else if (l.indices.startsWith( m.indices )) 1d
-        else if (m.indices.startsWith( l.indices )) -1d
-        else Double.NaN
+    PartialOrder.from( ( l, m ) =>
+      if (l == m) 0d
+      else if (l.indices.startsWith( m.indices )) 1d
+      else if (m.indices.startsWith( l.indices )) -1d
+      else Double.NaN
     )
 
   implicit val treeLocShow: Show[TreeLoc] = Show.fromToString

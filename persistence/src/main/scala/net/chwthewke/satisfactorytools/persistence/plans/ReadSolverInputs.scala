@@ -60,12 +60,11 @@ object ReadSolverInputs {
       readModelIds( planId, ReadModel.readItems ).map( _.map { case ( id, item ) => ( id, item.className ) } ),
       statements.selectResourceNodes.toQuery0( planId ).stream.compile.foldMonoid,
       statements.selectResourceWeights.toQuery0( planId ).stream.compile.foldMonoid
-    ).mapN(
-      ( itemsById, nodes, weights ) =>
-        ResourceOptions(
-          nodes.map { case ( ex, dists ) => ( ex, translateMapKeys( dists, itemsById ) ) },
-          ResourceWeights( translateMapKeys( weights, itemsById ) )
-        )
+    ).mapN( ( itemsById, nodes, weights ) =>
+      ResourceOptions(
+        nodes.map { case ( ex, dists ) => ( ex, translateMapKeys( dists, itemsById ) ) },
+        ResourceWeights( translateMapKeys( weights, itemsById ) )
+      )
     )
 
   def getSolverInputs( planId: PlanId ): ConnectionIO[SolverInputs] =

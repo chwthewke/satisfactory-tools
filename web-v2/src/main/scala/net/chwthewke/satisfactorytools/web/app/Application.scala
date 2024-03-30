@@ -114,14 +114,16 @@ class Application[F[_]](
       redirect( planId, InputTab.Bill, OutputTab.Steps )
 
     case ContextRequest(
-        session,
-        GET -> Root / "plan" / segment.PlanId( planId ) / segment.InputTab( inputTab ) / segment.OutputTab( outputTab )
+          session,
+          GET -> Root / "plan" / segment.PlanId( planId ) / segment.InputTab( inputTab ) / segment.OutputTab(
+            outputTab
+          )
         ) =>
       viewPlan( planId, inputTab, outputTab )
 
     case ContextRequest(
-        session,
-        req @ POST -> "plan" /: segment.PlanId( planId ) /: segment.InputTab( inputTab ) /:
+          session,
+          req @ POST -> "plan" /: segment.PlanId( planId ) /: segment.InputTab( inputTab ) /:
           segment.OutputTab( outputTab ) /: rest
         ) =>
       updatePlan[inputTab.Data, outputTab.Data]( planId, inputTab, outputTab, req, rest )
@@ -138,18 +140,17 @@ class Application[F[_]](
       planner
         .getPlanHeader( planId )
         .subflatMap( header => header.solution.value )
-        .semiflatMap(
-          solutionId =>
-            (
-              planner.getPlanResult( planId, solutionId, OutputTab.Steps ).map( _._1 ),
-              planner.getPlanResult( planId, solutionId, OutputTab.Items )
-            ).tupled
+        .semiflatMap( solutionId =>
+          (
+            planner.getPlanResult( planId, solutionId, OutputTab.Steps ).map( _._1 ),
+            planner.getPlanResult( planId, solutionId, OutputTab.Items )
+          ).tupled
         )
 
     val compareOrError: EitherT[F, String, ( CompareFactory, CompareFactory )] = for {
-      headerBefore  <- planner.getPlanHeader( before ).toRight( "Missing header before" )
-      headerAfter   <- planner.getPlanHeader( after ).toRight( "Missing header after" )
-      _             <- EitherT.cond( headerBefore.modelVersionId == headerAfter.modelVersionId, (), "differing model versions" )
+      headerBefore <- planner.getPlanHeader( before ).toRight( "Missing header before" )
+      headerAfter  <- planner.getPlanHeader( after ).toRight( "Missing header after" )
+      _ <- EitherT.cond( headerBefore.modelVersionId == headerAfter.modelVersionId, (), "differing model versions" )
       factoryBefore <- getFactory( before ).toRight( "Missing solution before" )
       factoryAfter  <- getFactory( after ).toRight( "Missing solution after" )
     } yield ( factoryBefore, factoryAfter )
@@ -183,7 +184,7 @@ class Application[F[_]](
           inputData       <- planner.getPlanQuery( planId, inputTab )
           outputData      <- header.solution.traverse( planner.getPlanResult( planId, _, outputTab ) )
           migrationTarget <- models.getModelVersions.map( _.lastOption.map( _._2 ) )
-          response        <- Ok( PlanView( model, migrationTarget, header, inputTab, inputData, outputTab, outputData ) )
+          response <- Ok( PlanView( model, migrationTarget, header, inputTab, inputData, outputTab, outputData ) )
         } yield response
     }.merge
 
@@ -201,8 +202,8 @@ class Application[F[_]](
           targetId <- targetPlanId( header, request, changes.isDefined, actionPath )
           _        <- changes.traverse_( act => act( targetId ) )
           _ <- planner
-                .computePlan( targetId )
-                .whenA( computeAction( changes.isDefined, header.solution, actionPath ) )
+                 .computePlan( targetId )
+                 .whenA( computeAction( changes.isDefined, header.solution, actionPath ) )
           _ <- resetTreeAction( planId, actionPath )
           _ <- treeAction( planId, actionPath, request )
           _ <- customGroupActions( targetId, changes.isDefined, outputTab, actionPath )
@@ -220,9 +221,7 @@ class Application[F[_]](
     actionPath match {
       case Actions.save /: _ =>
         decode( request )( Decoders.title )
-          .flatMap(
-            nameOpt => library.savePlan( header, nameOpt.getOrElse( PlanName( show"Plan #${header.id}" ) ) )
-          )
+          .flatMap( nameOpt => library.savePlan( header, nameOpt.getOrElse( PlanName( show"Plan #${header.id}" ) ) ) )
       case Actions.migrate /: _ =>
         library.migratePlan( header.owner, header.id )
       case _ =>
@@ -410,7 +409,7 @@ object Application {
       def unapply( segment: String ): Option[A]
 
       private[segment] def omap[B]( f: A => Option[B] ): Segment[B] =
-        (segment: String) => self.unapply( segment ).flatMap( f )
+        ( segment: String ) => self.unapply( segment ).flatMap( f )
 
       private[segment] def map[B]( f: A => B ): Segment[B]                = omap( a => Some( f( a ) ) )
       private[segment] def emap[E, B]( f: A => Either[E, B] ): Segment[B] = omap( a => f( a ).toOption )

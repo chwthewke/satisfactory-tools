@@ -30,7 +30,7 @@ final case class Recipe(
   def productsPerMinute: NonEmptyList[Countable[Double, Item]] = products.map( perMinute )
 
   def itemsPerMinuteMap: Map[Item, Double] =
-    productsPerMinute.foldMap { case Countable( it, am )      => Map( it -> am ) } |+|
+    productsPerMinute.foldMap { case Countable( it, am ) => Map( it -> am ) } |+|
       ingredientsPerMinute.foldMap { case Countable( it, am ) => Map( it -> -am ) }
 
   def itemsPerMinute: Vector[Countable[Double, Item]] =

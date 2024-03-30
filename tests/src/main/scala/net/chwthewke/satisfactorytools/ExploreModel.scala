@@ -14,14 +14,13 @@ object ExploreModel extends IOApp {
   override def run( args: List[String] ): IO[ExitCode] =
     Loader.io
       .loadModel( DataVersionStorage.Update7 )
-      .flatMap(
-        model =>
-          IO.println(
-            model.extractionRecipes
-              .map( _._3.className )
-              .sorted
-              .mkString_( s"EXTS (${model.extractionRecipes.size})\n", "\n", "" )
-          )
+      .flatMap( model =>
+        IO.println(
+          model.extractionRecipes
+            .map( _._3.className )
+            .sorted
+            .mkString_( s"EXTS (${model.extractionRecipes.size})\n", "\n", "" )
+        )
       )
       .as( ExitCode.Success )
 

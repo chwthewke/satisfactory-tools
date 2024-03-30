@@ -25,22 +25,22 @@ object RecipesView extends ( ( Model, RecipeList ) => Tag ) {
       legend( "Allowed recipes" ),
       div(
         button(
-          `class` := "button is-info",
+          `class`    := "button is-info",
           formaction := Actions.addAllRecipes,
           "+ ALL"
         ),
         button(
-          `class` := "button is-info",
+          `class`    := "button is-info",
           formaction := Actions.addAlts,
           "+ ALL ALTS"
         ),
         button(
-          `class` := "button is-info",
+          `class`    := "button is-info",
           formaction := Actions.removeAlts,
           "- ALL ALTS"
         ),
         button(
-          `class` := "button is-info",
+          `class`    := "button is-info",
           formaction := Actions.lockRecipes,
           "LOCK CURRENT"
         )
@@ -48,25 +48,23 @@ object RecipesView extends ( ( Model, RecipeList ) => Tag ) {
       div(
         span( width := "8em", display.`inline-block`, "WITH ALTS" ),
         8.to( 1, -1 )
-          .map(
-            tier =>
-              button(
-                `class` := "button is-info",
-                formaction := Actions.recipesUpToTier( tier, alternates = true ),
-                s"TIER $tier"
-              )
+          .map( tier =>
+            button(
+              `class`    := "button is-info",
+              formaction := Actions.recipesUpToTier( tier, alternates = true ),
+              s"TIER $tier"
+            )
           )
       ),
       div(
         span( width := "8em", display.`inline-block`, "NO ALTS" ),
         8.to( 0, -1 )
-          .map(
-            tier =>
-              button(
-                `class` := "button is-info",
-                formaction := Actions.recipesUpToTier( tier, alternates = false ),
-                s"TIER $tier"
-              )
+          .map( tier =>
+            button(
+              `class`    := "button is-info",
+              formaction := Actions.recipesUpToTier( tier, alternates = false ),
+              s"TIER $tier"
+            )
           )
       ),
       recipeFieldSets( model.manufacturingRecipes, list.recipes.toSet )
@@ -94,9 +92,9 @@ object RecipesView extends ( ( Model, RecipeList ) => Tag ) {
     div(
       input(
         `type` := "checkbox",
-        `id` := elId,
-        value := recipe.className.name,
-        name := Keys.recipes,
+        `id`   := elId,
+        value  := recipe.className.name,
+        name   := Keys.recipes,
         Option.when( selected )( checked )
       ),
       label(
@@ -118,7 +116,7 @@ object RecipesView extends ( ( Model, RecipeList ) => Tag ) {
 
     def showItemList[F[_]: Traverse]( items: F[( Countable[Double, Item], Countable[Double, Item] )] ) =
       items
-        .map( (showItem _).tupled )
+        .map( ( showItem _ ).tupled )
         .mkString_( ", " )
 
     val ingredients = showItemList( recipe.ingredients zip recipe.ingredientsPerMinute )

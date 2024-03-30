@@ -48,10 +48,10 @@ object BillView extends ( ( Model, Bill ) => Tag ) {
       td(
         input(
           `type` := "number",
-          step := "any",
-          min := 0,
-          name := inputName,
-          value := item.amount
+          step   := "any",
+          min    := 0,
+          name   := inputName,
+          value  := item.amount
         )
       )
     )

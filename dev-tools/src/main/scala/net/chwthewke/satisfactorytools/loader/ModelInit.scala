@@ -61,16 +61,15 @@ private[loader] object ModelInit {
       initResourceOptions( data.items, mapConfig ).toValidatedNel
 
     ( extractionRecipes, manufacturing, defaultResourceOptions )
-      .mapN(
-        ( ex, mf, ro ) =>
-          Model(
-            version,
-            mf,
-            data.items.map { case ( cn, ( item, _ ) ) => ( cn, item ) }.to( SortedMap ),
-            ex.map( _._1 ).distinct,
-            ex,
-            ro
-          )
+      .mapN( ( ex, mf, ro ) =>
+        Model(
+          version,
+          mf,
+          data.items.map { case ( cn, ( item, _ ) ) => ( cn, item ) }.to( SortedMap ),
+          ex.map( _._1 ).distinct,
+          ex,
+          ro
+        )
       )
   }
 
@@ -118,14 +117,13 @@ private[loader] object ModelInit {
     val ( miners, otherExtractors ) =
       machines.values.toVector.partition( _._2.machineType.is( ExtractorType.Miner ) )
 
-    getConverterRecipes( data, miners, selfExtraction ).map(
-      converterRecipes =>
-        (converterRecipes ++ getOtherExtractionRecipes( data, otherExtractors ))
-          .flatMap {
-            case ( item, extractor, machine ) =>
-              ResourcePurity.values
-                .map( purity => ( item, purity, extractionRecipe( item, extractor, purity, machine ) ) )
-          }
+    getConverterRecipes( data, miners, selfExtraction ).map( converterRecipes =>
+      ( converterRecipes ++ getOtherExtractionRecipes( data, otherExtractors ) )
+        .flatMap {
+          case ( item, extractor, machine ) =>
+            ResourcePurity.values
+              .map( purity => ( item, purity, extractionRecipe( item, extractor, purity, machine ) ) )
+        }
     )
   }
 
@@ -138,15 +136,15 @@ private[loader] object ModelInit {
       .traverse( r => validateRecipeItems[Id]( data, r.products.head ).map( _.item ) )
       .map { selfExtractionItems =>
         val ores: Vector[Item] =
-          data.items.values.collect { case ( item, NativeClass.resourceDescClass ) if item.form == Form.Solid => item }
-            .toVector
-        (ores ++ selfExtractionItems.filter( _.form == Form.Solid )).distinct
+          data.items.values.collect {
+            case ( item, NativeClass.resourceDescClass ) if item.form == Form.Solid => item
+          }.toVector
+        ( ores ++ selfExtractionItems.filter( _.form == Form.Solid ) ).distinct
       }
-      .map(
-        ores =>
-          converterExtractors.flatMap {
-            case ( extractor, machine ) => ores.map( item => ( item, extractor, machine ) )
-          }
+      .map( ores =>
+        converterExtractors.flatMap {
+          case ( extractor, machine ) => ores.map( item => ( item, extractor, machine ) )
+        }
       )
   }
 
@@ -165,14 +163,13 @@ private[loader] object ModelInit {
     ExtractorType.values
       .find( _.dataKey.fold( _ == extractor.extractorTypeName, _ == extractor.className ) )
       .toRight( s"No known extractor type for class ${extractor.className}, type ${extractor.extractorTypeName}" )
-      .map(
-        exType =>
-          Machine(
-            extractor.className,
-            extractor.displayName,
-            MachineType( exType ),
-            extractor.powerConsumption
-          )
+      .map( exType =>
+        Machine(
+          extractor.className,
+          extractor.displayName,
+          MachineType( exType ),
+          extractor.powerConsumption
+        )
       )
 
   def extractionRecipe(
@@ -224,33 +221,31 @@ private[loader] object ModelInit {
   ): ValidatedNel[String, Option[Recipe]] =
     NonEmptyList
       .fromList( recipe.producedIn.filter( data.manufacturers.keySet ) )
-      .traverse(
-        ms =>
-          (
-            classification
-              .get( recipe.className )
-              .toValidNel( show"Recipe ${recipe.displayName} [${recipe.className}] not classified" ),
-            Option
-              .when( ms.size == 1 )( ms.head )
-              .toValidNel(
-                show"Recipe ${recipe.displayName} [${recipe.className}] is produced in multiple manufacturers"
-              )
-              .andThen( validateManufacturer( data, _ ) ),
-            validateRecipeItems( data, recipe.ingredients ),
-            validateRecipeItems( data, recipe.products )
-          ).mapN(
-            ( cat, producer, ingredients, products ) =>
-              Recipe(
-                recipe.className,
-                recipe.displayName,
-                cat,
-                ingredients,
-                products,
-                recipe.duration,
-                producer,
-                recipePower( recipe, producer )
-              )
+      .traverse( ms =>
+        (
+          classification
+            .get( recipe.className )
+            .toValidNel( show"Recipe ${recipe.displayName} [${recipe.className}] not classified" ),
+          Option
+            .when( ms.size == 1 )( ms.head )
+            .toValidNel(
+              show"Recipe ${recipe.displayName} [${recipe.className}] is produced in multiple manufacturers"
+            )
+            .andThen( validateManufacturer( data, _ ) ),
+          validateRecipeItems( data, recipe.ingredients ),
+          validateRecipeItems( data, recipe.products )
+        ).mapN( ( cat, producer, ingredients, products ) =>
+          Recipe(
+            recipe.className,
+            recipe.displayName,
+            cat,
+            ingredients,
+            products,
+            recipe.duration,
+            producer,
+            recipePower( recipe, producer )
           )
+        )
       )
 
   def nuclearWastePseudoRecipes( items: Map[ClassName, ( Item, NativeClass )], gameData: GameData ): Vector[Recipe] =

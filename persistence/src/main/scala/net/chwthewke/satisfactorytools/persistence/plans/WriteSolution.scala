@@ -29,16 +29,15 @@ object WriteSolution {
   def writeSolution( planId: PlanId, solution: Either[String, Factory] ): ConnectionIO[Unit] =
     Headers
       .readPlanHeader( planId )
-      .semiflatMap(
-        header =>
-          for {
-            customGroups <- plans.CustomGroups.readPlanCustomGroups( header )
-            _            <- clearSolution( planId )
-            _ <- solution.fold(
-                  err => statements.insertSolutionError.run( ( planId, err ) ),
-                  factory => writeSolutionWithGroups( planId, header.modelVersionId, factory, customGroups )
-                )
-          } yield ()
+      .semiflatMap( header =>
+        for {
+          customGroups <- plans.CustomGroups.readPlanCustomGroups( header )
+          _            <- clearSolution( planId )
+          _ <- solution.fold(
+                 err => statements.insertSolutionError.run( ( planId, err ) ),
+                 factory => writeSolutionWithGroups( planId, header.modelVersionId, factory, customGroups )
+               )
+        } yield ()
       )
       .getOrElse( () )
 

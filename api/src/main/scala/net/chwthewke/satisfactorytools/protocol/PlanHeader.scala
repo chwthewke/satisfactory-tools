@@ -38,17 +38,17 @@ object PlanHeader {
 
   def apply( row: Row ): PlanHeader = row match {
     case (
-        id,
-        modelVersionId,
-        owner,
-        nameOpt,
-        srcNameOpt,
-        srcIdOpt,
-        updated,
-        solutionIdOpt,
-        solutionErrorOpt,
-        groupCountOpt,
-        lastGroupOpt
+          id,
+          modelVersionId,
+          owner,
+          nameOpt,
+          srcNameOpt,
+          srcIdOpt,
+          updated,
+          solutionIdOpt,
+          solutionErrorOpt,
+          groupCountOpt,
+          lastGroupOpt
         ) =>
       PlanHeader(
         id,

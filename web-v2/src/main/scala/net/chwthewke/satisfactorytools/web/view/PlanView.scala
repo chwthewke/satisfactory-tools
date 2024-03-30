@@ -26,7 +26,7 @@ object PlanView {
   ): Tag = page(
     header.title.mkString_( "Satisfactory Planner ", "", "" ),
     form(
-      method := "POST",
+      method  := "POST",
       enctype := "application/x-www-form-urlencoded",
       documentHeader( header, model.version, migrationTarget ),
       div(
@@ -65,12 +65,12 @@ object PlanView {
         `type` := "text",
         fontSize.`x-large`,
         Option.when( header.dirty )( color.gray ),
-        value := header.title.fold( "" )( _.show ),
+        value       := header.title.fold( "" )( _.show ),
         placeholder := "Untitled plan",
-        name := Keys.planTitle
+        name        := Keys.planTitle
       ),
       button(
-        `class` := "button is-success is-medium",
+        `class`    := "button is-success is-medium",
         formaction := Actions.save,
         "Save"
       ),
@@ -79,13 +79,12 @@ object PlanView {
         div( color.gray, modelVersion.name ),
         migrationTarget
           .filter( _ != modelVersion )
-          .map(
-            v =>
-              button(
-                `class` := "button is-warning",
-                formaction := Actions.migrate,
-                s"Migrate to ${v.name}"
-              )
+          .map( v =>
+            button(
+              `class`    := "button is-warning",
+              formaction := Actions.migrate,
+              s"Migrate to ${v.name}"
+            )
           )
       )
     )
@@ -100,7 +99,7 @@ object PlanView {
       ).map {
         case ( text, tab ) =>
           button(
-            `class` := "button is-small",
+            `class`    := "button is-small",
             formaction := s"input/${Actions.input( tab )}",
             text,
             Option.when( tab == selected )( fontWeight.bold )
@@ -119,7 +118,7 @@ object PlanView {
   private def outputTabs[X]( selected: OutputTab, solution: SolutionHeader[X] ): Tag = {
     val computeTab =
       button(
-        `class` := "button is-small",
+        `class`    := "button is-small",
         formaction := Actions.compute,
         if (solution.isComputed) "Recompute" else "Compute"
       )
@@ -134,12 +133,12 @@ object PlanView {
           ( "Inter-group Item I/O", OutputTab.GroupIO ),
           ( "Tree (beta)", OutputTab.Tree )
         ) ++
-          (1 to solution.groupCount)
+          ( 1 to solution.groupCount )
             .map( ix => ( ix.show, OutputTab.CustomGroup( ix ) ) )
       ).map {
         case ( text, tab ) =>
           button(
-            `class` := "button is-small",
+            `class`    := "button is-small",
             formaction := s"output/${Actions.output( tab )}",
             Option.when( tab == selected )( fontWeight.bold ),
             text
@@ -149,13 +148,13 @@ object PlanView {
     val groupActionTabs: Vector[Tag] =
       Vector(
         button(
-          `class` := "button is-small",
+          `class`    := "button is-small",
           formaction := Actions.removeGroup,
           Option.when( !solution.canRemoveGroup )( disabled ),
           "-"
         ),
         button(
-          `class` := "button is-small",
+          `class`    := "button is-small",
           formaction := Actions.addGroup,
           Option.when( !solution.canAddGroup )( disabled ),
           "+"
@@ -164,7 +163,7 @@ object PlanView {
 
     div(
       computeTab,
-      (regularTabs ++ groupActionTabs).filter( _ => solution.isComputed )
+      ( regularTabs ++ groupActionTabs ).filter( _ => solution.isComputed )
     )
   }
 

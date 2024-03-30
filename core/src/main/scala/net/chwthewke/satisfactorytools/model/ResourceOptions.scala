@@ -30,18 +30,17 @@ object ResourceOptions {
         show"N ${f"${distrib.normalNodes}% 2d"} I ${f"${distrib.impureNodes}% 2d"}"
 
     def showExtractorType( extractorType: ExtractorType, items: Map[ClassName, ResourceDistrib] ): String =
-      items.toVector.map( (showItem _).tupled ).mkString_( show"${extractorType.description}\n  ", "\n  ", "" )
+      items.toVector.map( ( showItem _ ).tupled ).mkString_( show"${extractorType.description}\n  ", "\n  ", "" )
 
-    Show.show(
-      opts =>
-        show"""NODES
-              |${opts.resourceNodes.toVector.map( (showExtractorType _).tupled ).mkString_( "\n\n" )}
-              |
-              |WEIGHTS
-              |${opts.resourceWeights.weights
-                .map { case ( item, weight ) => show"$item: $weight" }
-                .mkString( "\n" )}
-              |""".stripMargin
+    Show.show( opts =>
+      show"""NODES
+            |${opts.resourceNodes.toVector.map( ( showExtractorType _ ).tupled ).mkString_( "\n\n" )}
+            |
+            |WEIGHTS
+            |${opts.resourceWeights.weights
+             .map { case ( item, weight ) => show"$item: $weight" }
+             .mkString( "\n" )}
+            |""".stripMargin
     )
   }
 

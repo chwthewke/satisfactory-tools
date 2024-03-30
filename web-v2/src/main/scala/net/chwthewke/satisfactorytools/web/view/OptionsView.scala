@@ -97,9 +97,9 @@ object OptionsView extends ( ( Model, Options ) => Tag ) {
       div(
         input(
           `type` := "radio",
-          id := elId,
-          value := item.entryName,
-          name := key,
+          id     := elId,
+          value  := item.entryName,
+          name   := key,
           Option.when( selected )( checked )
         ),
         label( `for` := elId, describe( item ) )
@@ -114,8 +114,8 @@ object OptionsView extends ( ( Model, Options ) => Tag ) {
       describe: A => String,
       current: Set[A],
       possible: Option[Vector[A]] = None
-  )(
-      implicit E: Enum[A]
+  )( implicit
+      E: Enum[A]
   ): Frag = {
     def itemOption( item: A, selected: Boolean ): Tag = {
       val elId = show"${key}_${item.entryName}"
@@ -123,9 +123,9 @@ object OptionsView extends ( ( Model, Options ) => Tag ) {
       div(
         input(
           `type` := "checkbox",
-          id := elId,
-          value := item.entryName,
-          name := key,
+          id     := elId,
+          value  := item.entryName,
+          name   := key,
           Option.when( selected )( checked )
         ),
         label( `for` := elId, describe( item ) )

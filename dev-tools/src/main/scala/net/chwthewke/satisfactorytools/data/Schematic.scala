@@ -37,15 +37,14 @@ object Schematic {
     Parsers.bpGeneratedClassList | Atto.ok( Vector.empty )
 
   private def classListDecoder( matchingClass: ClassName, classListField: String ): Decoder[Option[Vector[ClassName]]] =
-    Decoder.instance(
-      c =>
-        OptionT
-          .liftF( c.get[ClassName]( "Class" ) )
-          .filter( _ == matchingClass )
-          .flatMapF(
-            _ => c.get[Option[Vector[ClassName]]]( classListField )( Decoder.decodeOption( classListParser.decoder ) )
-          )
-          .value
+    Decoder.instance( c =>
+      OptionT
+        .liftF( c.get[ClassName]( "Class" ) )
+        .filter( _ == matchingClass )
+        .flatMapF( _ =>
+          c.get[Option[Vector[ClassName]]]( classListField )( Decoder.decodeOption( classListParser.decoder ) )
+        )
+        .value
     )
 
   private val dependenciesDecoder: Decoder[Vector[ClassName]] =

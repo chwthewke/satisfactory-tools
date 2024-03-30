@@ -54,7 +54,8 @@ object Calculator {
         recipes match {
           case Nil => none
           case head :: tail =>
-            val required: Int = ((input.amount - produced) / head.maxAmountPerExtractor).ceil.toInt.min( head.limit )
+            val required: Int =
+              ( ( input.amount - produced ) / head.maxAmountPerExtractor ).ceil.toInt.min( head.limit )
 
             selectRecipes( Countable( head, required ) :: acc, tail, produced + head.maxAmountPerExtractor * required )
         }
@@ -77,7 +78,7 @@ object Calculator {
         if (clockSpeedCandidate <= head.item.maxClockSpeed)
           acc ++ recipes.map( r => ClockedRecipe.overclocked( r.map( _.recipe ), clockSpeedCandidate ) )
         else {
-          val picked: ClockedRecipe          = ClockedRecipe.overclocked( head.map( _.recipe ), head.item.maxClockSpeed )
+          val picked: ClockedRecipe = ClockedRecipe.overclocked( head.map( _.recipe ), head.item.maxClockSpeed )
           val nextAcc: Vector[ClockedRecipe] = acc :+ picked
           val nextTarget: Double             = target - picked.productsPerMinute.head.amount
           selectClockSpeeds( nextAcc, tail, nextTarget )
@@ -97,10 +98,10 @@ object Calculator {
   ): Factory = {
 
     val extraOutputs =
-      (solution.recipes
+      ( solution.recipes
         .filter( _.amount > Tolerance )
         .foldMap( r => r.item.itemsPerMinuteMap.map( _.map( _ * r.amount ) ) ) |+|
-        bill.items.map { case Countable( item, amount ) => ( item, -amount ) }.toMap)
+        bill.items.map { case Countable( item, amount ) => ( item, -amount ) }.toMap )
         .filter( _._2 > Tolerance )
         .map { case ( item, amount ) => Countable( item, amount ) }
         .toVector
@@ -111,22 +112,21 @@ object Calculator {
     ) =
       solution.inputs
         .filter( _.amount.abs > Tolerance )
-        .foldMap(
-          input =>
-            recipeSelection.tieredExtractionRecipes
-              .get( input.item )
-              .flatMap( renderExtractionRecipes( input, _ ) )
-              .cata(
-                r => ( r, Vector.empty ),
-                ( Vector.empty, Vector( input ) )
-              )
+        .foldMap( input =>
+          recipeSelection.tieredExtractionRecipes
+            .get( input.item )
+            .flatMap( renderExtractionRecipes( input, _ ) )
+            .cata(
+              r => ( r, Vector.empty ),
+              ( Vector.empty, Vector( input ) )
+            )
         )
 
     def reachable( block: Countable[Double, Recipe], fromItems: Set[Item] ): Boolean =
       block.item.ingredients.forall { case Countable( item, _ ) => fromItems( item ) }
 
     val initialItems: Set[Item] =
-      (inputRecipes.foldMap( _.recipe.item.products.toList ).map( _.item ) ++ extraInputs.map( _.item )).to( Set )
+      ( inputRecipes.foldMap( _.recipe.item.products.toList ).map( _.item ) ++ extraInputs.map( _.item ) ).to( Set )
 
     val sortedBlocks: Vector[Countable[Double, Recipe]] =
       (

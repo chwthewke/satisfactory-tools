@@ -54,8 +54,8 @@ object Library extends LibraryApi[ConnectionIO] {
   override def migratePlan( userId: UserId, planId: PlanId ): ConnectionIO[PlanId] =
     for {
       header <- Plans
-                 .getPlanHeader( planId )
-                 .getOrElseF( FC.raiseError( new IllegalArgumentException( show"Unknown plan #$planId" ) ) )
+                  .getPlanHeader( planId )
+                  .getOrElseF( FC.raiseError( new IllegalArgumentException( show"Unknown plan #$planId" ) ) )
       versions               <- ReadModel.getModelVersions
       ( versionId, version ) <- versions.lastOption.liftTo[ConnectionIO]( Error( "No model version to migrate to" ) )
       newId                  <- createPlan( userId, versionId, None, header.title.map( _.migrated( version ) ) )

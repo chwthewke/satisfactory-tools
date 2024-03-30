@@ -45,11 +45,10 @@ class IndexIcons[F[_]]( implicit S: Async[F], F: Files[F] ) {
 
   private def loadTextureNames: F[Map[String, NonEmptyVector[DataVersionStorage]]] =
     DataVersionStorage.values
-      .flatTraverse(
-        v =>
-          Loader[F]
-            .loadGameData( v )
-            .map( _.items.values.toVector.map( _._1.smallIcon.textureName ).distinct.tupleLeft( v ) )
+      .flatTraverse( v =>
+        Loader[F]
+          .loadGameData( v )
+          .map( _.items.values.toVector.map( _._1.smallIcon.textureName ).distinct.tupleLeft( v ) )
       )
       .map( _.foldMap { case ( v, n ) => Map( ( n, NonEmptyVector.one( v ) ) ) } )
 
@@ -82,8 +81,8 @@ class IndexIcons[F[_]]( implicit S: Async[F], F: Files[F] ) {
         versions.toVector.flatMap { version =>
           println( s"searching for texture $name for version $version" )
           // 1. find most likely version with this name
-          (DataVersionStorage.values.filter( _ > version )
-            ++ DataVersionStorage.values.filter( _ <= version ).reverse)
+          ( DataVersionStorage.values.filter( _ > version )
+            ++ DataVersionStorage.values.filter( _ <= version ).reverse )
             .collectFirstSome { earlierVersion =>
               findIcon( files, name, earlierVersion, None ).tupleRight( earlierVersion )
             }

@@ -22,10 +22,9 @@ trait Generators extends model.Generators {
   def genClockedRecipes( recipes: Vector[Recipe] ): Gen[Vector[ClockedRecipe]] =
     pick[Vector]( recipes )
       .flatMap(
-        _.traverse(
-          recipe =>
-            ( arbitrary[Short], arbitrary[Float] )
-              .mapN( ( am, bc ) => ClockedRecipe.overclocked( Countable( recipe, am & 0xFFFF ), bc.toDouble ) )
+        _.traverse( recipe =>
+          ( arbitrary[Short], arbitrary[Float] )
+            .mapN( ( am, bc ) => ClockedRecipe.overclocked( Countable( recipe, am & 0xffff ), bc.toDouble ) )
         )
       )
 
@@ -34,10 +33,9 @@ trait Generators extends model.Generators {
   ): Gen[Vector[Countable[Double, Recipe]]] =
     pick[Vector]( recipes )
       .flatMap(
-        _.traverse(
-          recipe =>
-            arbitrary[Float]
-              .map( am => Countable( recipe, am.toDouble ) )
+        _.traverse( recipe =>
+          arbitrary[Float]
+            .map( am => Countable( recipe, am.toDouble ) )
         )
       )
 

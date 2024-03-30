@@ -20,8 +20,8 @@ object ItemIO {
 
     override def combine( x: ItemIO[A], y: ItemIO[A] ): ItemIO[A] =
       ItemIO(
-        (x.sources ++ y.sources).gather,
-        (x.destinations ++ y.destinations).gather
+        ( x.sources ++ y.sources ).gather,
+        ( x.destinations ++ y.destinations ).gather
       )
   }
 

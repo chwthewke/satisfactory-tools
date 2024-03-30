@@ -18,7 +18,7 @@ case class ResourceDistrib( impureNodes: Int, normalNodes: Int, pureNodes: Int )
       .foldMap {
         case ( count, modifier ) =>
           count *
-            (extractorRecipe.productsPerMinute.head.amount * clockSpeed.percent / 100d * modifier)
+            ( extractorRecipe.productsPerMinute.head.amount * clockSpeed.percent / 100d * modifier )
               .min( belt.itemsPerMinute.toDouble )
       }
 

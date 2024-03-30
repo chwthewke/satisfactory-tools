@@ -51,15 +51,14 @@ object StepsView extends ( ( ( Factory, GroupAssignments ), Int ) => Tag ) {
       ),
       tbody(
         factory.extraction
-          .map(
-            recipe =>
-              recipeRow(
-                recipe,
-                RowIndex.zero,
-                groups,
-                groupCount,
-                radios = radios.min( CustomGroupsRadios.Placeholder )
-              )
+          .map( recipe =>
+            recipeRow(
+              recipe,
+              RowIndex.zero,
+              groups,
+              groupCount,
+              radios = radios.min( CustomGroupsRadios.Placeholder )
+            )
           ),
         factory.manufacturing.zipWithIndex.map {
           case ( r, ix ) =>
@@ -72,7 +71,7 @@ object StepsView extends ( ( ( Factory, GroupAssignments ), Int ) => Tag ) {
             )
         },
         tr(
-          td( colspan := (if (radios >= CustomGroupsRadios.Placeholder) groupCount else 1) ),
+          td( colspan := ( if (radios >= CustomGroupsRadios.Placeholder) groupCount else 1 ) ),
           td( colspan := 9, textAlign.right, "Total Power" ),
           td( textAlign.right, factory.allRecipes.foldMap( _.power ).show ),
           td( textAlign.left, "MW" )
@@ -93,7 +92,7 @@ object StepsView extends ( ( ( Factory, GroupAssignments ), Int ) => Tag ) {
     def customGroupRadios: Frag = radios match {
       case CustomGroupsRadios.Empty       => None
       case CustomGroupsRadios.Sorting     => Some( groupOrder( rowIndex ) )
-      case CustomGroupsRadios.Placeholder => Some( td( colspan := (groupCount + 1) ) )
+      case CustomGroupsRadios.Placeholder => Some( td( colspan := ( groupCount + 1 ) ) )
       case CustomGroupsRadios.Full =>
         Some( 0.to( groupCount ).map( groupRadio( recipe.item, groups, _ ) ) )
     }
@@ -120,8 +119,8 @@ object StepsView extends ( ( ( Factory, GroupAssignments ), Int ) => Tag ) {
     Seq[Frag](
       td(
         recipe.displayName.stripPrefix( altPrefix ),
-        colspan := (if (isAlternate) 1 else 2),
-        title := RecipesView.describeRecipe( recipe ),
+        colspan := ( if (isAlternate) 1 else 2 ),
+        title   := RecipesView.describeRecipe( recipe ),
         textAlign.left
       ),
       Option.when( isAlternate )( td( "ALT", textAlign.right ) )
@@ -137,9 +136,9 @@ object StepsView extends ( ( ( Factory, GroupAssignments ), Int ) => Tag ) {
       textAlign.center,
       input(
         `class` := "radio",
-        `type` := "radio",
-        name := Keys.outputGroup( recipe.className ),
-        value := groupIndex,
+        `type`  := "radio",
+        name    := Keys.outputGroup( recipe.className ),
+        value   := groupIndex,
         Option.when( groups.getOrElse( recipe.className, 0 ) == groupIndex )( checked )
       )
     )

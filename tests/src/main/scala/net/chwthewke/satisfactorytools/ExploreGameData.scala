@@ -13,14 +13,13 @@ object ExploreGameData extends IOApp {
   override def run( args: List[String] ): IO[ExitCode] =
     Loader.io
       .loadGameData( DataVersionStorage.Update7 )
-      .flatMap(
-        data =>
-          IO.println(
-            data.manufacturers.keys.mkString( "MANUFS\n", "\n", "\n" )
-          ) *>
-            IO.print(
-              data.recipes.foldMap( _.producedIn ).distinct.mkString( "PRODS\n", "\n", "\n" )
-            )
+      .flatMap( data =>
+        IO.println(
+          data.manufacturers.keys.mkString( "MANUFS\n", "\n", "\n" )
+        ) *>
+          IO.print(
+            data.recipes.foldMap( _.producedIn ).distinct.mkString( "PRODS\n", "\n", "\n" )
+          )
       )
       .as( ExitCode.Success )
 
@@ -28,15 +27,14 @@ object ExploreGameData extends IOApp {
     IO.println(
       show"""RECIPES
             |${data.recipes
-              .map(
-                recipe =>
-                  show"""${recipe.displayName} [${recipe.className}] in ${recipe.producedIn.headOption}
-                        |  ${recipe.ingredients
-                          .map( _.item.name )
-                          .mkString( ", " )} -> ${recipe.products.map( _.item.name ).mkString_( ", " )}
-                        |""".stripMargin
-              )
-              .mkString}
+             .map( recipe =>
+               show"""${recipe.displayName} [${recipe.className}] in ${recipe.producedIn.headOption}
+                     |  ${recipe.ingredients
+                      .map( _.item.name )
+                      .mkString( ", " )} -> ${recipe.products.map( _.item.name ).mkString_( ", " )}
+                     |""".stripMargin
+             )
+             .mkString}
             |""".stripMargin
     )
 
@@ -51,11 +49,11 @@ object ExploreGameData extends IOApp {
     IO.println(
       show"""ITEM ICONS
             |${data.items.values
-              .map( _._1 )
-              .toVector
-              .sortBy( _.displayName )
-              .map( item => show"${item.displayName} => ${item.smallIcon}" )
-              .mkString( "\n" )}
+             .map( _._1 )
+             .toVector
+             .sortBy( _.displayName )
+             .map( item => show"${item.displayName} => ${item.smallIcon}" )
+             .mkString( "\n" )}
             |""".stripMargin
     )
 

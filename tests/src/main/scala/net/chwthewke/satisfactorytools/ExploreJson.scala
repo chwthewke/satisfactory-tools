@@ -40,11 +40,10 @@ object ExploreJson extends IOApp {
     val ( notices, nativeClasses ) =
       array
         .flatMap( _.asObject )
-        .map(
-          obj =>
-            obj( "NativeClass" )
-              .flatMap( _.asString )
-              .toRight( s"no NativeClass key in ${Json.fromJsonObject( obj ).spaces2}\n" )
+        .map( obj =>
+          obj( "NativeClass" )
+            .flatMap( _.asString )
+            .toRight( s"no NativeClass key in ${Json.fromJsonObject( obj ).spaces2}\n" )
         )
         .partitionEither( identity )
 
@@ -57,35 +56,31 @@ object ExploreJson extends IOApp {
 
   def exploreNativeClasses[A: Monoid]( f: NativeClass => JsonObject => A )( array: Vector[Json] ): A =
     array.foldMap(
-      _.asObject.foldMap(
-        obj =>
-          obj( "NativeClass" )
-            .flatMap( _.as[NativeClass].toOption )
-            .foldMap(
-              cls => obj( "Classes" ).flatMap( _.asArray ).foldMap( _.foldMap( _.asObject.foldMap( f( cls ) ) ) )
-            )
+      _.asObject.foldMap( obj =>
+        obj( "NativeClass" )
+          .flatMap( _.as[NativeClass].toOption )
+          .foldMap( cls =>
+            obj( "Classes" ).flatMap( _.asArray ).foldMap( _.foldMap( _.asObject.foldMap( f( cls ) ) ) )
+          )
       )
     )
 
   def exploreResources( array: Vector[Json] ): Map[String, ( Json, NonEmptyVector[String] )] =
-    exploreNativeClasses(
-      nc =>
-        obj =>
-          Option
-            .when( nc == NativeClass.resourceDescClass )( obj )
-            .toVector
+    exploreNativeClasses( nc =>
+      obj =>
+        Option
+          .when( nc == NativeClass.resourceDescClass )( obj )
+          .toVector
     )( array )
-      .foldMap(
-        obj =>
-          obj( "ClassName" )
-            .flatMap( _.asString )
-            .foldMap(
-              cn =>
-                obj.toIterable.toVector.foldMap {
-                  case ( k, v ) =>
-                    Map( ( k, Map( ( v, NonEmptyVector.one( cn ) ) ) ) )
-                }
-            )
+      .foldMap( obj =>
+        obj( "ClassName" )
+          .flatMap( _.asString )
+          .foldMap( cn =>
+            obj.toIterable.toVector.foldMap {
+              case ( k, v ) =>
+                Map( ( k, Map( ( v, NonEmptyVector.one( cn ) ) ) ) )
+            }
+          )
       )
       .flatMap {
         case ( key, classesByValue ) =>
@@ -109,12 +104,11 @@ object ExploreJson extends IOApp {
     )
 
   private def extractNativeClass( json: Json ): Option[( NativeClass, Vector[Json] )] =
-    json.asObject.flatMap(
-      obj =>
-        (
-          obj( "NativeClass" ).flatMap( _.as[NativeClass].toOption ),
-          obj( "Classes" ).flatMap( _.asArray )
-        ).tupled
+    json.asObject.flatMap( obj =>
+      (
+        obj( "NativeClass" ).flatMap( _.as[NativeClass].toOption ),
+        obj( "Classes" ).flatMap( _.asArray )
+      ).tupled
     )
 
   def showSchemas( array: Vector[Json] ): String =
@@ -136,15 +130,14 @@ object ExploreJson extends IOApp {
       c: NativeClass,
       fields: String*
   ): Vector[Json] => SortedMap[String, Vector[Json]] =
-    exploreNativeClasses(
-      cls =>
-        obj =>
-          Option
-            .when( cls == c )(
-              fields.toVector
-                .foldMap( f => obj( f ).map( v => ( f, Vector( v ) ) ).to( SortedMap ) )
-            )
-            .orEmpty
+    exploreNativeClasses( cls =>
+      obj =>
+        Option
+          .when( cls == c )(
+            fields.toVector
+              .foldMap( f => obj( f ).map( v => ( f, Vector( v ) ) ).to( SortedMap ) )
+          )
+          .orEmpty
     )
 
   override def run( args: List[String] ): IO[ExitCode] =

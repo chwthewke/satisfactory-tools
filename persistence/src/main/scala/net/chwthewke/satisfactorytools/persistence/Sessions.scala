@@ -26,17 +26,17 @@ object Sessions extends SessionApi[ConnectionIO] {
     for {
       _ <- purgeExpiredSessions
       userId <- statements.upsertUser
-                 .withUniqueGeneratedKeys[UserId]( "id" )( userName )
-                 .adaptErr {
-                   case UnexpectedEnd => Error( s"Unable to create user $userName" )
-                 }
+                  .withUniqueGeneratedKeys[UserId]( "id" )( userName )
+                  .adaptErr {
+                    case UnexpectedEnd => Error( s"Unable to create user $userName" )
+                  }
       sessionId <- FC.delay( UUID.randomUUID() ).map( SessionId( _ ) )
       expiry <- statements
-                 .createSession( sessionId, userId )
-                 .unique
-                 .adaptErr {
-                   case UnexpectedEnd => Error( s"Could not create session $sessionId for user $userId" )
-                 }
+                  .createSession( sessionId, userId )
+                  .unique
+                  .adaptErr {
+                    case UnexpectedEnd => Error( s"Could not create session $sessionId for user $userId" )
+                  }
     } yield Session( sessionId, userId, userName, expiry )
 
   private def purgeExpiredSessions: ConnectionIO[Unit] =
@@ -47,8 +47,8 @@ object Sessions extends SessionApi[ConnectionIO] {
       _                    <- OptionT.liftF( purgeExpiredSessions )
       ( userId, userName ) <- OptionT( statements.selectSessionUser( sessionId ).option )
       expiry <- OptionT.liftF( statements.refreshSession( sessionId ).unique.adaptErr {
-                 case UnexpectedEnd => Error( s"Could not refresh session $sessionId" )
-               } )
+                  case UnexpectedEnd => Error( s"Could not refresh session $sessionId" )
+                } )
     } yield Session( sessionId, userId, userName, expiry )
 
   object statements {
@@ -73,7 +73,7 @@ object Sessions extends SessionApi[ConnectionIO] {
            |WHERE s."id" = $sessionId
            |  AND "expiry" >= CURRENT_TIMESTAMP
            |""".stripMargin //
-      .query
+        .query
 
     def createSession( sessionId: SessionId, userId: UserId ): Query0[Instant] =
       // language=SQL
@@ -84,7 +84,7 @@ object Sessions extends SessionApi[ConnectionIO] {
            |RETURNING
            |  "expiry"
            |""".stripMargin //
-      .query
+        .query
 
     def refreshSession( sessionId: SessionId ): Query0[Instant] =
       // language=SQL
@@ -96,14 +96,14 @@ object Sessions extends SessionApi[ConnectionIO] {
            |RETURNING
            |    "expiry"
            |""".stripMargin //
-      .query
+        .query
 
     val deleteOldSessions: Update0 =
       // language=SQL
       sql"""DELETE FROM "sessions"
            |WHERE "expiry" < CURRENT_TIMESTAMP + INTERVAL '10 minutes'
            |""".stripMargin //
-      .update
+        .update
 
   }
 }

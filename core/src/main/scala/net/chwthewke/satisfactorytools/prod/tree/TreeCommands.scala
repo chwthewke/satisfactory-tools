@@ -49,7 +49,7 @@ object TreeCommands {
                 Eval.now( Right( acc ) )
               else {
                 rest.last match {
-                  case TreeCommand.PushDown( to, recipe1, _ ) if (from: TreeLoc) == to && recipe == recipe1 =>
+                  case TreeCommand.PushDown( to, recipe1, _ ) if ( from: TreeLoc ) == to && recipe == recipe1 =>
                     Eval.later( Left( ( rest.init, acc ) ) )
                   case _ =>
                     Eval.later( Left( ( rest.init, rest.last +: acc ) ) )
@@ -66,7 +66,7 @@ object TreeCommands {
                 Eval.now( Right( acc ) )
               else {
                 rest.last match {
-                  case TreeCommand.PushDown( to, _, _ ) if (at: TreeLoc) <= to =>
+                  case TreeCommand.PushDown( to, _, _ ) if ( at: TreeLoc ) <= to =>
                     Eval.later( Left( ( rest.init, acc ) ) )
                   case _ =>
                     Eval.later( Left( ( rest.init, rest.last +: acc ) ) )

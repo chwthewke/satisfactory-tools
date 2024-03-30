@@ -52,7 +52,7 @@ object GroupIOView extends ( ( Map[Item, ItemIO[ItemSrcDest.InterGroup]], Int ) 
           case ( ( item, amount, peers ), outerIx ) =>
             def itemCells( height: Int ): Frag = Seq[Frag](
               numCell4( amount )( rowspan := height, verticalAlign.middle ),
-              td( rowspan := height, verticalAlign.middle, item.displayName )
+              td( rowspan                 := height, verticalAlign.middle, item.displayName )
             )
 
             if (peers.isEmpty)
@@ -126,7 +126,7 @@ object GroupIOView extends ( ( Map[Item, ItemIO[ItemSrcDest.InterGroup]], Int ) 
     ): Map[ItemSrcDest.InterGroup, Map[Item, Double]] =
       items.toVector.foldMap {
         case ( item, itemIO ) =>
-          (itemIO.sources ++ itemIO.destinations).foldMap {
+          ( itemIO.sources ++ itemIO.destinations ).foldMap {
             case Countable( srcDest, amount ) =>
               Map( srcDest -> Map( item -> amount ) )
           }

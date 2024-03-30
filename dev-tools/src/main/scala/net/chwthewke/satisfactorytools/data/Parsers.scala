@@ -23,7 +23,7 @@ object Parsers {
     (
       opt( string( "/Script/Engine." ) ) ~>
         string( "BlueprintGeneratedClass'\"/Game/FactoryGame/" ) ~>
-        (stringOf1( bpNoSep ) ~ char( '/' )).skipMany ~>
+        ( stringOf1( bpNoSep ) ~ char( '/' ) ).skipMany ~>
         stringOf1( bpNoSep ) ~> char( '.' ) ~>
         stringOf1( bpNoSep ) <~
         string( "\"'" )
@@ -35,7 +35,7 @@ object Parsers {
   val manufacturerClass: Parser[ClassName] = {
     val classNameParser: Parser[String] =
       string( "/" ) ~>
-        (stringOf1( bpNoSep ) ~ char( '/' )).skipMany1 ~>
+        ( stringOf1( bpNoSep ) ~ char( '/' ) ).skipMany1 ~>
         stringOf1( bpNoSep ) ~> char( '.' ) ~>
         stringOf1( bpNoSep )
 
@@ -44,19 +44,19 @@ object Parsers {
   }
 
   val manufacturerClassList: Parser[List[ClassName]] =
-    (char( '(' ) ~> manufacturerClass.sepBy1( char( ',' ) ) <~ char( ')' )).map( _.toList ) |
+    ( char( '(' ) ~> manufacturerClass.sepBy1( char( ',' ) ) <~ char( ')' ) ).map( _.toList ) |
       ok( Nil )
 
   val countable: Parser[Countable[Double, ClassName]] =
-    ((string( "(ItemClass=" ) ~> bpGeneratedClass <~ string( ",Amount=" )) ~ double <~ char( ')' ))
-      .map( (Countable[Double, ClassName] _).tupled )
+    ( ( string( "(ItemClass=" ) ~> bpGeneratedClass <~ string( ",Amount=" ) ) ~ double <~ char( ')' ) )
+      .map( ( Countable[Double, ClassName] _ ).tupled )
 
   val countableList: Parser[NonEmptyList[Countable[Double, ClassName]]] =
     char( '(' ) ~> countable.sepBy1( char( ',' ) ) <~ char( ')' )
 
   val texture2d: Parser[IconData] =
-    (string( "Texture2D " ) ~>
-      (char( '/' ) ~> stringOf1( bpNoSep )).many1 ~ (char( '.' ) ~> stringOf1( bpNoSep )))
+    ( string( "Texture2D " ) ~>
+      ( char( '/' ) ~> stringOf1( bpNoSep ) ).many1 ~ ( char( '.' ) ~> stringOf1( bpNoSep ) ) )
       .map {
         case ( pkgPath, texture ) =>
           IconData( pkgPath.init.mkString( "/" ), pkgPath.last, texture )
@@ -71,12 +71,11 @@ object Parsers {
     )( ( p, a ) => p | string( a.entryName ).as( a ) )
 
   implicit class ParserOps[A]( private val self: Parser[A] ) {
-    def decoder: Decoder[A] = Decoder[String].emap(
-      x =>
-        Parser
-          .parseOnly( self, x )
-          .either
-          .leftMap( e => s"parsing $x as $self: $e" )
+    def decoder: Decoder[A] = Decoder[String].emap( x =>
+      Parser
+        .parseOnly( self, x )
+        .either
+        .leftMap( e => s"parsing $x as $self: $e" )
     )
   }
 

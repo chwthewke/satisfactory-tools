@@ -19,7 +19,7 @@ case class ResourceWeights( weights: Map[ClassName, Int] /* int coded btw `0` an
         (
           item,
           1d / math.max( cap, 1e-5 ) *
-            math.pow( 2d, (weights.getOrElse( item.className, range ) - range).toDouble / 4d )
+            math.pow( 2d, ( weights.getOrElse( item.className, range ) - range ).toDouble / 4d )
         )
     }
 

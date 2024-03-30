@@ -47,8 +47,8 @@ trait DiffInstances extends data.DiffInstances {
       "extractedItems",
       "extractionRecipes",
       "defaultResourceOptions"
-    )(
-      (m: Model) => ( m.manufacturingRecipes, m.items, m.extractedItems, m.extractionRecipes, m.defaultResourceOptions )
+    )( ( m: Model ) =>
+      ( m.manufacturingRecipes, m.items, m.extractedItems, m.extractionRecipes, m.defaultResourceOptions )
     )(
       manufacturingRecipesDiff,
       Diff[SortedMap[ClassName, Item]],

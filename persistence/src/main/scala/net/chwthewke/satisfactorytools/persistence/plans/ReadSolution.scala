@@ -92,7 +92,7 @@ object ReadSolution {
             .flatMap {
               case ( item, itemIO ) =>
                 Option.when(
-                  (itemIO.sources ++ itemIO.destinations).exists( sd => inGroup( sd.item ) )
+                  ( itemIO.sources ++ itemIO.destinations ).exists( sd => inGroup( sd.item ) )
                 ) {
                   val groupSources: Vector[Countable[Double, ItemSrcDest.IntraGroup]] =
                     itemIO.sources
@@ -143,13 +143,12 @@ object ReadSolution {
                 itemIO.destinations.map( _.map( adaptItemSrcDest( ItemSrcDest.ToGroup ) ) ).gather
 
               val intraGroupCancellation: Map[Int, Double] =
-                (0 +: groups.groupsByClass.values.toVector).distinct
-                  .mapFilter(
-                    n =>
-                      (
-                        sources.collectFirst { case Countable( ItemSrcDest.FromGroup( `n` ), amount )    => amount },
-                        destinations.collectFirst { case Countable( ItemSrcDest.ToGroup( `n` ), amount ) => amount }
-                      ).mapN( math.min ).tupleLeft( n )
+                ( 0 +: groups.groupsByClass.values.toVector ).distinct
+                  .mapFilter( n =>
+                    (
+                      sources.collectFirst { case Countable( ItemSrcDest.FromGroup( `n` ), amount ) => amount },
+                      destinations.collectFirst { case Countable( ItemSrcDest.ToGroup( `n` ), amount ) => amount }
+                    ).mapN( math.min ).tupleLeft( n )
                   )
                   .toMap
 
@@ -162,11 +161,10 @@ object ReadSolution {
               def removeCancellations(
                   srcDests: Vector[Countable[Double, ItemSrcDest.InterGroup]]
               ): Vector[Countable[Double, ItemSrcDest.InterGroup]] =
-                srcDests.map(
-                  srcDest =>
-                    extractGroup( srcDest.item )
-                      .flatMap( intraGroupCancellation.get )
-                      .foldLeft( srcDest )( ( c, d ) => c.mapAmount( _ - d ) )
+                srcDests.map( srcDest =>
+                  extractGroup( srcDest.item )
+                    .flatMap( intraGroupCancellation.get )
+                    .foldLeft( srcDest )( ( c, d ) => c.mapAmount( _ - d ) )
                 )
 
               ( item, ItemIO( removeCancellations( sources ), removeCancellations( destinations ) ) )

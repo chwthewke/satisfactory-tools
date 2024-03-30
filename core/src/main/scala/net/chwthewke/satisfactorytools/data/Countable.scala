@@ -30,15 +30,15 @@ object Countable {
         .to( F )
   }
 
-  implicit def countableMonad[N](
-      implicit N: Numeric[N]
+  implicit def countableMonad[N]( implicit
+      N: Numeric[N]
   ): Monad[Countable[N, *]] with Traverse[Countable[N, *]] = new CountableInstance[N]
 
   private class CountableInstance[N]( implicit N: Numeric[N] )
       extends Monad[Countable[N, *]]
       with Traverse[Countable[N, *]] {
-    override def traverse[G[_], A, B]( fa: Countable[N, A] )( f: A => G[B] )(
-        implicit G: Applicative[G]
+    override def traverse[G[_], A, B]( fa: Countable[N, A] )( f: A => G[B] )( implicit
+        G: Applicative[G]
     ): G[Countable[N, B]] = G.map( f( fa.item ) )( Countable( _, fa.amount ) )
 
     override def foldLeft[A, B]( fa: Countable[N, A], b: B )( f: ( B, A ) => B ): B =
