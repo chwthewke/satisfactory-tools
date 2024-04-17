@@ -41,7 +41,11 @@ object TreeView extends ( ( FactoryTree, Int ) => Tag ) {
     val children = tree.tailForced
 
     div(
-      at.indices.toNev.fold[Frag]( "Root" )( _.map( _ + 1 ).mkString_( "." ) ),
+      span(
+        `class` := "is-large",
+        padding := "0.75rem",
+        at.indices.toNev.fold[Frag]( "Root" )( _.map( _ + 1 ).mkString_( "." ) )
+      ),
       at.nonRoot.map( loc =>
         button(
           `class`    := "button is-danger",

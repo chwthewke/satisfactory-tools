@@ -36,6 +36,10 @@ a:visited {
     color: #cdb126;
 }
 
+.is-large {
+    font-size: 1.5rem;
+}
+
 /*
 ==========================
 # BUTTONS
