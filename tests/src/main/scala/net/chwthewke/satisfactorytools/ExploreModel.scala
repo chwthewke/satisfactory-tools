@@ -1,6 +1,5 @@
 package net.chwthewke.satisfactorytools
 
-import cats.Order.catsKernelOrderingForOrder
 import cats.effect.ExitCode
 import cats.effect.IO
 import cats.effect.IOApp

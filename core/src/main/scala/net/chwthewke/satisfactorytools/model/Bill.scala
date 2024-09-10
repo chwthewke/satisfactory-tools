@@ -1,7 +1,6 @@
 package net.chwthewke.satisfactorytools
 package model
 
-import cats.Order.catsKernelOrderingForOrder
 import cats.Eq
 import cats.Show
 import cats.syntax.option._

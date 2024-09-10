@@ -2,7 +2,6 @@ package net.chwthewke.satisfactorytools
 package model
 
 import alleycats.std.iterable._
-import cats.Order.catsKernelOrderingForOrder
 import cats.Show
 import cats.syntax.foldable._
 import cats.syntax.show._

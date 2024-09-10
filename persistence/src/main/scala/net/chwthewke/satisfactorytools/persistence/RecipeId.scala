@@ -8,6 +8,7 @@ import cats.syntax.contravariant._
 final case class RecipeId( id: Int ) extends AnyVal
 
 object RecipeId {
-  implicit val showInstance: Show[RecipeId]   = Show[Int].contramap( _.id )
-  implicit val orderInstance: Order[RecipeId] = Order.by( _.id )
+  implicit val recipeIdShow: Show[RecipeId]         = Show[Int].contramap( _.id )
+  implicit val recipeIdOrder: Order[RecipeId]       = Order.by( _.id )
+  implicit val recipeIdOrdering: Ordering[RecipeId] = Order.catsKernelOrderingForOrder
 }

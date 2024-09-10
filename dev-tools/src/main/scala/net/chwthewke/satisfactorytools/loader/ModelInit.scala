@@ -3,7 +3,6 @@ package loader
 
 import alleycats.std.map._
 import cats.Id
-import cats.Order.catsKernelOrderingForOrder
 import cats.Traverse
 import cats.data.NonEmptyList
 import cats.data.ValidatedNel
@@ -21,6 +20,7 @@ import scala.concurrent.duration._
 import data.ClassName
 import data.Countable
 import data.Extractor
+import data.Form
 import data.GameData
 import data.GameRecipe
 import data.Item
@@ -38,7 +38,6 @@ import model.RecipeCategory
 import model.ResourceOptions
 import model.ResourcePurity
 import model.ResourceWeights
-import net.chwthewke.satisfactorytools.data.Form
 
 private[loader] object ModelInit {
   def apply( version: ModelVersion, data: GameData, mapConfig: MapConfig ): ValidatedNel[String, Model] = {

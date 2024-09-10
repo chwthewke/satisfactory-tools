@@ -15,7 +15,7 @@ import doobie.postgres.implicits._
 import doobie.util.invariant.UnexpectedEnd
 
 import api.LibraryApi
-import net.chwthewke.satisfactorytools.persistence.plans.PlanTrees
+import persistence.plans.PlanTrees
 import protocol.InputTab
 import protocol.ModelVersionId
 import protocol.Page

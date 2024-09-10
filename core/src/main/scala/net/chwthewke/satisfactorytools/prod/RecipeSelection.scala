@@ -1,7 +1,6 @@
 package net.chwthewke.satisfactorytools
 package prod
 
-import cats.Order.catsKernelOrderingForOrder
 import cats.syntax.apply._
 import cats.syntax.foldable._
 import cats.syntax.functor._

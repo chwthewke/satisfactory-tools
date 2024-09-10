@@ -31,7 +31,8 @@ object Item {
                                                                |Icon: ${item.smallIcon}
                                                                |""".stripMargin )
 
-  implicit val itemOrder: Order[Item] = Order.by( _.displayName )
+  implicit val itemOrder: Order[Item]       = Order.by( _.displayName )
+  implicit val itemOrdering: Ordering[Item] = Order.catsKernelOrderingForOrder
 
   implicit val itemDecoder: Decoder[Item] = deriveDecoder[Item]
   implicit val itemEncoder: Encoder[Item] = deriveEncoder[Item]

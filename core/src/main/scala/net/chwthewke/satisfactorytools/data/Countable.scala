@@ -71,6 +71,8 @@ object Countable {
 
   implicit def countableOrder[N: Order, A: Order]: Order[Countable[N, A]] =
     Order.by { case Countable( item, amount ) => ( item, amount ) }
+  implicit def countableOrdering[N: Order, A: Order]: Ordering[Countable[N, A]] =
+    Order.catsKernelOrderingForOrder
 
   implicit def countableDecoder[N: Decoder, A: Decoder]: Decoder[Countable[N, A]] = deriveDecoder[Countable[N, A]]
   implicit def countableEncoder[N: Encoder, A: Encoder]: Encoder[Countable[N, A]] = deriveEncoder[Countable[N, A]]

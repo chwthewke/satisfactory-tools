@@ -1,7 +1,6 @@
 package net.chwthewke.satisfactorytools
 package persistence
 
-import cats.Order.catsKernelOrderingForOrder
 import cats.data.NonEmptyList
 import cats.data.OptionT
 import cats.syntax.applicativeError._

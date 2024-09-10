@@ -20,8 +20,9 @@ object ResourcePurity extends Enum[ResourcePurity] {
 
   override val values: Vector[ResourcePurity] = findValues.toVector
 
-  implicit val resourcePurityShow: Show[ResourcePurity]   = Show.fromToString
-  implicit val resourcePurityOrder: Order[ResourcePurity] = Order.by( indexOf )
+  implicit val resourcePurityShow: Show[ResourcePurity]         = Show.fromToString
+  implicit val resourcePurityOrder: Order[ResourcePurity]       = Order.by( indexOf )
+  implicit val resourcePurityOrdering: Ordering[ResourcePurity] = Order.catsKernelOrderingForOrder
 
   implicit val resourcePurityDecoder: Decoder[ResourcePurity] = Circe.decoder( this )
   implicit val resourcePurityEncoder: Encoder[ResourcePurity] = Circe.encoder( this )

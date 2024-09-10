@@ -34,8 +34,9 @@ object MachineType extends Enum[MachineType] {
     ExtractorType.values.map( MachineType( _ ) ) ++
       ManufacturerType.values.map( MachineType( _ ) )
 
-  implicit val machineTypeShow: Show[MachineType]   = Show.show( _.machineType.fold( _.show, _.show ) )
-  implicit val machineTypeOrder: Order[MachineType] = Order.by( _.machineType )
+  implicit val machineTypeShow: Show[MachineType]         = Show.show( _.machineType.fold( _.show, _.show ) )
+  implicit val machineTypeOrder: Order[MachineType]       = Order.by( _.machineType )
+  implicit val machineTypeOrdering: Ordering[MachineType] = Order.catsKernelOrderingForOrder
 
   implicit val machineTypeDecoder: Decoder[MachineType] = Circe.decoder( this )
   implicit val machineTypeEncoder: Encoder[MachineType] = Circe.encoder( this )

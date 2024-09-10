@@ -270,8 +270,9 @@ object RecipeClassifier {
 
   case class Milestone( tier: Int ) extends AnyVal
   object Milestone {
-    def apply( schematic: Schematic ): Milestone  = Milestone( schematic.techTier )
-    implicit val milestoneOrder: Order[Milestone] = Order.by( _.tier )
+    def apply( schematic: Schematic ): Milestone        = Milestone( schematic.techTier )
+    implicit val milestoneOrder: Order[Milestone]       = Order.by( _.tier )
+    implicit val milestoneOrdering: Ordering[Milestone] = Order.catsKernelOrderingForOrder
   }
 
   sealed trait AnalysisItem {

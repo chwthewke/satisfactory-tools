@@ -38,19 +38,23 @@ object ItemSrcDest {
 
   private def order[A <: ItemSrcDest]: Order[A] = Order.by( index )
 
-  implicit val itemSrcDestShow: Show[ItemSrcDest]   = semiauto.show[ItemSrcDest]
-  implicit val itemSrcDestOrder: Order[ItemSrcDest] = order
+  implicit val itemSrcDestShow: Show[ItemSrcDest]         = semiauto.show[ItemSrcDest]
+  implicit val itemSrcDestOrder: Order[ItemSrcDest]       = order
+  implicit val itemSrcDestOrdering: Ordering[ItemSrcDest] = Order.catsKernelOrderingForOrder
 
   object Global {
-    implicit val globalItemSrcDestShow: Show[Global]   = semiauto.show[Global]
-    implicit val globalItemSrcDestOrder: Order[Global] = order
+    implicit val globalItemSrcDestShow: Show[Global]         = semiauto.show[Global]
+    implicit val globalItemSrcDestOrder: Order[Global]       = order
+    implicit val globalItemSrcDestOrdering: Ordering[Global] = Order.catsKernelOrderingForOrder
   }
   object IntraGroup {
-    implicit val intraGroupItemSrcDestShow: Show[IntraGroup]   = semiauto.show[IntraGroup]
-    implicit val intraGroupItemSrcDestOrder: Order[IntraGroup] = order
+    implicit val intraGroupItemSrcDestShow: Show[IntraGroup]         = semiauto.show[IntraGroup]
+    implicit val intraGroupItemSrcDestOrder: Order[IntraGroup]       = order
+    implicit val intraGroupItemSrcDestOrdering: Ordering[IntraGroup] = Order.catsKernelOrderingForOrder
   }
   object InterGroup {
-    implicit val interGroupItemSrcDestShow: Show[InterGroup]   = semiauto.show[InterGroup]
-    implicit val interGroupItemSrcDestOrder: Order[InterGroup] = order
+    implicit val interGroupItemSrcDestShow: Show[InterGroup]         = semiauto.show[InterGroup]
+    implicit val interGroupItemSrcDestOrder: Order[InterGroup]       = order
+    implicit val interGroupItemSrcDestOrdering: Ordering[InterGroup] = Order.catsKernelOrderingForOrder
   }
 }
