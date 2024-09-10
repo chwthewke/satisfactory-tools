@@ -1,7 +1,6 @@
 package net.chwthewke.satisfactorytools
 package web.view
 
-import cats.Order.catsKernelOrderingForOrder
 import cats.data.Ior
 import cats.syntax.foldable._
 import cats.syntax.option._

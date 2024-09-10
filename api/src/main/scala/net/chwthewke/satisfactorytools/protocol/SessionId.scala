@@ -11,5 +11,6 @@ case class SessionId( id: UUID ) extends AnyVal
 object SessionId {
   implicit val sessionIdShow: Show[SessionId] = Show[UUID].contramap( _.id )
 
-  implicit val sessionIdEq: Order[SessionId] = Order.by( _.id )
+  implicit val sessionIdOrder: Order[SessionId]       = Order.by( _.id )
+  implicit val sessionIdOrdering: Ordering[SessionId] = Order.catsKernelOrderingForOrder
 }

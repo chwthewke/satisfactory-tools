@@ -1,7 +1,6 @@
 package net.chwthewke.satisfactorytools
 
 import cats.Monoid
-import cats.Order.catsKernelOrderingForOrder
 import cats.data.NonEmptyVector
 import cats.effect.ExitCode
 import cats.effect.IO

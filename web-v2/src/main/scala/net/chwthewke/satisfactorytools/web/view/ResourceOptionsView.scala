@@ -1,7 +1,6 @@
 package net.chwthewke.satisfactorytools
 package web.view
 
-import cats.Order.catsKernelOrderingForOrder
 import cats.syntax.functor._
 import cats.syntax.show._
 import scalatags.Text

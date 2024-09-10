@@ -3,7 +3,6 @@ package persistence
 package plans
 
 import cats.Foldable
-import cats.Order.catsKernelOrderingForOrder
 import cats.syntax.apply._
 import cats.syntax.foldable._
 import cats.syntax.functor._

@@ -23,6 +23,7 @@ object ResearchCategory
   case object Mycelia        extends ResearchCategory( Vector( "Mycelia" ) )
   case object FlowerPetals   extends ResearchCategory( Vector( "FlowerPetals" ) )
 
-  override val values: Vector[ResearchCategory]             = findValues.toVector
-  override implicit val eqInstance: Order[ResearchCategory] = Order.by( values.indexOf )
+  override val values: Vector[ResearchCategory]                     = findValues.toVector
+  override implicit val eqInstance: Order[ResearchCategory]         = Order.by( values.indexOf )
+  implicit val researchCategoryOrdering: Ordering[ResearchCategory] = Order.catsKernelOrderingForOrder
 }

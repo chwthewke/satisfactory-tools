@@ -189,7 +189,8 @@ object StepsView extends ( ( ( Factory, GroupAssignments ), Int ) => Tag ) {
 
     override val values: Vector[CustomGroupsRadios] = findValues.toVector
 
-    implicit val customGroupsRadiosOrder: Order[CustomGroupsRadios] = Order.by( indexOf )
+    implicit val customGroupsRadiosOrder: Order[CustomGroupsRadios]       = Order.by( indexOf )
+    implicit val customGroupsRadiosOrdering: Ordering[CustomGroupsRadios] = Order.catsKernelOrderingForOrder
   }
 
 }

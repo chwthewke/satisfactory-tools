@@ -1,7 +1,6 @@
 package net.chwthewke.satisfactorytools
 package assets
 
-import cats.Order.catsKernelOrderingForOrder
 import cats.Show
 import cats.syntax.foldable._
 import pureconfig.ConfigReader

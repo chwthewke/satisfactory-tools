@@ -12,8 +12,9 @@ import io.circe.KeyEncoder
 final case class ClassName( name: String ) extends AnyVal
 
 object ClassName {
-  implicit val classNameShow: Show[ClassName]   = Show[String].contramap( _.name )
-  implicit val classNameOrder: Order[ClassName] = Order[String].contramap( _.name )
+  implicit val classNameShow: Show[ClassName]         = Show[String].contramap( _.name )
+  implicit val classNameOrder: Order[ClassName]       = Order[String].contramap( _.name )
+  implicit val classNameOrdering: Ordering[ClassName] = Order.catsKernelOrderingForOrder
 
   implicit val classNameDecoder: Decoder[ClassName] = Decoder[String].map( ClassName( _ ) )
   implicit val classNameEncoder: Encoder[ClassName] = Encoder[String].contramap( _.name )

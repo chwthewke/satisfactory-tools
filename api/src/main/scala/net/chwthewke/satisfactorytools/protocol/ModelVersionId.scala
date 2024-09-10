@@ -8,6 +8,7 @@ import cats.syntax.contravariant._
 case class ModelVersionId( id: Int ) extends AnyVal
 
 object ModelVersionId {
-  implicit val modelVersionIdShow: Show[ModelVersionId]   = Show[Int].contramap( _.id )
-  implicit val modelVersionIdOrder: Order[ModelVersionId] = Order.by( _.id )
+  implicit val modelVersionIdShow: Show[ModelVersionId]         = Show[Int].contramap( _.id )
+  implicit val modelVersionIdOrder: Order[ModelVersionId]       = Order.by( _.id )
+  implicit val modelVersionIdOrdering: Ordering[ModelVersionId] = Order.catsKernelOrderingForOrder
 }

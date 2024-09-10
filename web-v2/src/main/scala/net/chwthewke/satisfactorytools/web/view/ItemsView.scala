@@ -1,8 +1,6 @@
 package net.chwthewke.satisfactorytools
 package web.view
 
-import cats.Order
-import cats.Order.catsKernelOrderingForOrder
 import scalatags.Text
 import scalatags.Text.Tag
 
@@ -16,7 +14,7 @@ object ItemsView extends ( ( Map[Item, ItemIO[ItemSrcDest]], Int ) => Tag ) {
 
   import Text.all._
 
-  def sortAndFilterSmallAmounts[A: Order](
+  def sortAndFilterSmallAmounts[A: Ordering](
       srcOrDest: Vector[Countable[Double, A]]
   ): Vector[Countable[Double, A]] =
     srcOrDest.filter( _.amount.abs > AmountTolerance ).sortBy( _.item )

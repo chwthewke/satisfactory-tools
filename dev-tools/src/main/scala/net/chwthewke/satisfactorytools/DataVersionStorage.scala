@@ -55,4 +55,6 @@ object DataVersionStorage extends Enum[DataVersionStorage] {
   override val values: Vector[DataVersionStorage] = findValues.toVector
   implicit val dataVersionStorageOrder: Order[DataVersionStorage] =
     Order.by[DataVersionStorage, Int]( values.indexOf )
+  implicit val dataVersionStorageOrdering: Ordering[DataVersionStorage] =
+    Order.catsKernelOrderingForOrder
 }

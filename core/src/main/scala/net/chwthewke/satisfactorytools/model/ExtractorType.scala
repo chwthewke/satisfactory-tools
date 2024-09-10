@@ -32,8 +32,9 @@ object ExtractorType extends Enum[ExtractorType] {
 
   override val values: Vector[ExtractorType] = findValues.toVector
 
-  implicit val extractorTypeShow: Show[ExtractorType]   = Show( _.entryName )
-  implicit val extractorTypeOrder: Order[ExtractorType] = Order.by( values.indexOf )
+  implicit val extractorTypeShow: Show[ExtractorType]         = Show( _.entryName )
+  implicit val extractorTypeOrder: Order[ExtractorType]       = Order.by( values.indexOf )
+  implicit val extractorTypeOrdering: Ordering[ExtractorType] = Order.catsKernelOrderingForOrder
 
   implicit val extractorTypeDecoder: Decoder[ExtractorType] = Circe.decoder( this )
   implicit val extractorTypeEncoder: Encoder[ExtractorType] = Circe.encoder( this )

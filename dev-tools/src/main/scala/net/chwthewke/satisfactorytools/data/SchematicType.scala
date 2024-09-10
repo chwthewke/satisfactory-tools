@@ -20,5 +20,6 @@ object SchematicType extends Enum[SchematicType] with CirceEnum[SchematicType] w
 
   override val values: Vector[SchematicType] = findValues.toVector
 
-  implicit val orderInstance: Order[SchematicType] = Order.by( values.indexOf )
+  override implicit val eqInstance: Order[SchematicType]      = Order.by( values.indexOf )
+  implicit val schematicTypeOrdering: Ordering[SchematicType] = Order.catsKernelOrderingForOrder
 }

@@ -13,5 +13,6 @@ object Direction extends Enum[Direction] {
 
   override val values: IndexedSeq[Direction] = findValues
 
-  implicit val directionOrder: Order[Direction] = Order.by( _.arrow )
+  implicit val directionOrder: Order[Direction]       = Order.by( _.arrow )
+  implicit val directionOrdering: Ordering[Direction] = Order.catsKernelOrderingForOrder
 }

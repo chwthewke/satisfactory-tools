@@ -66,6 +66,7 @@ object RecipeCategory {
     case Alternate( tier )             => ( tier, 3, None )
     case NuclearWaste                  => ( 0, 4, None )
   }
+  implicit val recipeCategoryOrdering: Ordering[RecipeCategory] = Order.catsKernelOrderingForOrder
 
   implicit val recipeCategoryDecoder: Decoder[RecipeCategory] = deriveDecoder[RecipeCategory]
   implicit val recipeCategoryEncoder: Encoder[RecipeCategory] = deriveEncoder[RecipeCategory]
