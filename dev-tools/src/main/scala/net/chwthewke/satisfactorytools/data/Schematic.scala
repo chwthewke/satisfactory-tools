@@ -4,10 +4,9 @@ package data
 import atto._
 import Atto._
 import atto.Parser
+import cats.Show
 import cats.data.OptionT
-import cats.syntax.apply._
-import cats.syntax.foldable._
-import cats.syntax.functorFilter._
+import cats.syntax.all._
 import io.circe.Decoder
 
 case class Schematic(
@@ -16,11 +15,24 @@ case class Schematic(
     `type`: SchematicType,
     cost: Vector[Countable[Double, ClassName]],
     techTier: Int,
+    requireAllDependencies: Boolean,
     schematicDependencies: Vector[ClassName /*Schematic*/ ],
     unlocks: Vector[ClassName /*Recipe*/ ]
 )
 
 object Schematic {
+
+  implicit val schematicShow: Show[Schematic] =
+    Show.show { s =>
+      val depsTag: String = "" // if (s.requireAllDependencies) "ALL OF " else "ONE OF "
+      show"""${s.displayName} # ${s.className}
+            |  type: ${s.`type`}
+            |  tier: ${s.techTier}
+            |  cost: ${s.cost.mkString_( ", " )}
+            |  deps: $depsTag${s.schematicDependencies.mkString_( ", " )}
+            |  unlocks: ${s.unlocks.mkString_( ", " )}
+            |""".stripMargin
+    }
 
   import Parsers.ParserOps
 
@@ -47,10 +59,24 @@ object Schematic {
         .value
     )
 
-  private val dependenciesDecoder: Decoder[Vector[ClassName]] =
+  private val dependenciesDecoder: Decoder[( Vector[ClassName], Boolean )] =
     Decoder
-      .decodeVector( classListDecoder( schematicDependencyClass, "mSchematics" ) )
-      .map( v => v.mapFilter( identity ).combineAll )
+      .decodeVector(
+        OptionT( classListDecoder( schematicDependencyClass, "mSchematics" ) )
+          .semiflatMap( d =>
+            Parsers.booleanString.decoder
+              .prepare( _.downField( "mRequireAllSchematicsToBePurchased" ) )
+              .map( req => ( d, req ) )
+          )
+          .value
+      )
+      .map( _.flattenOption )
+      .emap { depBlocks =>
+        if (depBlocks.size > 1)
+          Left( "Multiple mSchematicDependencies items" )
+        else
+          Right( depBlocks.headOption.getOrElse( ( Vector.empty, false ) ) )
+      }
 
   private val unlocksDecoder: Decoder[Vector[ClassName]] =
     Decoder
@@ -73,7 +99,8 @@ object Schematic {
         typ,
         c,
         tier,
-        deps,
+        deps._2,
+        deps._1,
         unlocks
       )
     }

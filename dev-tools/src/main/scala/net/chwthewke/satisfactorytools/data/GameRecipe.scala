@@ -18,7 +18,9 @@ case class GameRecipe(
     producedIn: List[ClassName],
     variablePowerMin: Double,
     variablePowerRange: Double
-)
+) {
+  def isSelfExtraction: Boolean = ingredients == List( products.head )
+}
 
 object GameRecipe {
 
@@ -49,7 +51,7 @@ object GameRecipe {
     )(
       Decoder[ClassName],
       Decoder[String],
-      countableList.decoder.map( _.toList ),
+      countableListOrEmpty.decoder,
       countableList.decoder,
       Decoders.doubleStringDecoder.map( _.seconds ),
       Decoder.decodeOption( manufacturerClassList.decoder ).map( _.orEmpty ),

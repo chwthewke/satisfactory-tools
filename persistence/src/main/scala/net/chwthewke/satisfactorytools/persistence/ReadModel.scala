@@ -66,6 +66,7 @@ object ReadModel extends ModelApi[ConnectionIO] {
            |  , "display_name"
            |  , "machine_type"
            |  , "power_consumption"
+           |  , "power_consumption_exponent"
            |FROM "machines"
            |WHERE "model_version_id" = $version
            |""".stripMargin //

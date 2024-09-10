@@ -33,4 +33,6 @@ object NativeClass {
   val waterPumpClass: NativeClass         = NativeClass( "Class'/Script/FactoryGame.FGBuildableWaterPump'" )
   val frackingExtractorClass: NativeClass = NativeClass( "Class'/Script/FactoryGame.FGBuildableFrackingExtractor'" )
   val schematicClass: NativeClass         = NativeClass( "Class'/Script/FactoryGame.FGSchematic'" )
+  val powerBoosterFuelClass: NativeClass  = NativeClass( "Class'/Script/FactoryGame.FGItemDescriptorPowerBoosterFuel'" )
+  val powerShardClass: NativeClass        = NativeClass( "Class'/Script/FactoryGame.FGPowerShardDescriptor'" )
 }

@@ -90,14 +90,16 @@ object WriteModel {
           |, "display_name"
           |, "machine_type"
           |, "power_consumption"
+          |, "power_consumption_exponent"
           |, "model_version_id"
           |)
-          |VALUES ( ?, ?, ?, ?, ? )
+          |VALUES ( ?, ?, ?, ?, ?, ? )
           |ON CONFLICT ON CONSTRAINT "machines_name_version_unique"
           |DO UPDATE SET
-          |    "display_name"      = "excluded"."display_name"
-          |  , "machine_type"      = "excluded"."machine_type" 
-          |  , "power_consumption" = "excluded"."power_consumption"
+          |    "display_name"               = "excluded"."display_name"
+          |  , "machine_type"               = "excluded"."machine_type" 
+          |  , "power_consumption"          = "excluded"."power_consumption"
+          |  , "power_consumption_exponent" = "excluded"."power_consumption_exponent"
           |""".stripMargin
       ).contramap( ( _, version ) )
 

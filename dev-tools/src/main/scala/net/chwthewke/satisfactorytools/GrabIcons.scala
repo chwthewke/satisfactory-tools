@@ -51,15 +51,18 @@ class GrabIcons[F[_]]( version: DataVersionStorage )( implicit S: Async[F], F: F
   }
 
   def grabIcon( gameSource: DataVersionStorage.GameSource, extractDir: Path, data: IconData ): F[Unit] =
-    for {
-      ( x, o, e ) <- runExtract( gameSource, extractDir, data )
-      _           <- console.println( s"Extract texture ${data.textureName} returned $x" )
-      _           <- console.errorln( s"Error while extracting ${data.textureName}\n$o\n$e" ).whenA( x != 0 )
-      _           <- moveExtracted( extractDir, data )
-    } yield ()
+    gameSource.ueVersionTag.traverse_( ueVersionTag =>
+      for {
+        ( x, o, e ) <- runExtract( gameSource.path, ueVersionTag, extractDir, data )
+        _           <- console.println( s"Extract texture ${data.textureName} returned $x" )
+        _           <- console.errorln( s"Error while extracting ${data.textureName}\n$o\n$e" ).whenA( x != 0 )
+        _           <- moveExtracted( extractDir, data )
+      } yield ()
+    )
 
   def runExtract(
-      gameSource: DataVersionStorage.GameSource,
+      gamePath: Path,
+      ueVersionTag: String,
       extractDir: Path,
       data: IconData
   ): F[( Int, String, String )] =
@@ -71,8 +74,8 @@ class GrabIcons[F[_]]( version: DataVersionStorage )( implicit S: Async[F], F: F
       val exit: Int = Process(
         Seq(
           GrabIcons.pathToUModel,
-          s"-game=${gameSource.ueVersionTag}",
-          s"-path=${gameSource.path / "FactoryGame" / "Content" / "Paks"}",
+          s"-game=$ueVersionTag",
+          s"-path=${gamePath / "FactoryGame" / "Content" / "Paks"}",
           s"-out=$extractDir",
           "-png",
           "-export",
@@ -109,4 +112,3 @@ object GrabIconsU4 extends GrabIcons.Program( DataVersionStorage.Update4 )
 object GrabIconsU5 extends GrabIcons.Program( DataVersionStorage.Update5 )
 object GrabIconsU6 extends GrabIcons.Program( DataVersionStorage.Update6 )
 object GrabIconsU7 extends GrabIcons.Program( DataVersionStorage.Update7 )
-//object GrabIconsU8 extends GrabIcons.Program( DataVersionStorage.Update8 )

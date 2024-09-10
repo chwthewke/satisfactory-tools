@@ -17,9 +17,10 @@ object Parsers {
   val classNameList: Parser[NonEmptyList[ClassName]] =
     char( '(' ) ~> classNameString.sepBy1( char( ',' ) ) <~ char( ')' )
 
-  private val bpNoSep = satisfy( c => c != ',' && c != '.' && c != '/' && c != '"' && c != ')' )
+  private val bpNoSep: Parser[Char] =
+    satisfy( c => c != ',' && c != '.' && c != '/' && c != '"' && c != ')' && c != '\'' ).named( "bpNoSep" )
 
-  val bpGeneratedClass: Parser[ClassName] =
+  val oldBpGeneratedClass: Parser[ClassName] =
     (
       opt( string( "/Script/Engine." ) ) ~>
         string( "BlueprintGeneratedClass'\"/Game/FactoryGame/" ) ~>
@@ -28,6 +29,17 @@ object Parsers {
         stringOf1( bpNoSep ) <~
         string( "\"'" )
     ).map( ClassName( _ ) )
+
+  val newBpGeneratedClass: Parser[ClassName] =
+    (
+      string( "\"/Script/Engine.BlueprintGeneratedClass'/Game/FactoryGame/" ) ~>
+        ( stringOf1( bpNoSep ) ~ char( '/' ) ).skipMany ~>
+        stringOf1( bpNoSep ) ~> char( '.' ) ~>
+        stringOf1( bpNoSep ) <~
+        string( "'\"" )
+    ).map( ClassName( _ ) )
+
+  val bpGeneratedClass: Parser[ClassName] = newBpGeneratedClass | oldBpGeneratedClass
 
   val bpGeneratedClassList: Parser[Vector[ClassName]] =
     listOf1( bpGeneratedClass ).map( _.toList.toVector )
@@ -54,6 +66,9 @@ object Parsers {
   val countableList: Parser[NonEmptyList[Countable[Double, ClassName]]] =
     char( '(' ) ~> countable.sepBy1( char( ',' ) ) <~ char( ')' )
 
+  val countableListOrEmpty: Parser[List[Countable[Double, ClassName]]] =
+    countableList.map( _.toList ) | string( "" ).as( Nil )
+
   val texture2d: Parser[IconData] =
     ( string( "Texture2D " ) ~>
       ( char( '/' ) ~> stringOf1( bpNoSep ) ).many1 ~ ( char( '.' ) ~> stringOf1( bpNoSep ) ) )
@@ -69,6 +84,9 @@ object Parsers {
     e.values.foldLeft(
       err[A]( e.values.map( _.entryName ).mkString( s"Not one of: <", ", ", ">" ) )
     )( ( p, a ) => p | string( a.entryName ).as( a ) )
+
+  val booleanString: Parser[Boolean] =
+    string( "False" ).as( false ) | string( "True" ).as( true )
 
   implicit class ParserOps[A]( private val self: Parser[A] ) {
     def decoder: Decoder[A] = Decoder[String].emap( x =>

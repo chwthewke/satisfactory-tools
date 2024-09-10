@@ -41,7 +41,7 @@ import model.ResourceWeights
 
 private[loader] object ModelInit {
   def apply( version: ModelVersion, data: GameData, mapConfig: MapConfig ): ValidatedNel[String, Model] = {
-    val ( rawSelfExtraction, rawManufacturing ) = data.recipes.partition( isSelfExtraction )
+    val ( rawSelfExtraction, rawManufacturing ) = data.recipes.partition( _.isSelfExtraction )
 
     val extractorMachines: ValidatedNel[String, Map[ClassName, ( Extractor, Machine )]] =
       data.extractors.traverse( ex => extractorMachine( ex ).toValidatedNel.tupleLeft( ex ) )
@@ -88,9 +88,6 @@ private[loader] object ModelInit {
       .map( ResourceOptions( _, ResourceWeights.default ) )
       .leftMap( _.mkString_( "Unknown items in resource nodes config: ", ", ", "" ) )
       .toEither
-
-  def isSelfExtraction( recipe: GameRecipe ): Boolean =
-    recipe.ingredients == List( recipe.products.head )
 
   def validateItem(
       data: GameData,
@@ -167,7 +164,8 @@ private[loader] object ModelInit {
           extractor.className,
           extractor.displayName,
           MachineType( exType ),
-          extractor.powerConsumption
+          extractor.powerConsumption,
+          extractor.powerConsumptionExponent
         )
       )
 
@@ -198,7 +196,8 @@ private[loader] object ModelInit {
         if (manufacturer.powerConsumption == 0d) ManufacturerType.VariableManufacturer
         else ManufacturerType.Manufacturer
       ),
-      manufacturer.powerConsumption
+      manufacturer.powerConsumption,
+      manufacturer.powerConsumptionExponent
     )
 
   def validateManufacturer( data: GameData, className: ClassName ): ValidatedNel[String, Machine] =
@@ -260,7 +259,13 @@ private[loader] object ModelInit {
                 Countable( s, 1d ) :: Nil,
                 NonEmptyList.of( Countable( p, prod.amount.toDouble ) ),
                 math.ceil( 1000 * s.fuelValue / g.powerProduction ).toLong.milliseconds,
-                Machine( g.className, g.displayName, MachineType( ManufacturerType.Manufacturer ), 0d ),
+                Machine(
+                  g.className,
+                  g.displayName,
+                  MachineType( ManufacturerType.Manufacturer ),
+                  0d,
+                  g.powerConsumptionExponent
+                ),
                 Power.Fixed( -g.powerProduction )
               )
           }

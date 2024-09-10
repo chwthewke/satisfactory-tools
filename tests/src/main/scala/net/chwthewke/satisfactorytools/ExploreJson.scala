@@ -5,12 +5,7 @@ import cats.data.NonEmptyVector
 import cats.effect.ExitCode
 import cats.effect.IO
 import cats.effect.IOApp
-import cats.syntax.apply._
-import cats.syntax.foldable._
-import cats.syntax.functorFilter._
-import cats.syntax.option._
-import cats.syntax.show._
-import cats.syntax.unorderedFoldable._
+import cats.syntax.all._
 import io.circe.Json
 import io.circe.JsonObject
 import io.circe.fs2.byteArrayParser
@@ -34,6 +29,26 @@ object ExploreJson extends IOApp {
 
   def loadJsonAllVersions: IO[Vector[Json]] =
     DataVersionStorage.values.foldMapM( loadJsonVersion )
+
+  def printSchematicDependenciesCount( array: Vector[Json] ): IO[Unit] = {
+    val dbc =
+      exploreNativeClasses( nc => obj => Option.when( nc == NativeClass.schematicClass )( obj ).toVector )( array )
+        .map( sObj =>
+          sObj( "mSchematicDependencies" )
+            .flatMap( _.asArray )
+            .map( _.size )
+            .getOrElse( 0 )
+        )
+        .groupBy( identity )
+        .fmap( _.size )
+
+    IO.println(
+      dbc
+        .to( SortedMap )
+        .map { case ( n, f ) => s"$n: $f" }
+        .mkString( "DEPENDENCY BLOCK SIZE FREQ\n", "\n", "" )
+    )
+  }
 
   def printNativeClasses( array: Vector[Json] ): IO[Unit] = {
     val ( notices, nativeClasses ) =
@@ -142,7 +157,8 @@ object ExploreJson extends IOApp {
   override def run( args: List[String] ): IO[ExitCode] =
     for {
       array <- loadJson
-      _     <- printResources( array )
+      _     <- printSchematicDependenciesCount( array )
+//      _     <- printResources( array )
 //      _     <- IO.println( showSchemas( array ) )
 //      _ <- printNativeClasses( array )
 //      _ <- IO.println( collectNativeClassFields( NativeClass.resourceExtractorClass )( array ).intercalate( "\n" ) )

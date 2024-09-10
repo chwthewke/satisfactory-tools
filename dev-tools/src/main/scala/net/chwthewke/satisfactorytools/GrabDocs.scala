@@ -27,7 +27,7 @@ class GrabDocs[F[_]: Async]( implicit F: Files[F] ) {
       val docsPath: Path = source.path
         .resolve( "CommunityResources" )
         .resolve( "Docs" )
-        .resolve( "Docs.json" )
+        .resolve( storage.docsFile )
 
       val destDir: Path  = destBase.resolve( storage.docsPath )
       val destPath: Path = destDir.resolve( "Docs.json" )
@@ -61,8 +61,9 @@ object GrabDocs {
   }
 }
 
-object GrabDocsU4 extends GrabDocs.Program( DataVersionStorage.Update4 )
-object GrabDocsU5 extends GrabDocs.Program( DataVersionStorage.Update5 )
-object GrabDocsU6 extends GrabDocs.Program( DataVersionStorage.Update6 )
-object GrabDocsU7 extends GrabDocs.Program( DataVersionStorage.Update7 )
-object GrabDocsU8 extends GrabDocs.Program( DataVersionStorage.Update8 )
+object GrabDocsU4   extends GrabDocs.Program( DataVersionStorage.Update4 )
+object GrabDocsU5   extends GrabDocs.Program( DataVersionStorage.Update5 )
+object GrabDocsU6   extends GrabDocs.Program( DataVersionStorage.Update6 )
+object GrabDocsU7   extends GrabDocs.Program( DataVersionStorage.Update7 )
+object GrabDocsU8   extends GrabDocs.Program( DataVersionStorage.Update8 )
+object GrabDocsR1_0 extends GrabDocs.Program( DataVersionStorage.Release1_0 )

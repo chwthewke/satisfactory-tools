@@ -52,8 +52,9 @@ object InitDatabaseModel {
   }
 }
 
-object InitDatabaseModelU4 extends InitDatabaseModel.Program( DataVersionStorage.Update4 )
-object InitDatabaseModelU5 extends InitDatabaseModel.Program( DataVersionStorage.Update5 )
-object InitDatabaseModelU6 extends InitDatabaseModel.Program( DataVersionStorage.Update6 )
-object InitDatabaseModelU7 extends InitDatabaseModel.Program( DataVersionStorage.Update7 )
-object InitDatabaseModelU8 extends InitDatabaseModel.Program( DataVersionStorage.Update8 )
+object InitDatabaseModelU4   extends InitDatabaseModel.Program( DataVersionStorage.Update4 )
+object InitDatabaseModelU5   extends InitDatabaseModel.Program( DataVersionStorage.Update5 )
+object InitDatabaseModelU6   extends InitDatabaseModel.Program( DataVersionStorage.Update6 )
+object InitDatabaseModelU7   extends InitDatabaseModel.Program( DataVersionStorage.Update7 )
+object InitDatabaseModelU8   extends InitDatabaseModel.Program( DataVersionStorage.Update8 )
+object InitDatabaseModelR1_0 extends InitDatabaseModel.Program( DataVersionStorage.Release1_0 )

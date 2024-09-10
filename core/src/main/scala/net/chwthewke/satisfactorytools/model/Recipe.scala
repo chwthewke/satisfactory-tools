@@ -4,6 +4,8 @@ package model
 import cats.Show
 import cats.data.NonEmptyList
 import cats.syntax.foldable._
+import cats.syntax.functor._
+import cats.syntax.option._
 import cats.syntax.semigroup._
 import cats.syntax.show._
 import io.circe.Decoder
@@ -48,17 +50,17 @@ final case class Recipe(
 
 object Recipe {
 
-  implicit def recipeShow( implicit showItem: Show[Item], showMachine: Show[Machine] ): Show[Recipe] =
+  implicit val recipeShow: Show[Recipe] =
     Show.show {
       case Recipe( className, displayName, category, ingredients, products, duration, producer, power ) =>
-        show"""  $displayName # $className
+        show"""  $displayName # $className ${category.tierOpt.map( t => s"(tier $t)" ).orEmpty}
               |  Ingredients:
-              |    ${ingredients.map( _.show ).intercalate( "\n    " )}
+              |    ${ingredients.map( _.map( _.displayName ).show ).intercalate( "\n    " )}
               |  Products:
-              |    ${products.map( _.show ).intercalate( "\n    " )}
-              |  Duration $duration
-              |  Producer:
-              |    $producer
+              |    ${products.map( _.map( _.displayName ).show ).intercalate( "\n    " )}
+              |  Duration: $duration
+              |  Power: $power 
+              |  Produced in: ${producer.displayName}
               |""".stripMargin
     }
 

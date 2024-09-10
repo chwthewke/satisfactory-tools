@@ -58,6 +58,7 @@ object OptionsView extends ( ( Model, Options ) => Tag ) {
       case Belt.BeltMk3 => "Belt Mk. 3"
       case Belt.BeltMk4 => "Belt Mk. 4"
       case Belt.BeltMk5 => "Belt Mk. 5"
+      case Belt.BeltMk6 => "Belt Mk. 6"
     }
 
     show"$head (${belt.itemsPerMinute} items / min.)"
