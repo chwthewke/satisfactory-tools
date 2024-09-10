@@ -41,7 +41,7 @@ case class Options(
 object Options {
   val full: Options =
     Options(
-      Belt.BeltMk5,
+      Belt.BeltMk6,
       Pipe.PipeMk2,
       Miner.MinerMk3,
       ClockSpeed.ClockSpeed250,
@@ -51,7 +51,7 @@ object Options {
 
   val default: Options =
     Options(
-      Belt.BeltMk5,
+      Belt.BeltMk6,
       Pipe.PipeMk2,
       Miner.MinerMk3,
       ClockSpeed.ClockSpeed100,
@@ -70,6 +70,7 @@ object Options {
     final case object BeltMk3 extends Belt( "belt-mk3", 270 )
     final case object BeltMk4 extends Belt( "belt-mk4", 480 )
     final case object BeltMk5 extends Belt( "belt-mk5", 780 )
+    final case object BeltMk6 extends Belt( "belt-mk6", 1200 )
 
     override val values: Vector[Belt] = findValues.toVector
 

@@ -32,12 +32,15 @@ case class ClockedRecipe(
     machineCount: Int
 ) {
 
+  def machine: Machine                 = recipe.item.producedIn
+  def powerConsumptionExponent: Double = machine.powerConsumptionExponent
+
   val clockSpeedMillionth: Int = ( clockSpeed * 10000d ).ceil.toInt
-  val machine: Machine         = recipe.item.producedIn
 
-  val fractionalAmount: Double = recipe.amount
+  def fractionalAmount: Double = recipe.amount
 
-  def power: Power = recipe.item.power.map( _ * machineCount * math.pow( clockSpeedMillionth / 1e6d, 1.6d ) )
+  def power: Power =
+    recipe.item.power.map( _ * machineCount * math.pow( clockSpeedMillionth / 1e6d, powerConsumptionExponent ) )
 
   val mainProductAmount: Double        = recipe.flatMap( _.productsPerMinute.head ).amount
   val mainProductAmountPerUnit: Double = mainProductAmount / machineCount
@@ -48,7 +51,6 @@ case class ClockedRecipe(
 
   def multipleOf( n: Int ): ClockedRecipe =
     ClockedRecipe.fixed( recipe.item, fractionalAmount, 1 + n * ( ( machineCount - 1 ) / n ) )
-
 }
 
 object ClockedRecipe {

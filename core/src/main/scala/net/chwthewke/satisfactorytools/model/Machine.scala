@@ -14,16 +14,17 @@ case class Machine(
     className: ClassName,
     displayName: String,
     machineType: MachineType,
-    powerConsumption: Double
+    powerConsumption: Double,
+    powerConsumptionExponent: Double
 )
 
 object Machine {
 
   implicit val machineShow: Show[Machine] = Show.show {
-    case Machine( className, displayName, machineType, powerConsumption ) =>
+    case Machine( className, displayName, machineType, powerConsumption, powerConsumptionExponent ) =>
       show"""$displayName # $className
             |$machineType
-            |Power: ${f"$powerConsumption%.0f MW"}""".stripMargin
+            |Power: ${f"$powerConsumption%.0f MW"} (exp: ${f"$powerConsumptionExponent%.4f"})""".stripMargin
   }
 
   implicit val machineDecoder: Decoder[Machine] = deriveDecoder[Machine]

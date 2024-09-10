@@ -26,9 +26,6 @@ case class Model(
 object Model {
 
   implicit val modelShow: Show[Model] = Show.show { model =>
-    implicit val showItem: Show[Item]       = Show.show( _.displayName )
-    implicit val showMachine: Show[Machine] = Show.show( _.displayName )
-
     show"""Manufacturing Recipes
           |${model.manufacturingRecipes.map( _.show ).intercalate( "\n" )}
           |

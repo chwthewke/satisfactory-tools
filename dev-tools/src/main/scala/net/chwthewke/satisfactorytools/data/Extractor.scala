@@ -18,6 +18,7 @@ final case class Extractor(
     allowedResourceForms: List[Form],
     allowedResources: Option[NonEmptyList[ClassName]],
     powerConsumption: Double,
+    powerConsumptionExponent: Double,
     cycleTime: FiniteDuration,
     itemsPerCycle: Int
 )
@@ -27,7 +28,7 @@ object Extractor {
   implicit val extractorDecoder: Decoder[Extractor] = {
     import Parsers._
 
-    Decoder.forProduct9(
+    Decoder.forProduct10(
       "ClassName",
       "mDisplayName",
       "mExtractorTypeName",
@@ -35,6 +36,7 @@ object Extractor {
       "mOnlyAllowCertainResources",
       "mAllowedResources",
       "mPowerConsumption",
+      "mPowerConsumptionExponent",
       "mExtractCycleTime",
       "mItemsPerCycle"
     )(
@@ -46,9 +48,10 @@ object Extractor {
           fr: Boolean,
           rf: List[ClassName],
           pc: Double,
+          pe: Double,
           ct: Double,
           ic: Int
-      ) => Extractor( cn, dn, etn, arf, NonEmptyList.fromList( rf ).flatMap( fr.option( _ ) ), pc, ct.seconds, ic )
+      ) => Extractor( cn, dn, etn, arf, NonEmptyList.fromList( rf ).flatMap( fr.option( _ ) ), pc, pe, ct.seconds, ic )
     )(
       Decoder[ClassName],
       Decoder[String],
@@ -57,6 +60,7 @@ object Extractor {
       Decoders.booleanStringDecoder,
       listOf( bpGeneratedClass ).decoder
         .or( Decoder[String].ensure( _.isEmpty, "Cannot decode allowed resources" ).as( List.empty[ClassName] ) ),
+      Decoders.doubleStringDecoder,
       Decoders.doubleStringDecoder,
       Decoders.doubleStringDecoder,
       Decoders.intStringDecoder
@@ -72,7 +76,7 @@ object Extractor {
   implicit val extractorShow: Show[Extractor] = Show { extractor =>
     show"""${extractor.displayName} # ${extractor.className}
           |${extractor.itemsPerCycle} / ${extractor.cycleTime}
-          |Power: ${f"${extractor.powerConsumption}%.0f"} MW
+          |Power: ${f"${extractor.powerConsumption}%.0f"} MW (exp: ${f"${extractor.powerConsumptionExponent}%.4f"})
           |Resource forms: ${extractor.allowedResourceForms.map( _.show ).intercalate( ", " )}
           |Resources: ${extractor.allowedResources.cata( _.toList.map( _.show ).intercalate( ", " ), "any" )}
           |""".stripMargin
