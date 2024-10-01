@@ -7,6 +7,7 @@ import cats.syntax.apply._
 import cats.syntax.functorFilter._
 import cats.syntax.traverse._
 import doobie._
+import doobie.implicits._
 import doobie.util.invariant.UnexpectedContinuation
 import doobie.util.invariant.UnexpectedEnd
 
