@@ -15,6 +15,7 @@ import protocol.ModelVersionId
 import protocol.OutputTab
 import protocol.PlanHeader
 import protocol.PlanId
+import protocol.SolutionHeader
 import protocol.SolutionId
 import protocol.UserId
 
@@ -46,13 +47,21 @@ trait PlannerApi[F[_]] { self =>
 
   def setCustomGroupSelection( planId: PlanId, groups: Map[ClassName, Int] ): F[Unit]
 
-  def setCustomGroupOrder( planId: PlanId, group: Int, groupRow: Int ): F[Unit]
+  def swapCustomGroupRowWithNext( planId: PlanId, group: Int, groupRow: Int ): F[Unit]
+
+  def swapCustomGroupRowWithPrevious( planId: PlanId, group: Int, groupRow: Int ): F[Unit]
+
+  def toggleCustomGroupSectionBefore( planId: PlanId, group: Int, groupRow: Int ): F[Unit]
 
   def getPlanHeader( planId: PlanId ): OptionT[F, PlanHeader]
 
   def getPlanQuery( planId: PlanId, inputTab: InputTab ): F[inputTab.Data]
 
-  def getPlanResult( planId: PlanId, solutionId: SolutionId, outputTab: OutputTab ): F[outputTab.Data]
+  def getPlanResult(
+      planId: PlanId,
+      solutionHeader: SolutionHeader[SolutionId],
+      outputTab: OutputTab
+  ): F[SolutionHeader[outputTab.Data]]
 
   def getCustomGroupSelection( planId: PlanId ): F[Map[ClassName, Int]]
 
@@ -103,8 +112,14 @@ trait PlannerApi[F[_]] { self =>
     override def setCustomGroupSelection( planId: PlanId, groups: Map[ClassName, Int] ): G[Unit] =
       f( self.setCustomGroupSelection( planId, groups ) )
 
-    override def setCustomGroupOrder( planId: PlanId, group: Int, groupRow: Int ): G[Unit] =
-      f( self.setCustomGroupOrder( planId, group, groupRow ) )
+    override def swapCustomGroupRowWithNext( planId: PlanId, group: Int, groupRow: Int ): G[Unit] =
+      f( self.swapCustomGroupRowWithNext( planId, group, groupRow ) )
+
+    override def swapCustomGroupRowWithPrevious( planId: PlanId, group: Int, groupRow: Int ): G[Unit] =
+      f( self.swapCustomGroupRowWithPrevious( planId, group, groupRow ) )
+
+    override def toggleCustomGroupSectionBefore( planId: PlanId, group: Int, groupRow: Int ): G[Unit] =
+      f( self.toggleCustomGroupSectionBefore( planId, group, groupRow ) )
 
     override def getPlanHeader( planId: PlanId ): OptionT[G, PlanHeader] =
       self.getPlanHeader( planId ).mapK( f )
@@ -112,8 +127,12 @@ trait PlannerApi[F[_]] { self =>
     override def getPlanQuery( planId: PlanId, inputTab: InputTab ): G[inputTab.Data] =
       f( self.getPlanQuery( planId, inputTab ) )
 
-    override def getPlanResult( planId: PlanId, solutionId: SolutionId, outputTab: OutputTab ): G[outputTab.Data] =
-      f( self.getPlanResult( planId, solutionId, outputTab ) )
+    override def getPlanResult(
+        planId: PlanId,
+        solutionHeader: SolutionHeader[SolutionId],
+        outputTab: OutputTab
+    ): G[SolutionHeader[outputTab.Data]] =
+      f( self.getPlanResult( planId, solutionHeader, outputTab ) )
 
     override def getCustomGroupSelection( planId: PlanId ): G[Map[ClassName, Int]] =
       f( self.getCustomGroupSelection( planId ) )

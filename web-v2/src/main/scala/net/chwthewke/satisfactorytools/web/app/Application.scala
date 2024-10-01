@@ -13,10 +13,10 @@ import cats.syntax.eq._
 import cats.syntax.flatMap._
 import cats.syntax.foldable._
 import cats.syntax.functor._
+import cats.syntax.nested._
 import cats.syntax.semigroup._
 import cats.syntax.semigroupk._
 import cats.syntax.show._
-import cats.syntax.traverse._
 import org.http4s.ContextRequest
 import org.http4s.ContextRoutes
 import org.http4s.FormDataDecoder
@@ -78,7 +78,7 @@ class Application[F[_]](
       for {
         modelVersion <- decode( req )( forms.Decoders.modelVersion )
         planId       <- planner.newPlan( session.userId, modelVersion )
-        response     <- redirect( planId, InputTab.Bill, OutputTab.Steps )
+        response     <- redirect( planId, InputTab.Bill, OutputTab.Steps( editGroups = false ) )
       } yield response
 
     case ContextRequest( session, POST -> Root / "library" ) =>
@@ -111,13 +111,12 @@ class Application[F[_]](
   val planRoutes: ContextRoutes[Session, F] = ContextRoutes.of {
     // TODO make view read-only if plan owner != session user
     case ContextRequest( session, GET -> Root / "plan" / segment.PlanId( planId ) ) =>
-      redirect( planId, InputTab.Bill, OutputTab.Steps )
+      redirect( planId, InputTab.Bill, OutputTab.Steps( editGroups = false ) )
 
     case ContextRequest(
           session,
-          GET -> Root / "plan" / segment.PlanId( planId ) / segment.InputTab( inputTab ) / segment.OutputTab(
-            outputTab
-          )
+          GET -> Root / "plan" / segment.PlanId( planId ) /
+          segment.InputTab( inputTab ) / segment.OutputTab( outputTab )
         ) =>
       viewPlan( planId, inputTab, outputTab )
 
@@ -139,12 +138,12 @@ class Application[F[_]](
     def getFactory( planId: PlanId ): OptionT[F, CompareFactory] =
       planner
         .getPlanHeader( planId )
-        .subflatMap( header => header.solution.value )
-        .semiflatMap( solutionId =>
+        .map( header => header.solution )
+        .flatMapF( solutionHeader =>
           (
-            planner.getPlanResult( planId, solutionId, OutputTab.Steps ).map( _._1 ),
-            planner.getPlanResult( planId, solutionId, OutputTab.Items )
-          ).tupled
+            planner.getPlanResult( planId, solutionHeader, OutputTab.Steps( editGroups = false ) ).nested,
+            planner.getPlanResult( planId, solutionHeader, OutputTab.Items ).nested
+          ).mapN { case ( ( factory, _ ), items ) => ( factory, items ) }.value.map( _.value )
         )
 
     val compareOrError: EitherT[F, String, ( CompareFactory, CompareFactory )] = for {
@@ -182,7 +181,7 @@ class Application[F[_]](
       case ( header, model ) =>
         for {
           inputData       <- planner.getPlanQuery( planId, inputTab )
-          outputData      <- header.solution.traverse( planner.getPlanResult( planId, _, outputTab ) )
+          outputData      <- planner.getPlanResult( planId, header.solution, outputTab )
           migrationTarget <- models.getModelVersions.map( _.lastOption.map( _._2 ) )
           response <- Ok( PlanView( model, migrationTarget, header, inputTab, inputData, outputTab, outputData ) )
         } yield response
@@ -271,8 +270,12 @@ class Application[F[_]](
 
   private def reorderGroup( planId: PlanId, hasChanges: Boolean, outputTab: OutputTab, actionPath: Uri.Path ): F[Unit] =
     ( outputTab, actionPath ) match {
-      case ( OutputTab.CustomGroup( ix ), Actions.outputGroupOrder /: segment.Int( row ) /: _ ) =>
-        planner.setCustomGroupOrder( planId, ix, row ).whenA( !hasChanges )
+      case ( OutputTab.CustomGroup( ix, _ ), Actions.outputGroupMoveDown /: segment.Int( row ) /: _ ) =>
+        planner.swapCustomGroupRowWithNext( planId, ix, row ).whenA( !hasChanges )
+      case ( OutputTab.CustomGroup( ix, _ ), Actions.outputGroupMoveUp /: segment.Int( row ) /: _ ) =>
+        planner.swapCustomGroupRowWithPrevious( planId, ix, row ).whenA( !hasChanges )
+      case ( OutputTab.CustomGroup( ix, _ ), Actions.outputGroupSection /: segment.Int( row ) /: _ ) =>
+        planner.toggleCustomGroupSectionBefore( planId, ix, row ).whenA( !hasChanges )
       case _ =>
         F.unit
     }
@@ -338,7 +341,7 @@ class Application[F[_]](
       request: Request[F]
   ): OptionT[F, PlanId => F[Unit]] =
     outputTab match {
-      case OutputTab.Steps =>
+      case OutputTab.Steps( true ) =>
         collectChanges(
           request,
           Decoders.customGroups,

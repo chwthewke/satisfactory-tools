@@ -226,6 +226,7 @@ object Library extends LibraryApi[ConnectionIO] {
           |  , "amount"
           |  , "custom_group"
           |  , "group_order"
+          |  , "section_before"
           |  )
           |  SELECT
           |    ?
@@ -233,6 +234,7 @@ object Library extends LibraryApi[ConnectionIO] {
           |  , "amount"
           |  , "custom_group"
           |  , "group_order"
+          |  , "section_before"
           |  FROM       "solution_manufacturing_recipes" r
           |  INNER JOIN "plan_solutions" s ON r."solution_id" = s."id"
           |  WHERE s."plan_id" = ?

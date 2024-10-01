@@ -2,6 +2,8 @@ package net.chwthewke.satisfactorytools
 package persistence
 package plans
 
+import cats.data.NonEmptyVector
+
 import protocol.PlanId
 
 class CustomGroupsChecks extends DatabaseSpec {
@@ -25,9 +27,21 @@ class CustomGroupsChecks extends DatabaseSpec {
       }
     }
 
+    "reads the group order" must {
+      "type check" in {
+        check( CustomGroups.statements.selectGroupOrder( PlanId( 1 ), 1, NonEmptyVector.of( 2, 3 ) ) )
+      }
+    }
+
     "updates group order" must {
       "type check" in {
-        check( CustomGroups.statements.updateGroupOrder( PlanId( 1 ), 1, 0 ) )
+        check( CustomGroups.statements.updateGroupOrder( 1 ) )
+      }
+    }
+
+    "toggles section separator" must {
+      "type check" in {
+        check( CustomGroups.statements.toggleSectionBefore( PlanId( 1 ), 1, 2 ) )
       }
     }
   }
