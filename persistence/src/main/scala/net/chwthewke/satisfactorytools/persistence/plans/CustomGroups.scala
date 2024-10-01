@@ -2,7 +2,9 @@ package net.chwthewke.satisfactorytools
 package persistence
 package plans
 
+import cats.data.NonEmptyVector
 import cats.data.OptionT
+import cats.syntax.applicative._
 import cats.syntax.apply._
 import cats.syntax.functor._
 import cats.syntax.functorFilter._
@@ -11,6 +13,7 @@ import doobie.implicits._
 
 import data.ClassName
 import data.Countable
+import model.GroupAssignments
 import protocol.PlanHeader
 import protocol.PlanId
 import protocol.SolutionHeader
@@ -27,7 +30,7 @@ object CustomGroups {
           ReadModel.readRecipes( header.modelVersionId )
         ).mapN {
           case ( groups, recipes ) =>
-            groups.assignments
+            groups.groupsByItem
               .flatMap {
                 case ( recipeId, ix ) => recipes.get( recipeId ).map( _.className ).tupleRight( ix )
               }
@@ -35,26 +38,96 @@ object CustomGroups {
       )
       .getOrElse( Map.empty )
 
-  private[plans] def readPlanCustomGroups( header: PlanHeader ): ConnectionIO[CustomGroupLists] =
+  private[plans] def readPlanCustomGroups( header: PlanHeader ): ConnectionIO[GroupAssignments[RecipeId]] =
     OptionT
       .fromOption[ConnectionIO]( header.solution.valueAndCount )
       .semiflatMap { case ( solutionId, groupCount ) => readCustomGroups( solutionId, groupCount ) }
-      .getOrElse( CustomGroupLists.empty( SolutionHeader.DefaultCustomGroups ) )
+      .getOrElse( GroupAssignments.emptyGroups( SolutionHeader.DefaultCustomGroups ) )
 
-  def writeCustomGroupOrder( planId: PlanId, group: Int, groupRow: Int ): ConnectionIO[Unit] =
-    statements.updateGroupOrder( planId, group, groupRow ).run.void
+  type GroupOrderRow  = ( SolutionId, RecipeId, Int, Boolean )
+  type GroupOrderSwap = ( GroupOrderRow, GroupOrderRow, Option[GroupOrderRow] )
 
-  def readCustomGroups( solutionId: SolutionId, groupCount: Int ): ConnectionIO[CustomGroupLists] =
+  private def getCustomGroupRows(
+      planId: PlanId,
+      group: Int,
+      from: Int,
+      thirdRow: Boolean
+  ): OptionT[ConnectionIO, GroupOrderSwap] = {
+    val queriedRows: NonEmptyVector[Int] =
+      if (thirdRow) NonEmptyVector.of( 0, 1, 2 ) else NonEmptyVector.of( 0, 1 )
+
+//    import cats.syntax.flatMap._
+    OptionT(
+      statements
+        .selectGroupOrder( planId, group, queriedRows.map( from + _ ) )
+        .stream
+        .mapFilter { case ( solId, recipeId, orderOpt, section ) => orderOpt.map( ( solId, recipeId, _, section ) ) }
+        .compile
+        .toVector
+        // .flatTap( rows => FC.delay( println( rows.mkString( "READ ROWS\n  ", "\n  ", "" ) ) ) )
+        .map( vec => ( vec.headOption, vec.lift( 1 ) ).mapN( ( _, _, vec.lift( 2 ) ) ) )
+    )
+  }
+
+  private def swapDown( rows: GroupOrderSwap ): Vector[GroupOrderRow] = rows match {
+    case (
+          ( sol1, rec1, ord1, sec1 ),
+          ( sol2, rec2, ord2, sec2 ),
+          _
+        ) if sol2 == sol1 && ord2 == ord1 + 1 =>
+      if (sec2)
+        Vector(
+          ( sol1, rec1, ord1, true ),
+          ( sol2, rec2, ord2, false )
+        )
+      else
+        Vector(
+          ( sol2, rec2, ord1, sec1 ),
+          ( sol1, rec1, ord2, false )
+        )
+
+    case _ => Vector.empty
+  }
+
+  private def swapUp( rows: GroupOrderSwap ): Vector[GroupOrderRow] = rows match {
+    case (
+          r1 @ ( sol1, rec1, ord1, sec1 ),
+          ( sol2, rec2, ord2, sec2 ),
+          next
+        )
+        if sol2 == sol1 && ord2 == ord1 + 1
+          && next.forall { case ( sol3, _, ord3, _ ) => sol3 == sol1 && ord3 == ord2 + 1 } =>
+      if (sec2)
+        Vector( r1, ( sol2, rec2, ord2, false ) ) ++ next.map( _.copy( _4 = true ) )
+      else
+        Vector(
+          ( sol2, rec2, ord1, sec1 ),
+          ( sol1, rec1, ord2, false )
+        )
+
+    case _ => Vector.empty
+  }
+
+  def swapCustomGroupRowWithNext( planId: PlanId, group: Int, groupRow: Int, up: Boolean ): ConnectionIO[Unit] =
+    getCustomGroupRows( planId, group, groupRow, up )
+      .foreachF { rows =>
+        val swapped: Vector[( SolutionId, RecipeId, Int, Boolean )] = if (up) swapUp( rows ) else swapDown( rows )
+//        FC.delay( println( swapped.mkString( "WRITTEN ROWS\n  ", "\n  ", "" ) ) ) *>
+        statements.updateGroupOrder( group ).updateMany( swapped ).void
+      }
+
+  def toggleCustomGroupSectionBefore( planId: PlanId, group: Int, groupRow: Int ): ConnectionIO[Unit] =
+    statements.toggleSectionBefore( planId, group, groupRow ).run.whenA( groupRow > 0 )
+
+  def readCustomGroups( solutionId: SolutionId, groupCount: Int ): ConnectionIO[GroupAssignments[RecipeId]] =
     statements.selectRecipeGroups
       .toQuery0( solutionId )
       .stream
-      .mapFilter { case ( recipe, groupOpt ) => groupOpt.tupleRight( recipe ) }
-      .groupAdjacentBy( _._1 )
       .compile
-      .fold( Vector.fill( groupCount )( Vector.empty[RecipeId] ) ) {
-        case ( acc, ( groupIx, chunk ) ) => acc.updated( groupIx - 1, chunk.map( _._2 ).toVector )
+      .fold( GroupAssignments.emptyGroups[RecipeId]( groupCount ) ) {
+        case ( groups, ( recipe, groupOpt, sectionBefore ) ) =>
+          groupOpt.foldLeft( groups )( _.append( _, recipe, sectionBefore ) )
       }
-      .map( CustomGroupLists( _ ) )
 
   def updateCustomGroupSelection(
       planId: PlanId,
@@ -111,12 +184,13 @@ object CustomGroups {
 
   private[plans] object statements {
 
-    val selectRecipeGroups: Query[SolutionId, ( RecipeId, Option[Int] )] =
+    val selectRecipeGroups: Query[SolutionId, ( RecipeId, Option[Int], Boolean )] =
       Query(
         // language=SQL
         """SELECT
           |    "recipe_id"
           |  , "custom_group"
+          |  , "section_before"
           |FROM "solution_manufacturing_recipes"
           |WHERE "solution_id" = ?
           |ORDER BY "custom_group", "group_order"
@@ -145,16 +219,45 @@ object CustomGroups {
           |""".stripMargin
       )
 
-    def updateGroupOrder( planId: PlanId, groupIndex: Int, groupRow: Int ): Update0 =
+    def selectGroupOrder(
+        planId: PlanId,
+        groupIndex: Int,
+        rows: NonEmptyVector[Int]
+    ): Query0[( SolutionId, RecipeId, Option[Int], Boolean )] =
+      // language=SQL
+      sql"""SELECT r."solution_id", r."recipe_id", r."group_order", r."section_before"
+           |FROM       "solution_manufacturing_recipes" r
+           |INNER JOIN "plan_solutions"                 s ON s."id" = r."solution_id"
+           |WHERE s."plan_id" = $planId
+           |  AND r."custom_group" = $groupIndex
+           |  AND ${Fragments.in( fr"""r."group_order"""", rows )}
+           |ORDER BY r."group_order"
+           |""".stripMargin //
+        .query
+
+    def updateGroupOrder( groupNumber: Int ): Update[( SolutionId, RecipeId, Int, Boolean )] =
+      Update[( Int, Boolean, SolutionId, RecipeId, Int )](
+        // language=SQL
+        """UPDATE "solution_manufacturing_recipes"
+          |SET
+          |  "group_order" = ?
+          |, "section_before" = ?
+          |WHERE "solution_id" = ?
+          |  AND "recipe_id" = ?
+          |  AND "custom_group" = ? 
+          |""".stripMargin
+      ).contramap { case ( solId, recId, ord, sec ) => ( ord, sec, solId, recId, groupNumber ) }
+
+    def toggleSectionBefore( planId: PlanId, groupNumber: Int, groupRow: Int ): Update0 =
       // language=SQL
       sql"""UPDATE "solution_manufacturing_recipes" r
            |SET
-           |  "group_order" = ${2 * groupRow + 1} - r."group_order"
+           |  "section_before" = NOT "section_before"
            |FROM "plan_solutions" s
-           |WHERE s."id"           = r."solution_id"
-           |  AND s."plan_id"      = $planId
-           |  AND r."custom_group" = $groupIndex
-           |  AND "group_order"    IN ( $groupRow, ${groupRow + 1} )
+           |WHERE s."id" = r."solution_id"
+           |  AND s."plan_id" = $planId
+           |  AND r."custom_group" = $groupNumber
+           |  AND r."group_order" = $groupRow
            |""".stripMargin //
         .update
   }

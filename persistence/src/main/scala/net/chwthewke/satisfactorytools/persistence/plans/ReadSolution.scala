@@ -11,10 +11,13 @@ import cats.syntax.semigroup._
 import cats.syntax.traverse._
 import doobie._
 import doobie.implicits._
+import scala.annotation.nowarn
 
+import data.ClassName
 import data.Countable
 import data.Item
 import model.Bill
+import model.GroupAssignment
 import model.GroupAssignments
 import model.Machine
 import model.Recipe
@@ -30,32 +33,41 @@ import protocol.SolutionId
 
 object ReadSolution {
 
+  @nowarn( "msg=unreachable code" )
   def readPlanResult[D](
       planId: PlanId,
       solutionId: SolutionId,
+      groupCount: Int,
       outputTab: OutputTab.Aux[D]
   ): ConnectionIO[D] =
     outputTab match {
-      case OutputTab.CustomGroup( ix ) => getGroupResult( planId, solutionId, ix )
-      case OutputTab.GroupIO           => getGroupIO( planId, solutionId )
-      case OutputTab.Steps             => getSolution( planId, solutionId )
-      case OutputTab.Items             => getItems( planId, solutionId )
-      case OutputTab.Machines          => getMachines( planId, solutionId )
-      case OutputTab.Inputs            => getRawInputs( planId, solutionId )
-      case OutputTab.Tree              => getPlanTree( planId, solutionId )
+      case OutputTab.CustomGroup( ix, _ ) => getGroupResult( planId, solutionId, groupCount, ix )
+      case OutputTab.Steps( _ )           => getSolution( planId, solutionId, groupCount )
+      case OutputTab.GroupIO              => getGroupIO( planId, solutionId, groupCount )
+      case OutputTab.Items                => getItems( planId, solutionId, groupCount )
+      case OutputTab.Machines             => getMachines( planId, solutionId, groupCount )
+      case OutputTab.Inputs               => getRawInputs( planId, solutionId, groupCount )
+      case OutputTab.Tree                 => getPlanTree( planId, solutionId, groupCount )
     }
 
-  private def getPlanTree( planId: PlanId, solutionId: SolutionId ): ConnectionIO[FactoryTree] =
+  private def getPlanTree( planId: PlanId, solutionId: SolutionId, groupCount: Int ): ConnectionIO[FactoryTree] =
     (
-      getSolution( planId, solutionId ),
+      getSolution( planId, solutionId, groupCount ),
       PlanTrees.readPlanTreeCommands( planId )
     ).mapN { case ( ( factory, _ ), commands ) => FactoryTree( factory.allRecipes ).runAll( commands ) }
 
-  private def getGroupResult( planId: PlanId, solutionId: SolutionId, group: Int ): ConnectionIO[CustomGroupResult] = {
-    ( ReadSolverInputs.getBill( planId ), getSolution( planId, solutionId ) ).mapN {
+  private def getGroupResult(
+      planId: PlanId,
+      solutionId: SolutionId,
+      groupCount: Int,
+      groupNumber: Int
+  ): ConnectionIO[CustomGroupResult] = {
+    ( ReadSolverInputs.getBill( planId ), getSolution( planId, solutionId, groupCount ) ).mapN {
       case ( bill, ( factory, groups ) ) =>
+        val group: GroupAssignment[ClassName] = groups.at( groupNumber ).getOrElse( GroupAssignment.empty )
+
         val groupRecipes: Vector[Countable[Double, Recipe]] =
-          factory.manufacturing.filter( r => groups.get( r.item.className ).contains( group ) )
+          factory.manufacturing.filter( r => group.contains( r.item.className ) )
         val external = groupRecipes
           .foldMap( _.flatTraverse( _.itemsPerMinute ) )
           .gather
@@ -75,14 +87,14 @@ object ReadSolution {
         ): ItemSrcDest.IntraGroup =
           srcDest match {
             case step @ ItemSrcDest.Step( _, stepGroup ) =>
-              if (stepGroup == group) step else otherGroup( stepGroup )
+              if (stepGroup == groupNumber) step else otherGroup( stepGroup )
 
             case other: ItemSrcDest.IntraGroup => other
           }
 
         def inGroup( srcDest: ItemSrcDest ): Boolean =
           srcDest match {
-            case ItemSrcDest.Step( _, stepGroupOpt ) => stepGroupOpt == group
+            case ItemSrcDest.Step( _, stepGroupOpt ) => stepGroupOpt == groupNumber
             case _                                   => false
           }
 
@@ -109,8 +121,9 @@ object ReadSolution {
         def machines: Vector[Countable[Int, Machine]] = extractMachines( groupFactory )
 
         CustomGroupResult(
-          group,
+          groupNumber,
           groupFactory,
+          group,
           itemIO,
           machines
         )
@@ -120,9 +133,10 @@ object ReadSolution {
 
   private def getGroupIO(
       planId: PlanId,
-      solutionId: SolutionId
+      solutionId: SolutionId,
+      groupCount: Int
   ): ConnectionIO[Map[Item, ItemIO[ItemSrcDest.InterGroup]]] =
-    ( ReadSolverInputs.getBill( planId ), getSolution( planId, solutionId ) ).mapN {
+    ( ReadSolverInputs.getBill( planId ), getSolution( planId, solutionId, groupCount ) ).mapN {
       case ( bill, ( factory, groups ) ) =>
         def adaptItemSrcDest( otherGroup: Int => ItemSrcDest.InterGroup )(
             srcDest: ItemSrcDest.Global
@@ -142,7 +156,7 @@ object ReadSolution {
                 itemIO.destinations.map( _.map( adaptItemSrcDest( ItemSrcDest.ToGroup ) ) ).gather
 
               val intraGroupCancellation: Map[Int, Double] =
-                ( 0 +: groups.groupsByClass.values.toVector ).distinct
+                ( 0 +: groups.groupsByItem.values.toVector ).distinct
                   .mapFilter( n =>
                     (
                       sources.collectFirst { case Countable( ItemSrcDest.FromGroup( `n` ), amount ) => amount },
@@ -170,7 +184,11 @@ object ReadSolution {
           }
     }
 
-  private def getSolution( planId: PlanId, solutionId: SolutionId ): ConnectionIO[( Factory, GroupAssignments )] =
+  private def getSolution(
+      planId: PlanId,
+      solutionId: SolutionId,
+      groupCount: Int
+  ): ConnectionIO[( Factory, GroupAssignments[ClassName] )] =
     (
       readModelIds( planId, ReadModel.readItems ),
       readModelIds( planId, ReadModel.readRecipes ),
@@ -186,15 +204,16 @@ object ReadSolution {
               r.traverse( recipesById.get ).map( ClockedRecipe.overclocked( _, s ) )
           }
 
-        val manufacturingRecipesWithGroups: Vector[( Countable[Double, Recipe], Option[Int] )] =
+        val manufacturingRecipesWithGroups: Vector[( Countable[Double, Recipe], ( Option[Int], Boolean ) )] =
           manufacturing.mapFilter {
-            case ( r, g ) =>
-              r.traverse( recipesById.get ).tupleRight( g )
+            case ( r, g, b ) =>
+              r.traverse( recipesById.get ).tupleRight( ( g, b ) )
           }
 
-        val groups: GroupAssignments = GroupAssignments(
-          manufacturingRecipesWithGroups.flatMap { case ( r, g ) => g.tupleLeft( r.item.className ) }.toMap
-        )
+        val groups: GroupAssignments[ClassName] =
+          manufacturingRecipesWithGroups.foldLeft( GroupAssignments.emptyGroups[ClassName]( groupCount ) ) {
+            case ( acc, ( r, ( g, b ) ) ) => g.fold( acc )( n => acc.append( n, r.item.className, b ) )
+          }
 
         val extraInputs: Vector[Countable[Double, Item]] =
           inputs.mapFilter( _.traverse( itemsById.get ) )
@@ -215,10 +234,14 @@ object ReadSolution {
 
   // TODO see if these can be optimized with purpose-specific SQL
   //   but it's not exactly highest priority
-  private def getItems( planId: PlanId, solutionId: SolutionId ): ConnectionIO[Map[Item, ItemIO[ItemSrcDest.Global]]] =
+  private def getItems(
+      planId: PlanId,
+      solutionId: SolutionId,
+      groupCount: Int
+  ): ConnectionIO[Map[Item, ItemIO[ItemSrcDest.Global]]] =
     (
       ReadSolverInputs.getBill( planId ),
-      getSolution( planId, solutionId )
+      getSolution( planId, solutionId, groupCount )
     ).mapN {
       case ( bill, ( factory, groups ) ) =>
         extractItemIO( bill, factory, groups )
@@ -227,7 +250,7 @@ object ReadSolution {
   private def extractItemIO(
       bill: Bill,
       factory: Factory,
-      groups: GroupAssignments
+      groups: GroupAssignments[ClassName]
   ): Map[Item, ItemIO[ItemSrcDest.Global]] =
     factory.manufacturingRecipes.foldMap( manufacturingItemInOut( groups, _ ) ) |+|
       factory.extraction.foldMap( extractionItemInOut ) |+|
@@ -236,7 +259,7 @@ object ReadSolution {
       itemOut( ItemSrcDest.Byproduct, factory.extraOutputs )
 
   private def manufacturingItemInOut(
-      groups: GroupAssignments,
+      groups: GroupAssignments[ClassName],
       recipeBlock: ClockedRecipe
   ): Map[Item, ItemIO[ItemSrcDest.Global]] = {
     val key: ItemSrcDest.Global =
@@ -267,8 +290,12 @@ object ReadSolution {
   ): Map[Item, ItemIO[A]] =
     items.foldMap( c => Map( c.item -> ItemIO.out( key, c.amount ) ) )
 
-  private def getMachines( planId: PlanId, solutionId: SolutionId ): ConnectionIO[Vector[Countable[Int, Machine]]] =
-    getSolution( planId, solutionId )
+  private def getMachines(
+      planId: PlanId,
+      solutionId: SolutionId,
+      groupCount: Int
+  ): ConnectionIO[Vector[Countable[Int, Machine]]] =
+    getSolution( planId, solutionId, groupCount )
       .map( _._1 )
       .map( extractMachines )
 
@@ -278,8 +305,12 @@ object ReadSolution {
       .gather
       .sortBy( m => ( m.item.machineType, m.item.powerConsumption ) )
 
-  private def getRawInputs( planId: PlanId, solutionId: SolutionId ): ConnectionIO[Vector[Countable[Double, Item]]] =
-    getSolution( planId, solutionId )
+  private def getRawInputs(
+      planId: PlanId,
+      solutionId: SolutionId,
+      groupCount: Int
+  ): ConnectionIO[Vector[Countable[Double, Item]]] =
+    getSolution( planId, solutionId, groupCount )
       .map( _._1 )
       .map( extractRawInputs )
 
@@ -287,13 +318,14 @@ object ReadSolution {
     factory.extraction.map( _.productsPerMinute.head ).gather
 
   private[plans] object statements {
-    val selectManufacturingRecipes: Query[SolutionId, ( Countable[Double, RecipeId], Option[Int] )] =
+    val selectManufacturingRecipes: Query[SolutionId, ( Countable[Double, RecipeId], Option[Int], Boolean )] =
       Query(
         // language=SQL
         """SELECT
           |    "recipe_id"
           |  , "amount"
           |  , "custom_group"
+          |  , "section_before"
           |FROM "solution_manufacturing_recipes"
           |WHERE "solution_id" = ?
           |ORDER BY "custom_group", "group_order", "id"

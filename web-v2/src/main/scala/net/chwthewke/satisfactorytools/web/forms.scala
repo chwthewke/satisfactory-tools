@@ -116,18 +116,21 @@ object forms {
 
     object output {
       def apply( tab: OutputTab ): String = tab match {
-        case OutputTab.Steps             => "steps"
-        case OutputTab.Items             => "items"
-        case OutputTab.Machines          => "machines"
-        case OutputTab.Inputs            => "inputs"
-        case OutputTab.CustomGroup( ix ) => s"group_$ix"
-        case OutputTab.GroupIO           => "group-io"
-        case OutputTab.Tree              => "tree"
+        case OutputTab.Steps( false )           => "steps"
+        case OutputTab.Steps( true )            => "steps_groups"
+        case OutputTab.Items                    => "items"
+        case OutputTab.Machines                 => "machines"
+        case OutputTab.Inputs                   => "inputs"
+        case OutputTab.CustomGroup( ix, false ) => s"group_$ix"
+        case OutputTab.CustomGroup( ix, true )  => s"group_edit_$ix"
+        case OutputTab.GroupIO                  => "group-io"
+        case OutputTab.Tree                     => "tree"
       }
 
       def unapply( string: String ): Option[OutputTab] =
         Vector(
-          OutputTab.Steps,
+          OutputTab.Steps( editGroups = false ),
+          OutputTab.Steps( editGroups = true ),
           OutputTab.Items,
           OutputTab.Machines,
           OutputTab.Inputs,
@@ -138,7 +141,13 @@ object forms {
             Option
               .when( string.startsWith( "group_" ) )( string.stripPrefix( "group_" ) )
               .flatMap( Numeric[Int].parseString )
-              .map( OutputTab.CustomGroup )
+              .map( OutputTab.CustomGroup( _, editOrder = false ) )
+          )
+          .orElse(
+            Option
+              .when( string.startsWith( "group_edit_" ) )( string.stripPrefix( "group_edit_" ) )
+              .flatMap( Numeric[Int].parseString )
+              .map( OutputTab.CustomGroup( _, editOrder = true ) )
           )
     }
 
@@ -298,7 +307,9 @@ object forms {
     val addGroup: String    = "group_inc"
     val removeGroup: String = "group_dec"
 
-    val outputGroupOrder: String = "group_order"
+    val outputGroupMoveUp: String   = "group_move_up"
+    val outputGroupMoveDown: String = "group_move_down"
+    val outputGroupSection: String  = "group_section"
 
   }
 

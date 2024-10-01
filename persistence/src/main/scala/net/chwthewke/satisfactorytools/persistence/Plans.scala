@@ -4,6 +4,7 @@ package persistence
 import cats.data.OptionT
 import cats.syntax.flatMap._
 import cats.syntax.functor._
+import cats.syntax.traverse._
 import doobie._
 
 import api.PlannerApi
@@ -21,6 +22,7 @@ import protocol.ModelVersionId
 import protocol.OutputTab
 import protocol.PlanHeader
 import protocol.PlanId
+import protocol.SolutionHeader
 import protocol.SolutionId
 import protocol.UserId
 
@@ -52,7 +54,7 @@ object Plans extends PlannerApi[ConnectionIO] {
   override def setRecipeList( planId: PlanId, recipeList: RecipeList ): ConnectionIO[Unit] =
     plans.WriteSolverInputs.updateRecipeList( planId, recipeList )
 
-  override def addAllRecipes( planId: PlanId ): doobie.ConnectionIO[Unit] =
+  override def addAllRecipes( planId: PlanId ): ConnectionIO[Unit] =
     plans.WriteSolverInputs.setDefaultRecipeList( planId )
 
   override def lockCurrentRecipes( planId: PlanId ): ConnectionIO[Unit] =
@@ -60,8 +62,11 @@ object Plans extends PlannerApi[ConnectionIO] {
       .readPlanHeader( planId )
       .mproduct( header =>
         OptionT
-          .fromOption[ConnectionIO]( header.solution.value )
-          .semiflatMap( plans.ReadSolution.readPlanResult( planId, _, OutputTab.Steps ) )
+          .fromOption[ConnectionIO]( header.solution.valueAndCount )
+          .semiflatMap {
+            case ( solutionId, groupCount ) =>
+              plans.ReadSolution.readPlanResult( planId, solutionId, groupCount, OutputTab.Steps( editGroups = false ) )
+          }
           .map( _._1 )
       )
       .flatMap {
@@ -106,16 +111,25 @@ object Plans extends PlannerApi[ConnectionIO] {
 
   override def getPlanResult(
       planId: PlanId,
-      solutionId: SolutionId,
+      solutionHeader: SolutionHeader[SolutionId],
       outputTab: OutputTab
-  ): ConnectionIO[outputTab.Data] =
-    plans.ReadSolution.readPlanResult( planId, solutionId, outputTab )
+  ): ConnectionIO[SolutionHeader[outputTab.Data]] =
+    solutionHeader.tupleRight( solutionHeader.groupCount ).traverse {
+      case ( id, groupCount ) =>
+        plans.ReadSolution.readPlanResult( planId, id, groupCount, outputTab )
+    }
 
   override def getCustomGroupSelection( planId: PlanId ): ConnectionIO[Map[ClassName, Int]] =
     plans.CustomGroups.readCustomGroupSelection( planId )
 
-  override def setCustomGroupOrder( planId: PlanId, group: Int, groupRow: Int ): ConnectionIO[Unit] =
-    plans.CustomGroups.writeCustomGroupOrder( planId, group, groupRow )
+  override def swapCustomGroupRowWithNext( planId: PlanId, group: Int, groupRow: Int ): ConnectionIO[Unit] =
+    plans.CustomGroups.swapCustomGroupRowWithNext( planId, group, groupRow, up = false )
+
+  override def swapCustomGroupRowWithPrevious( planId: PlanId, group: Int, groupRow: Int ): ConnectionIO[Unit] =
+    plans.CustomGroups.swapCustomGroupRowWithNext( planId, group, groupRow - 1, up = true )
+
+  override def toggleCustomGroupSectionBefore( planId: PlanId, group: Int, groupRow: Int ): ConnectionIO[Unit] =
+    plans.CustomGroups.toggleCustomGroupSectionBefore( planId, group, groupRow )
 
   override def computePlan( planId: PlanId ): ConnectionIO[Unit] =
     plans.Headers

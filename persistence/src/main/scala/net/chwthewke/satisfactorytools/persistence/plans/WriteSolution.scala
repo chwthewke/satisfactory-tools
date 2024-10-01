@@ -12,6 +12,7 @@ import doobie.util.invariant.UnexpectedEnd
 import data.ClassName
 import data.Countable
 import data.Item
+import model.GroupAssignments
 import model.Recipe
 import persistence.ItemId
 import persistence.ReadModel
@@ -46,7 +47,7 @@ object WriteSolution {
       planId: PlanId,
       modelVersionId: ModelVersionId,
       factory: Factory,
-      customGroups: CustomGroupLists
+      customGroups: GroupAssignments[RecipeId]
   ): ConnectionIO[Unit] =
     for {
       solutionId <- writeSolutionHeader( planId, customGroups.count )
@@ -81,7 +82,7 @@ object WriteSolution {
 
   def writeManufacturingRecipes(
       solutionId: SolutionId,
-      groups: CustomGroupLists,
+      groups: GroupAssignments[RecipeId],
       recipes: Vector[Countable[Double, Recipe]],
       recipeIds: Map[ClassName, RecipeId]
   ): doobie.ConnectionIO[Int] =
@@ -93,10 +94,10 @@ object WriteSolution {
 
   private[persistence] def writeManufacturingRecipesIds(
       solutionId: SolutionId,
-      customGroups: CustomGroupLists,
+      customGroups: GroupAssignments[RecipeId],
       recipes: Vector[Countable[Double, RecipeId]]
   ): ConnectionIO[Int] = {
-    val filteredCustomGroups: CustomGroupLists = customGroups.filter( recipes.map( _.item ).toSet )
+    val filteredCustomGroups: GroupAssignments[RecipeId] = customGroups.filter( recipes.map( _.item ).toSet )
 
     val rows: Vector[( SolutionId, Countable[Double, RecipeId], Option[( Int, Int )] )] =
       recipes.map( recipeId => ( solutionId, recipeId, filteredCustomGroups.groupIndex( recipeId.item ) ) )

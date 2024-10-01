@@ -1,48 +1,67 @@
 package net.chwthewke.satisfactorytools
 package web.view
 
-import cats.Order
 import cats.syntax.foldable._
-import cats.syntax.order._
+import cats.syntax.option._
 import cats.syntax.show._
-import enumeratum.Enum
-import enumeratum.EnumEntry
 import scalatags.Text
 import scalatags.Text.Tag
 
+import data.ClassName
+import model.GroupAssignment
 import model.GroupAssignments
 import model.Recipe
 import prod.ClockedRecipe
 import prod.Factory
+import protocol.OutputTab
 import web.forms._
 
-object StepsView extends ( ( ( Factory, GroupAssignments ), Int ) => Tag ) {
+case class StepsView( editGroups: Boolean ) extends ( ( ( Factory, GroupAssignments[ClassName] ), Int ) => Tag ) {
   import Text.all._
 
-  override def apply( steps: ( Factory, GroupAssignments ), groupCount: Int ): Tag =
+  import StepsView._
+
+  override def apply( steps: ( Factory, GroupAssignments[ClassName] ), groupCount: Int ): Tag =
     fieldset(
-      legend( "Manufacturing steps" ),
-      recipeTable( steps._1, steps._2, groupCount, CustomGroupsRadios.Full )
+      legend(
+        "Manufacturing steps",
+        raw( "&nbsp;" ),
+        button(
+          formaction := s"output/${Actions.output( OutputTab.Steps( !editGroups ) )}",
+          if (editGroups) "Done editing groups" else "Edit groups"
+        )
+      ),
+      recipeTable( steps._1, if (editGroups) CustomGroupsRadios.Full( steps._2 ) else CustomGroupsRadios.Empty )
     )
+}
+
+object StepsView {
+  import Text.all._
 
   def recipeTable(
       factory: Factory,
-      groups: GroupAssignments,
-      groupCount: Int,
       radios: CustomGroupsRadios
   ): Tag = {
-    def groupHeaders: Frag = radios match {
-      case CustomGroupsRadios.Empty   => Seq.empty[Frag]
-      case CustomGroupsRadios.Sorting => Seq( th( colspan := 2 ) )
-      case CustomGroupsRadios.Placeholder | CustomGroupsRadios.Full =>
-        Seq[Frag](
-          th( "0", textAlign.center ),
-          1.to( groupCount ).map( ix => th( ix.toString, textAlign.center ) )
+
+    val ( groupHeaders: Seq[Frag], groupWidth: Int ) = radios match {
+      case CustomGroupsRadios.Empty        => ( Seq.empty[Frag], 0 )
+      case CustomGroupsRadios.Group( _ )   => ( Seq.empty[Frag], 0 )
+      case CustomGroupsRadios.Sorting( _ ) => ( Seq( th( colspan := 2 ) ), 2 )
+      case CustomGroupsRadios.Full( groups ) =>
+        (
+          Seq[Frag](
+            th( "0", textAlign.center ),
+            1.to( groups.count ).map( ix => th( ix.toString, textAlign.center ) )
+          ),
+          groups.count + 1
         )
     }
 
     table(
+      position.relative,
+      left    := "1em",
       `class` := "table is-striped",
+      borderCollapse.collapse,
       thead(
         tr(
           groupHeaders,
@@ -55,9 +74,7 @@ object StepsView extends ( ( ( Factory, GroupAssignments ), Int ) => Tag ) {
             recipeRow(
               recipe,
               RowIndex.zero,
-              groups,
-              groupCount,
-              radios = radios.min( CustomGroupsRadios.Placeholder )
+              radios = CustomGroupsRadios.Placeholder( groupWidth )
             )
           ),
         factory.manufacturing.zipWithIndex.map {
@@ -65,36 +82,34 @@ object StepsView extends ( ( ( Factory, GroupAssignments ), Int ) => Tag ) {
             recipeRow(
               ClockedRecipe.roundUp( r ),
               RowIndex( ix, factory.manufacturing.size ),
-              groups,
-              groupCount,
               radios
             )
         },
         tr(
-          td( colspan := ( if (radios >= CustomGroupsRadios.Placeholder) groupCount else 1 ) ),
-          td( colspan := 9, textAlign.right, "Total Power" ),
+          Option.when( groupWidth > 0 )( td( colspan := groupWidth ) ),
+          td( colspan := 8, textAlign.right, "Total Power" ),
           td( textAlign.right, factory.allRecipes.foldMap( _.power ).show ),
           td( textAlign.left, "MW" )
         )
       )
     )
+
   }
 
   def recipeRow(
       block: ClockedRecipe,
       rowIndex: RowIndex,
-      groups: GroupAssignments,
-      groupCount: Int,
-      radios: CustomGroupsRadios
+      radios: CustomGroupsRadios.Internal
   ): Tag = {
     import block._
 
-    def customGroupRadios: Frag = radios match {
-      case CustomGroupsRadios.Empty       => None
-      case CustomGroupsRadios.Sorting     => Some( groupOrder( rowIndex ) )
-      case CustomGroupsRadios.Placeholder => Some( td( colspan := ( groupCount + 1 ) ) )
-      case CustomGroupsRadios.Full =>
-        Some( 0.to( groupCount ).map( groupRadio( recipe.item, groups, _ ) ) )
+    def customGroupRadios: Modifier = radios match {
+      case CustomGroupsRadios.Empty                     => none[Modifier]
+      case CustomGroupsRadios.Group( group )            => Some( groupSection( rowIndex, group ) )
+      case CustomGroupsRadios.Sorting( group )          => Some( groupOrder( rowIndex, group ) )
+      case CustomGroupsRadios.Placeholder( groupWidth ) => Option.when( groupWidth > 0 )( td( colspan := groupWidth ) )
+      case CustomGroupsRadios.Full( groups ) =>
+        Some( 0.to( groups.count ).map( groupRadio( recipe.item, groups, _ ) ) )
     }
 
     tr(
@@ -129,7 +144,7 @@ object StepsView extends ( ( ( Factory, GroupAssignments ), Int ) => Tag ) {
 
   def groupRadio(
       recipe: Recipe,
-      groups: GroupAssignments,
+      groups: GroupAssignments[ClassName],
       groupIndex: Int
   ): Tag =
     td(
@@ -143,24 +158,57 @@ object StepsView extends ( ( ( Factory, GroupAssignments ), Int ) => Tag ) {
       )
     )
 
+  private def groupSection( rowIndex: RowIndex, sectionsBefore: Set[Int] ): Modifier =
+    Option.when( sectionsBefore( rowIndex.index ) )( borderTop := "3px solid white" )
+
+  private def locateSections( group: GroupAssignment[ClassName] ): Set[Int] =
+    group.sections
+      .foldLeft( ( 0, Set.empty[Int] ) ) {
+        case ( ( counter, acc ), section ) =>
+          ( counter + section.size, acc + counter )
+      }
+      ._2
+      .excl( 0 )
+
+  def groupSection(
+      rowIndex: RowIndex,
+      group: GroupAssignment[ClassName]
+  ): Modifier = groupSection( rowIndex, locateSections( group ) )
+
   def groupOrder(
-      rowIndex: RowIndex
-  ): Frag = Seq(
-    td(
-      button(
-        formaction := s"${Actions.outputGroupOrder}/${rowIndex.index - 1}",
-        Option.when( !rowIndex.canMoveUp )( disabled ),
-        "\u25B2"
-      )
-    ),
-    td(
-      button(
-        formaction := s"${Actions.outputGroupOrder}/${rowIndex.index}",
-        Option.when( !rowIndex.canMoveDown )( disabled ),
-        "\u25BC"
+      rowIndex: RowIndex,
+      group: GroupAssignment[ClassName]
+  ): Modifier = {
+    val sectionsBefore: Set[Int] = locateSections( group )
+
+    Seq[Modifier](
+      position.relative,
+      groupSection( rowIndex, sectionsBefore ),
+      td(
+        Option.when( rowIndex.index > 0 )(
+          button(
+            formaction := s"${Actions.outputGroupSection}/${rowIndex.index}",
+            if (sectionsBefore( rowIndex.index )) "x" else "\u2014",
+            position.absolute,
+            top  := "-0.9em",
+            left := "-1.1em"
+          )
+        ),
+        button(
+          formaction := s"${Actions.outputGroupMoveUp}/${rowIndex.index}",
+          Option.when( !rowIndex.canMoveUp )( disabled ),
+          "\u25B2"
+        )
+      ),
+      td(
+        button(
+          formaction := s"${Actions.outputGroupMoveDown}/${rowIndex.index}",
+          Option.when( !rowIndex.canMoveDown )( disabled ),
+          "\u25BC"
+        )
       )
     )
-  )
+  }
 
   val headers: Vector[( Int, String, Modifier )] =
     Vector(
@@ -180,17 +228,14 @@ object StepsView extends ( ( ( Factory, GroupAssignments ), Int ) => Tag ) {
     val zero: RowIndex = RowIndex( 0, 0 )
   }
 
-  sealed trait CustomGroupsRadios extends EnumEntry with Product
-  object CustomGroupsRadios extends Enum[CustomGroupsRadios] {
-    final case object Empty       extends CustomGroupsRadios
-    final case object Sorting     extends CustomGroupsRadios
-    final case object Placeholder extends CustomGroupsRadios
-    final case object Full        extends CustomGroupsRadios
+  sealed trait CustomGroupsRadios extends CustomGroupsRadios.Internal
+  object CustomGroupsRadios {
+    sealed trait Internal extends Product with Serializable
 
-    override val values: Vector[CustomGroupsRadios] = findValues.toVector
-
-    implicit val customGroupsRadiosOrder: Order[CustomGroupsRadios]       = Order.by( indexOf )
-    implicit val customGroupsRadiosOrdering: Ordering[CustomGroupsRadios] = Order.catsKernelOrderingForOrder
+    final case object Empty                                       extends CustomGroupsRadios
+    final case class Group( group: GroupAssignment[ClassName] )   extends CustomGroupsRadios
+    final case class Sorting( group: GroupAssignment[ClassName] ) extends CustomGroupsRadios
+    final case class Placeholder( width: Int )                    extends CustomGroupsRadios.Internal
+    final case class Full( groups: GroupAssignments[ClassName] )  extends CustomGroupsRadios
   }
-
 }
