@@ -5,7 +5,7 @@ import sbt.Keys._
 
 ThisBuild / organization       := "net.chwthewke"
 ThisBuild / scalaOrganization  := "org.scala-lang"
-ThisBuild / scalaVersion       := "2.13.13"
+ThisBuild / scalaVersion       := "2.13.15"
 // TODO when I can make sense of lm-coursier
 ThisBuild / conflictManager                         := ConflictManager.strict
 ThisBuild / updateSbtClassifiers / conflictManager  := ConflictManager.default
@@ -16,7 +16,7 @@ enablePlugins( FormatPlugin )
 ThisBuild / SettingKey[Seq[String]]( "ide-base-packages" )
   .withRank( KeyRanks.Invisible ) := Seq( "net.chwthewke.satisfactorytools" )
 
-ThisBuild / Compile / doc / sources := Seq.empty
+ThisBuild / Compile / doc / sources                := Seq.empty
 ThisBuild / Compile / packageDoc / publishArtifact := false
 
 val compilerPlugins = libraryDependencies ++= kindProjector ++ betterMonadicFor
@@ -92,7 +92,7 @@ val `web-v2-app` = project
   .enablePlugins( JavaServerAppPackaging )
   .enablePlugins( LauncherJarPlugin )
   .settings(
-    topLevelDirectory := Some( "stw2" ),
+    topLevelDirectory   := Some( "stw2" ),
     Compile / mainClass := Some( "net.chwthewke.satisfactorytools.web.Main" )
   )
 

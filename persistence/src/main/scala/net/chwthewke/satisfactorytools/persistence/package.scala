@@ -20,7 +20,7 @@ package object persistence {
   // val ModelVersion: Int = 1
 
   private def enumMeta[A <: EnumEntry: TypeName]( pgEnumName: String )( implicit E: Enum[A] ): Meta[A] =
-    pgEnumStringOpt( pgEnumName, E.withNameOption, _.entryName )
+    pgEnumStringOpt( pgEnumName.toLowerCase, E.withNameOption, _.entryName )
 
   private def fromPgEnumArray[A <: EnumEntry: TypeName]( arr: Array[String] )( implicit E: Enum[A] ): Vector[A] =
     arr.toVector
@@ -32,7 +32,7 @@ package object persistence {
 
   def enumArrayMeta[A <: EnumEntry: TypeName]( pgEnumName: String )( implicit E: Enum[A] ): Meta[Vector[A]] =
     Meta.Advanced
-      .array[String]( pgEnumName, s"_$pgEnumName" )
+      .array[String]( pgEnumName.toLowerCase, s"_${pgEnumName.toLowerCase}" )
       .timap( fromPgEnumArray( _ ) )( toPgEnumArray( _ ) )
 
   implicit val formMeta: Meta[Form]                   = enumMeta( "T_FORM" )

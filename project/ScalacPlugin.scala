@@ -30,7 +30,8 @@ object ScalacPlugin extends AutoPlugin {
     "-Ywarn-numeric-widen",
     "-Ywarn-value-discard",
     "-Vimplicits",
-    s"-Wconf:${warningSuppressions.mkString( "," )}"
+    s"-Wconf:${warningSuppressions.mkString( "," )}",
+    "-Wconf:any:warning-verbose"
   )
 
   val isIdea: SettingKey[Boolean] = SettingKey( "is-idea", "Whether sbt is run from IntelliJ IDEA" )
@@ -39,8 +40,8 @@ object ScalacPlugin extends AutoPlugin {
     opts.filterNot( x => x == warnValueDiscard || x == warnNonUnitStatement )
 
   def forConsole( opts: Seq[String] ): Seq[String] =
-    opts.filterNot(
-      x => x == fatalWarnings || x == warnValueDiscard || x == warnNonUnitStatement || x.startsWith( xLint )
+    opts.filterNot( x =>
+      x == fatalWarnings || x == warnValueDiscard || x == warnNonUnitStatement || x.startsWith( xLint )
     )
 
   override def buildSettings: Seq[Def.Setting[_]] = Seq(

@@ -6,6 +6,7 @@ import cats.syntax.functor._
 import cats.syntax.functorFilter._
 import cats.syntax.traverse._
 import doobie._
+import doobie.implicits._
 import doobie.util.invariant.UnexpectedEnd
 
 import data.ClassName
