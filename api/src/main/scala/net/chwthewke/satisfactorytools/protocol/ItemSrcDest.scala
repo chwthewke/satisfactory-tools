@@ -10,17 +10,19 @@ import model.Recipe
 sealed trait ItemSrcDest extends Product
 
 object ItemSrcDest {
+  sealed trait ItemSrc    extends ItemSrcDest
+  sealed trait ItemDest   extends ItemSrcDest
   sealed trait Global     extends ItemSrcDest
   sealed trait IntraGroup extends ItemSrcDest
   sealed trait InterGroup extends ItemSrcDest
 
-  final case class Extract( recipe: Recipe )          extends IntraGroup with Global
-  final case class Step( recipe: Recipe, group: Int ) extends IntraGroup with Global
-  final case class FromGroup( group: Int )            extends IntraGroup with InterGroup
-  final case class ToGroup( group: Int )              extends IntraGroup with InterGroup
-  final case object Input                             extends IntraGroup with InterGroup with Global
-  final case object Byproduct                         extends IntraGroup with InterGroup with Global
-  final case object Requested                         extends IntraGroup with InterGroup with Global
+  final case class Extract( recipe: Recipe )          extends ItemSrc with IntraGroup with Global
+  final case class Step( recipe: Recipe, group: Int ) extends ItemSrc with ItemDest with IntraGroup with Global
+  final case class FromGroup( group: Int )            extends ItemSrc with IntraGroup with InterGroup
+  final case class ToGroup( group: Int )              extends ItemDest with IntraGroup with InterGroup
+  final case object Input                             extends ItemSrc with IntraGroup with InterGroup with Global
+  final case object Byproduct                         extends ItemDest with IntraGroup with InterGroup with Global
+  final case object Requested                         extends ItemDest with IntraGroup with InterGroup with Global
 
   // global: Extract | Step | Input | Byproduct | Requested
   // intra: *
