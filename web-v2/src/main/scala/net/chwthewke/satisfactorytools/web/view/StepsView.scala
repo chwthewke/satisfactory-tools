@@ -165,7 +165,7 @@ object StepsView {
     group.sections
       .foldLeft( ( 0, Set.empty[Int] ) ) {
         case ( ( counter, acc ), section ) =>
-          ( counter + section.size, acc + counter )
+          ( counter + section.length, acc + counter )
       }
       ._2
       .excl( 0 )

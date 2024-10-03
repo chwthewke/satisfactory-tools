@@ -97,10 +97,14 @@ object WriteSolution {
       customGroups: GroupAssignments[RecipeId],
       recipes: Vector[Countable[Double, RecipeId]]
   ): ConnectionIO[Int] = {
-    val filteredCustomGroups: GroupAssignments[RecipeId] = customGroups.filter( recipes.map( _.item ).toSet )
 
-    val rows: Vector[( SolutionId, Countable[Double, RecipeId], Option[( Int, Int )] )] =
-      recipes.map( recipeId => ( solutionId, recipeId, filteredCustomGroups.groupIndex( recipeId.item ) ) )
+    val groupColumns: Map[RecipeId, ( Int, Int, Boolean )] = customGroups.groupIndices
+
+    val rows: Vector[( SolutionId, Countable[Double, RecipeId], Option[( Int, Int )], Boolean )] =
+      recipes.map { recipeId =>
+        val groupCols: Option[( Int, Int, Boolean )] = groupColumns.get( recipeId.item )
+        ( solutionId, recipeId, groupCols.map { case ( a, b, _ ) => ( a, b ) }, groupCols.fold( false )( _._3 ) )
+      }
 
     statements.insertSolutionManufacturingRecipe.updateMany( rows )
   }
@@ -172,19 +176,21 @@ object WriteSolution {
           |""".stripMargin
       )
 
-    val insertSolutionManufacturingRecipe: Update[( SolutionId, Countable[Double, RecipeId], Option[( Int, Int )] )] =
+    val insertSolutionManufacturingRecipe
+        : Update[( SolutionId, Countable[Double, RecipeId], Option[( Int, Int )], Boolean )] =
       Update(
         // language=SQL
         """INSERT INTO "solution_manufacturing_recipes"
-          |  ( "solution_id", "recipe_id", "amount", "custom_group", "group_order" )
+          |  ( "solution_id", "recipe_id", "amount", "custom_group", "group_order", "section_before" )
           |VALUES
-          |  ( ?, ?, ?, ?, ? )
+          |  ( ?, ?, ?, ?, ?, ? )
           |ON CONFLICT ON CONSTRAINT "solution_manufacturing_recipes_unique"
           |DO UPDATE
           |  SET
-          |    "amount"       = "excluded"."amount"
-          |  , "custom_group" = "excluded"."custom_group"
-          |  , "group_order"  = "excluded"."group_order"
+          |    "amount"         = "excluded"."amount"
+          |  , "custom_group"   = "excluded"."custom_group"
+          |  , "group_order"    = "excluded"."group_order"
+          |  , "section_before" = "excluded"."section_before"
           |""".stripMargin
       )
 

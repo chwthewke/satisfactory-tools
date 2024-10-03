@@ -1,8 +1,14 @@
 package net.chwthewke.satisfactorytools
 package model
 
+import cats.Eq
+import cats.Show
+import cats.data.NonEmptyVector
+import cats.derived.semiauto
 import cats.syntax.functor._
 import cats.syntax.functorFilter._
+import cats.syntax.unorderedFoldable._
+import cats.syntax.vector._
 
 final case class GroupAssignments[A]( groups: Vector[GroupAssignment[A]] ) {
   def count: Int = groups.size
@@ -12,10 +18,11 @@ final case class GroupAssignments[A]( groups: Vector[GroupAssignment[A]] ) {
   def at( n: Int ): Option[GroupAssignment[A]] =
     groups.lift( n - 1 )
 
-  def groupIndex( item: A ): Option[( Int, Int )] =
-    groups.iterator.zipWithIndex
-      .map { case ( g, i ) => ( i + 1, g.indexOf( item ) ) }
-      .find( _._2 >= 0 )
+  def groupIndices: Map[A, ( Int, Int, Boolean )] =
+    groups.iterator.zipWithIndex.flatMap {
+      case ( group, grpIx ) =>
+        group.withIndices.map { case ( item, ix, sectionBefore ) => ( item, ( grpIx + 1, ix, sectionBefore ) ) }
+    }.toMap
 
   lazy val groupsByItem: Map[A, Int] =
     groups.zipWithIndex.flatMap { case ( g, ix ) => g.allRecipes.tupleRight( ix + 1 ) }.toMap
@@ -43,7 +50,7 @@ final case class GroupAssignments[A]( groups: Vector[GroupAssignment[A]] ) {
   // - update( newAssignments ).groupIndex( recipeId ).map( _._1 ) === newAssignments.get( recipeId ) [forall recipeId]
   // - update( newAssignments ).assignments === newAssignments
   // NOTE does not keep sections
-  def update( newAssignments: Map[A, Int] ): GroupAssignments[A] = GroupAssignments(
+  def update( newAssignments: Map[A, Int] )( implicit eq: Eq[A] ): GroupAssignments[A] = GroupAssignments(
     groups.zipWithIndex.map {
       case ( g, ix ) =>
         val kept: GroupAssignment[A] = g.filter( newAssignments.get( _ ).contains( ix + 1 ) )
@@ -55,36 +62,50 @@ final case class GroupAssignments[A]( groups: Vector[GroupAssignment[A]] ) {
 }
 
 object GroupAssignments {
+  implicit def groupAssignmentsShow[A: Show]: Show[GroupAssignments[A]] =
+    semiauto.show[GroupAssignments[A]]
+
   def empty[A]: GroupAssignments[A] = GroupAssignments( Vector.empty )
 
   def emptyGroups[A]( groupCount: Int ): GroupAssignments[A] =
     GroupAssignments( Vector.fill( groupCount )( GroupAssignment.empty[A] ) )
 
-  def of[A]( groupCount: Int, assignments: Map[A, Int] ): GroupAssignments[A] =
+  def of[A: Eq]( groupCount: Int, assignments: Map[A, Int] ): GroupAssignments[A] =
     emptyGroups( groupCount ).update( assignments )
 }
 
-final case class GroupAssignment[A]( sections: Vector[Vector[A]] ) extends AnyVal {
-  def allRecipes: Vector[A] = sections.flatten
+final case class GroupAssignment[A]( sections: Vector[NonEmptyVector[A]] ) extends AnyVal {
+  def allRecipes: Vector[A] = sections.flatMap( _.toVector )
 
   def filter( p: A => Boolean ): GroupAssignment[A] =
     GroupAssignment( sections.mapFilter { section =>
       val newSection: Vector[A] = section.filter( p )
-      Option.when( newSection.nonEmpty )( newSection )
+      newSection.toNev
     } )
 
   def append( recipe: A, sectionBefore: Boolean ): GroupAssignment[A] = {
-    val ( initSections, lastSection ) =
-      if (sections.isEmpty || sectionBefore) ( sections, Vector.empty )
-      else ( sections.init, sections.last )
+    val ( initSections: Vector[NonEmptyVector[A]], lastSection: Option[NonEmptyVector[A]] ) =
+      if (sections.isEmpty || sectionBefore) ( sections, None )
+      else ( sections.init, Some( sections.last ) )
 
-    GroupAssignment( initSections :+ ( lastSection :+ recipe ) )
+    GroupAssignment( initSections :+ lastSection.fold( NonEmptyVector.one( recipe ) )( _.append( recipe ) ) )
   }
 
-  def contains( recipe: A ): Boolean = sections.exists( _.contains( recipe ) )
-  def indexOf( recipe: A ): Int      = allRecipes.indexOf( recipe )
+  def contains( recipe: A )( implicit eq: Eq[A] ): Boolean = sections.exists( _.contains_( recipe ) )
+
+  def withIndices: Iterator[( A, Int, Boolean )] =
+    sections.iterator.zipWithIndex
+      .flatMap {
+        case ( section, secIx ) =>
+          ( section.head, secIx != 0 ) +: section.tail.map( ( _, false ) )
+      }
+      .zipWithIndex
+      .map { case ( ( item, sectionBefore ), ix ) => ( item, ix, sectionBefore ) }
 }
 
 object GroupAssignment {
-  def empty[A]: GroupAssignment[A] = GroupAssignment( Vector.empty[Vector[A]] )
+  implicit def groupAssignmentShow[A: Show]: Show[GroupAssignment[A]] =
+    semiauto.show[GroupAssignment[A]]
+
+  def empty[A]: GroupAssignment[A] = GroupAssignment( Vector.empty[NonEmptyVector[A]] )
 }
