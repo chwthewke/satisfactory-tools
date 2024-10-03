@@ -1,6 +1,7 @@
 package net.chwthewke.satisfactorytools
 package web.view
 
+import cats.syntax.option._
 import scalatags.Text
 import scalatags.Text.Tag
 
@@ -14,10 +15,10 @@ object ItemsView extends ( ( Map[Item, ItemIO[ItemSrcDest]], Int ) => Tag ) {
 
   import Text.all._
 
-  def sortAndFilterSmallAmounts[A: Ordering](
+  def sortAndFilterSmallAmounts[A, B](
       srcOrDest: Vector[Countable[Double, A]]
-  ): Vector[Countable[Double, A]] =
-    srcOrDest.filter( _.amount.abs > AmountTolerance ).sortBy( _.item )
+  )( implicit ev: A <:< B, ord: Ordering[B] ): Vector[Countable[Double, A]] =
+    srcOrDest.filter( _.amount.abs > AmountTolerance ).sortBy( _.item )( ord.on( ev ) )
 
   private def sortAndFilterSmallAmounts(
       items: Map[Item, ItemIO[ItemSrcDest]]
@@ -28,7 +29,10 @@ object ItemsView extends ( ( Map[Item, ItemIO[ItemSrcDest]], Int ) => Tag ) {
         case ( item, itemIO ) =>
           (
             item,
-            ItemIO( sortAndFilterSmallAmounts( itemIO.sources ), sortAndFilterSmallAmounts( itemIO.destinations ) )
+            ItemIO(
+              sortAndFilterSmallAmounts[ItemSrcDest.ItemSrc, ItemSrcDest]( itemIO.sources ),
+              sortAndFilterSmallAmounts[ItemSrcDest.ItemDest, ItemSrcDest]( itemIO.destinations )
+            )
           )
       }
       .filterNot {
@@ -50,12 +54,22 @@ object ItemsView extends ( ( Map[Item, ItemIO[ItemSrcDest]], Int ) => Tag ) {
       case ItemSrcDest.ToGroup( n )      => s"GROUP #$n"
     }
 
-  private def itemIORows( dir: String, rows: Vector[Countable[Double, ItemSrcDest]] ): Frag =
+  private def itemIORows( dir: String, rows: Vector[Countable[Double, ItemSrcDest]], firstRow: Modifier ): Frag =
     rows.zipWithIndex.map {
       case ( Countable( srcDest, amount ), ix ) =>
         tr(
+          Option.when( ix == 0 )( firstRow ),
           numCell4( amount ),
-          Option.when( ix == 0 )( td( rowspan := rows.size, verticalAlign.middle, dir ) ),
+          Option.when( ix == 0 )(
+            td(
+              rowspan := rows.size,
+              verticalAlign.middle,
+              textAlign.center,
+              dir,
+              paddingLeft  := "0.75em",
+              paddingRight := "0.75em"
+            )
+          ),
           td( showItemSrcDest( srcDest ) )
         )
     }
@@ -69,9 +83,10 @@ object ItemsView extends ( ( Map[Item, ItemIO[ItemSrcDest]], Int ) => Tag ) {
             fieldset(
               legend( item.displayName ),
               table(
+                borderCollapse.collapse,
                 tbody(
-                  itemIORows( "from", srcs ),
-                  itemIORows( "to", dests )
+                  itemIORows( "from", srcs, none[Modifier] ),
+                  itemIORows( "to", dests, Option.when( srcs.nonEmpty )( borderTop := "1px solid white" ) )
                 )
               )
             )

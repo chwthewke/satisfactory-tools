@@ -82,14 +82,20 @@ object ReadSolution {
             output
           )
 
-        def adaptItemSrcDest( otherGroup: Int => ItemSrcDest.IntraGroup )(
-            srcDest: ItemSrcDest
-        ): ItemSrcDest.IntraGroup =
+        def adaptItemSrc( srcDest: ItemSrcDest.ItemSrc ): ItemSrcDest.IntraGroup with ItemSrcDest.ItemSrc =
           srcDest match {
             case step @ ItemSrcDest.Step( _, stepGroup ) =>
-              if (stepGroup == groupNumber) step else otherGroup( stepGroup )
+              if (stepGroup == groupNumber) step else ItemSrcDest.FromGroup( stepGroup )
 
-            case other: ItemSrcDest.IntraGroup => other
+            case other: ItemSrcDest.IntraGroup with ItemSrcDest.ItemSrc => other
+          }
+
+        def adaptItemDest( srcDest: ItemSrcDest.ItemDest ): ItemSrcDest.IntraGroup with ItemSrcDest.ItemDest =
+          srcDest match {
+            case step @ ItemSrcDest.Step( _, stepGroup ) =>
+              if (stepGroup == groupNumber) step else ItemSrcDest.ToGroup( stepGroup )
+
+            case other: ItemSrcDest.IntraGroup with ItemSrcDest.ItemDest => other
           }
 
         def inGroup( srcDest: ItemSrcDest ): Boolean =
@@ -105,13 +111,13 @@ object ReadSolution {
                 Option.when(
                   ( itemIO.sources ++ itemIO.destinations ).exists( sd => inGroup( sd.item ) )
                 ) {
-                  val groupSources: Vector[Countable[Double, ItemSrcDest.IntraGroup]] =
+                  val groupSources: Vector[Countable[Double, ItemSrcDest.IntraGroup with ItemSrcDest.ItemSrc]] =
                     itemIO.sources
-                      .map( _.map( adaptItemSrcDest( ItemSrcDest.FromGroup ) ) )
+                      .map( _.map( adaptItemSrc ) )
                       .gather
-                  val groupDestinations: Vector[Countable[Double, ItemSrcDest.IntraGroup]] =
+                  val groupDestinations: Vector[Countable[Double, ItemSrcDest.IntraGroup with ItemSrcDest.ItemDest]] =
                     itemIO.destinations
-                      .map( _.map( adaptItemSrcDest( ItemSrcDest.ToGroup ) ) )
+                      .map( _.map( adaptItemDest ) )
                       .gather
 
                   ( item, ItemIO( groupSources, groupDestinations ) )
@@ -138,49 +144,29 @@ object ReadSolution {
   ): ConnectionIO[Map[Item, ItemIO[ItemSrcDest.InterGroup]]] =
     ( ReadSolverInputs.getBill( planId ), getSolution( planId, solutionId, groupCount ) ).mapN {
       case ( bill, ( factory, groups ) ) =>
-        def adaptItemSrcDest( otherGroup: Int => ItemSrcDest.InterGroup )(
-            srcDest: ItemSrcDest.Global
-        ): ItemSrcDest.InterGroup =
-          srcDest match {
-            case ItemSrcDest.Step( _, group )  => otherGroup( group )
-            case ItemSrcDest.Extract( _ )      => ItemSrcDest.Input
-            case other: ItemSrcDest.InterGroup => other
-          }
+        def adaptItemSrc( src: ItemSrcDest.ItemSrc ): ItemSrcDest.InterGroup with ItemSrcDest.ItemSrc = src match {
+          case ItemSrcDest.Extract( _ )     => ItemSrcDest.Input
+          case ItemSrcDest.Step( _, group ) => ItemSrcDest.FromGroup( group )
+          case s: ItemSrcDest.FromGroup     => s
+          case ItemSrcDest.Input            => ItemSrcDest.Input
+        }
+
+        def adaptItemDest( dest: ItemSrcDest.ItemDest ): ItemSrcDest.InterGroup with ItemSrcDest.ItemDest = dest match {
+          case ItemSrcDest.Step( _, group ) => ItemSrcDest.ToGroup( group )
+          case d: ItemSrcDest.ToGroup       => d
+          case ItemSrcDest.Byproduct        => ItemSrcDest.Byproduct
+          case ItemSrcDest.Requested        => ItemSrcDest.Requested
+        }
 
         extractItemIO( bill, factory, groups )
           .map {
             case ( item, itemIO ) =>
-              val sources: Vector[Countable[Double, ItemSrcDest.InterGroup]] =
-                itemIO.sources.map( _.map( adaptItemSrcDest( ItemSrcDest.FromGroup ) ) ).gather
-              val destinations: Vector[Countable[Double, ItemSrcDest.InterGroup]] =
-                itemIO.destinations.map( _.map( adaptItemSrcDest( ItemSrcDest.ToGroup ) ) ).gather
+              val sources: Vector[Countable[Double, ItemSrcDest.InterGroup with ItemSrcDest.ItemSrc]] =
+                itemIO.sources.map( _.map( adaptItemSrc ) ).gather
+              val destinations: Vector[Countable[Double, ItemSrcDest.InterGroup with ItemSrcDest.ItemDest]] =
+                itemIO.destinations.map( _.map( adaptItemDest ) ).gather
 
-              val intraGroupCancellation: Map[Int, Double] =
-                ( 0 +: groups.groupsByItem.values.toVector ).distinct
-                  .mapFilter( n =>
-                    (
-                      sources.collectFirst { case Countable( ItemSrcDest.FromGroup( `n` ), amount ) => amount },
-                      destinations.collectFirst { case Countable( ItemSrcDest.ToGroup( `n` ), amount ) => amount }
-                    ).mapN( math.min ).tupleLeft( n )
-                  )
-                  .toMap
-
-              def extractGroup: ItemSrcDest => Option[Int] = {
-                case ItemSrcDest.FromGroup( n ) => Some( n )
-                case ItemSrcDest.ToGroup( n )   => Some( n )
-                case _                          => None
-              }
-
-              def removeCancellations(
-                  srcDests: Vector[Countable[Double, ItemSrcDest.InterGroup]]
-              ): Vector[Countable[Double, ItemSrcDest.InterGroup]] =
-                srcDests.map( srcDest =>
-                  extractGroup( srcDest.item )
-                    .flatMap( intraGroupCancellation.get )
-                    .foldLeft( srcDest )( ( c, d ) => c.mapAmount( _ - d ) )
-                )
-
-              ( item, ItemIO( removeCancellations( sources ), removeCancellations( destinations ) ) )
+              ( item, ItemIO( sources, destinations ) )
           }
     }
 
@@ -262,7 +248,7 @@ object ReadSolution {
       groups: GroupAssignments[ClassName],
       recipeBlock: ClockedRecipe
   ): Map[Item, ItemIO[ItemSrcDest.Global]] = {
-    val key: ItemSrcDest.Global =
+    val key: ItemSrcDest.Step =
       ItemSrcDest.Step( recipeBlock.recipe.item, groups.getOrElse( recipeBlock.recipe.item.className, 0 ) )
 
     itemOut( key, recipeBlock.ingredientsPerMinute ) |+|
@@ -272,19 +258,19 @@ object ReadSolution {
   private def extractionItemInOut(
       recipeBlock: ClockedRecipe
   ): Map[Item, ItemIO[ItemSrcDest.Global]] = {
-    val key: ItemSrcDest.Global =
+    val key: ItemSrcDest.Extract =
       ItemSrcDest.Extract( recipeBlock.recipe.item )
 
     itemIn( key, recipeBlock.productsPerMinute )
   }
 
-  private def itemIn[F[_]: Foldable, A <: ItemSrcDest](
+  private def itemIn[F[_]: Foldable, A <: ItemSrcDest with ItemSrcDest.ItemSrc](
       key: A,
       items: F[Countable[Double, Item]]
   ): Map[Item, ItemIO[A]] =
     items.foldMap( c => Map( c.item -> ItemIO.in( key, c.amount ) ) )
 
-  private def itemOut[F[_]: Foldable, A <: ItemSrcDest](
+  private def itemOut[F[_]: Foldable, A <: ItemSrcDest with ItemSrcDest.ItemDest](
       key: A,
       items: F[Countable[Double, Item]]
   ): Map[Item, ItemIO[A]] =
