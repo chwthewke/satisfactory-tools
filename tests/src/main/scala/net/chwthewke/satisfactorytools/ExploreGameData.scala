@@ -17,8 +17,9 @@ object ExploreGameData extends IOApp {
   override def run( args: List[String] ): IO[ExitCode] =
     Loader.io
       .loadGameData( DataVersionStorage.Release1_0 )
+      .flatTap( printAltRecipesDependencies )
 //      .flatTap( data => IO.println( data ) )
-      .flatTap( data => printExtractors( data ) *> printManufacturers( data ) )
+//      .flatTap( data => printExtractors( data ) *> printManufacturers( data ) )
       .as( ExitCode.Success )
 
   def printExtractors( data: GameData ): IO[Unit] =
@@ -36,6 +37,50 @@ object ExploreGameData extends IOApp {
         items.toString + "\n" +
           items.traverse( item => None ).toString
     } )
+  }
+
+  private def descOneOf[A]( desc: A => String )( as: RecipeClassifier.OneOf[A] ): Option[String] =
+    as.items match {
+      case Vector()    => None
+      case Vector( a ) => Some( desc( a ) )
+      case _           => Some( as.map( desc ).mkString_( "(one of: ", ", ", ")" ) )
+    }
+
+  private def descAllOf[A]( desc: A => String )( as: RecipeClassifier.AllOf[A] ): String =
+    as.items.mapFilter( descOneOf( desc ) ) match {
+      case Vector() => "N/A"
+      case ds       => ds.mkString_( ", " )
+    }
+
+  def printAltRecipesDependencies( data: GameData ): IO[Unit] = {
+    val analyzer: RecipeClassifier#MilestoneAnalyzer = RecipeClassifier( data ).MilestoneAnalyzer.init
+
+    IO.println {
+      analyzer.manufacturingRecipes
+        .filter( _.isAlternate )
+        .mapFilter( recipe =>
+          analyzer.alternateUnlocks.toVector
+            .collect { case ( c, r ) if r.className == recipe.className => c }
+            .mapFilter( s => data.schematics.find( _.className == s ) )
+            .map( s => ( s, analyzer.schematicDependencies.get( s.className ).orEmpty ) )
+            .toNev
+            .tupleLeft( recipe )
+        )
+        .map {
+          case ( recipe, schematics ) =>
+            schematics
+              .map {
+                case ( schematic, deps ) =>
+                  s"${schematic.displayName}, depends on: ${descAllOf( ( s: Schematic ) => s.displayName )( deps )}"
+              }
+              .mkString_(
+                s"${recipe.displayName}\n  ",
+                "\n  ",
+                ""
+              )
+        }
+        .mkString( "\n\n" )
+    }
   }
 
   def printDependencies( data: GameData ): IO[Unit] = {

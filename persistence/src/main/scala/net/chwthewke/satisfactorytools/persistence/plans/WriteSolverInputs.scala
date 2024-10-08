@@ -26,7 +26,9 @@ import model.ResourceOptions
 import model.ResourcePurity
 import model.ResourceWeights
 import prod.Factory
+import protocol.ItemId
 import protocol.PlanId
+import protocol.RecipeId
 
 object WriteSolverInputs {
 

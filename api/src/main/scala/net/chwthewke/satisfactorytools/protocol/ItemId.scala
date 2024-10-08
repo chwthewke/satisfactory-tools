@@ -1,5 +1,5 @@
 package net.chwthewke.satisfactorytools
-package persistence
+package protocol
 
 import cats.Order
 import cats.Show

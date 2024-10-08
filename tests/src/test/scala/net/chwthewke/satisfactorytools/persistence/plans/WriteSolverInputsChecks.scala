@@ -5,6 +5,7 @@ package plans
 import cats.data.NonEmptyVector
 
 import protocol.PlanId
+import protocol.RecipeId
 
 class WriteSolverInputsChecks extends DatabaseSpec {
   "the statement" which {

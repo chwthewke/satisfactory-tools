@@ -19,6 +19,7 @@ case class GameRecipe(
     variablePowerMin: Double,
     variablePowerRange: Double
 ) {
+  def isAlternate: Boolean = displayName.toLowerCase.startsWith( "alternate" )
   def isSelfExtraction: Boolean = ingredients == List( products.head )
 }
 

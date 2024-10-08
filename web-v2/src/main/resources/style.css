@@ -241,6 +241,21 @@ input[type=checkbox], input[type=radio] {
     background-color: #272b30;
 }
 
+table.has-borders {
+    border-collapse: collapse;
+}
+
+table.has-borders td {
+    border-width: 2px;
+    border-style: solid;
+    border-color: #e2e2e2;
+}
+
+table.full-width {
+    table-layout: fixed;
+    width: 100%;
+}
+
 
 /*
 ==========================

@@ -3,6 +3,8 @@ package persistence
 
 import doobie.implicits._
 
+import protocol.ItemId
+
 class MigrationsSpec extends DatabaseSpec {
 
   "Initialising the database" should {
