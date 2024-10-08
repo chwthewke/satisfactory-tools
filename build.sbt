@@ -27,7 +27,7 @@ val core =
     .settings(
       libraryDependencies ++=
         cats ++ catsFree ++ alleycatsCore ++ kittens ++ mouse ++
-          atto ++ circe ++ enumeratum ++ enumeratumCirce
+          atto ++ circe ++ enumeratum ++ enumeratumCirce ++ algebra
     )
     .enablePlugins( ScalacPlugin )
 

@@ -1,8 +1,11 @@
 package net.chwthewke.satisfactorytools
 package model
 
+import algebra.lattice.MeetSemilattice
 import cats.Eq
 import cats.Show
+import cats.data.Ior
+import cats.syntax.align._
 import cats.syntax.foldable._
 import cats.syntax.option._
 import cats.syntax.show._
@@ -20,9 +23,23 @@ case class ResourceOptions(
 ) {
   def get( machine: Machine, item: Item ): ResourceDistrib =
     machine.machineType.extractorType.flatMap( resourceNodes.get ).flatMap( _.get( item.className ) ).orEmpty
+
+  def mergeResourceNodes( defaultResourceNodes: Map[ExtractorType, Map[ClassName, ResourceDistrib]] ): ResourceOptions =
+    copy(resourceNodes =
+      resourceNodes
+        .alignMergeWith( defaultResourceNodes )(
+          _.alignWith( _ ) {
+            case Ior.Left( a )    => a
+            case Ior.Both( a, b ) => MeetSemilattice.meet( a, b )
+            case Ior.Right( b )   => b
+          }
+        )
+    )
 }
 
 object ResourceOptions {
+
+  val empty: ResourceOptions = ResourceOptions( Map.empty, ResourceWeights( Map.empty ) )
 
   implicit val resourceOptionsShow: Show[ResourceOptions] = {
     def showItem( item: ClassName, distrib: ResourceDistrib ): String =

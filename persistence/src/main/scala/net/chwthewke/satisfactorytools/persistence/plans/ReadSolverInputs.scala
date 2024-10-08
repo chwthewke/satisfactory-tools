@@ -4,6 +4,7 @@ package plans
 
 import cats.syntax.applicativeError._
 import cats.syntax.apply._
+import cats.syntax.functor._
 import cats.syntax.functorFilter._
 import cats.syntax.traverse._
 import doobie._
@@ -11,7 +12,9 @@ import doobie.implicits._
 import doobie.util.invariant.UnexpectedContinuation
 import doobie.util.invariant.UnexpectedEnd
 
+import data.ClassName
 import data.Countable
+import data.Item
 import model.Bill
 import model.ExtractorType
 import model.Options
@@ -57,16 +60,28 @@ object ReadSolverInputs {
     } yield ( k, a )
 
   def getResourceOptions( planId: PlanId ): ConnectionIO[ResourceOptions] =
-    (
-      readModelIds( planId, ReadModel.readItems ).map( _.map { case ( id, item ) => ( id, item.className ) } ),
-      statements.selectResourceNodes.toQuery0( planId ).stream.compile.foldMonoid,
-      statements.selectResourceWeights.toQuery0( planId ).stream.compile.foldMonoid
-    ).mapN( ( itemsById, nodes, weights ) =>
-      ResourceOptions(
-        nodes.map { case ( ex, dists ) => ( ex, translateMapKeys( dists, itemsById ) ) },
-        ResourceWeights( translateMapKeys( weights, itemsById ) )
+    Headers
+      .readPlanHeader( planId )
+      .foldF( FC.pure( ( Map.empty[ItemId, Item], ResourceOptions.empty ) ) )( header =>
+        (
+          ReadModel.readItems( header.modelVersionId ),
+          ReadModel.readDefaultResourceOptions( header.modelVersionId )
+        ).tupled
       )
-    )
+      .flatMap {
+        case ( itemsById, defaultResourceNodes ) =>
+          (
+            statements.selectResourceNodes.toQuery0( planId ).stream.compile.foldMonoid,
+            statements.selectResourceWeights.toQuery0( planId ).stream.compile.foldMonoid
+          ).mapN { ( nodes, weights ) =>
+            val itemClasses: Map[ItemId, ClassName] = itemsById.fmap( _.className )
+
+            ResourceOptions(
+              nodes.fmap( translateMapKeys( _, itemClasses ) ),
+              ResourceWeights( translateMapKeys( weights, itemClasses ) )
+            ).mergeResourceNodes( defaultResourceNodes.resourceNodes )
+          }
+      }
 
   def getSolverInputs( planId: PlanId ): ConnectionIO[SolverInputs] =
     ( getBill( planId ), getRecipeList( planId ), getOptions( planId ), getResourceOptions( planId ) )

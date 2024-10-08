@@ -1,6 +1,7 @@
 package net.chwthewke.satisfactorytools
 package model
 
+import algebra.lattice.MeetSemilattice
 import cats.Eq
 import cats.Monoid
 import cats.Show
@@ -42,6 +43,15 @@ object ResourceDistrib {
   implicit val resourceDistribMonoid: Monoid[ResourceDistrib] = semiauto.monoid[ResourceDistrib]
 
   implicit val resourceDistribShow: Show[ResourceDistrib] = Show.fromToString[ResourceDistrib]
+
+  implicit val resourceDistribMeetSemilattice: MeetSemilattice[ResourceDistrib] = new MeetSemilattice[ResourceDistrib] {
+    override def meet( lhs: ResourceDistrib, rhs: ResourceDistrib ): ResourceDistrib =
+      ResourceDistrib(
+        lhs.impureNodes.min( rhs.impureNodes ),
+        lhs.normalNodes.min( rhs.normalNodes ),
+        lhs.pureNodes.min( rhs.pureNodes )
+      )
+  }
 
   implicit val resourceDistribEq: Eq[ResourceDistrib] = semiauto.eq[ResourceDistrib]
 
