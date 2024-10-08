@@ -46,7 +46,7 @@ object RecipesView extends ( ( Model, RecipeList ) => Tag ) {
       ),
       div(
         span( width := "8em", display.`inline-block`, "WITH ALTS" ),
-        8.to( 1, -1 )
+        9.to( 1, -1 )
           .map( tier =>
             button(
               `class`    := "button is-info",
@@ -57,7 +57,7 @@ object RecipesView extends ( ( Model, RecipeList ) => Tag ) {
       ),
       div(
         span( width := "8em", display.`inline-block`, "NO ALTS" ),
-        8.to( 0, -1 )
+        9.to( 0, -1 )
           .map( tier =>
             button(
               `class`    := "button is-info",
