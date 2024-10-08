@@ -59,7 +59,7 @@ object Library extends LibraryApi[ConnectionIO] {
       versions               <- ReadModel.getModelVersions
       ( versionId, version ) <- versions.lastOption.liftTo[ConnectionIO]( Error( "No model version to migrate to" ) )
       newId                  <- createPlan( userId, versionId, None, header.title.map( _.migrated( version ) ) )
-      _                      <- copyPlanInputParts( planId, newId )
+      _                      <- copyPlanInputParts( planId, newId, Some( versionId ) )
       _                      <- plans.WriteSolution.clearSolution( newId )
     } yield newId
 
@@ -94,13 +94,17 @@ object Library extends LibraryApi[ConnectionIO] {
 
   private def copyPlanParts( from: PlanId, to: PlanId ): ConnectionIO[Unit] =
     for {
-      _ <- copyPlanInputParts( from, to )
+      _ <- copyPlanInputParts( from, to, None )
       _ <- plans.WriteSolution.clearSolution( to )
       _ <- copySolution( from, to )
       _ <- copyPlanTree( from, to )
     } yield ()
 
-  private def copyPlanInputParts( from: PlanId, to: PlanId ): ConnectionIO[Unit] =
+  private def copyPlanInputParts(
+      from: PlanId,
+      to: PlanId,
+      migrateResourceOptions: Option[ModelVersionId]
+  ): ConnectionIO[Unit] =
     for {
       // TODO optimized SQL for the inputs part?
       bill       <- Plans.getPlanQuery( from, InputTab.Bill )
@@ -110,7 +114,16 @@ object Library extends LibraryApi[ConnectionIO] {
       options    <- Plans.getPlanQuery( from, InputTab.Options )
       _          <- Plans.setOptions( to, options )
       resources  <- Plans.getPlanQuery( from, InputTab.ResourceOptions )
-      _          <- Plans.setResourceOptions( to, resources )
+      migratedResources <-
+        OptionT
+          .fromOption[ConnectionIO]( migrateResourceOptions )
+          .semiflatMap( version => ReadModel.readDefaultResourceOptions( version ) )
+          .semiflatTap( ro => FC.delay( println( show"Migrating plan $from with default resource options $ro" ) ) )
+          .map( defaultResourceOptions => resources.mergeResourceNodes( defaultResourceOptions.resourceNodes ) )
+          .semiflatTap( ro => FC.delay( println( show"Computed resource options: $ro" ) ) )
+          .getOrElse( resources )
+          .flatTap( ro => FC.delay( println( show"Final resource options: $ro" ) ) )
+      _ <- Plans.setResourceOptions( to, migratedResources )
     } yield ()
 
   private def copySolution( from: PlanId, to: PlanId ): ConnectionIO[Unit] =
