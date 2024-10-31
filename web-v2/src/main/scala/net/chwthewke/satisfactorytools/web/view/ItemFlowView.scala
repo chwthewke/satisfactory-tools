@@ -44,9 +44,21 @@ case class ItemFlowView( state: ItemFlow.State ) extends ( ( ItemFlow.Data, Int 
     )
   }
 
-  def stacksCell[R <: ItemFlowView.Block]( slot: RecipeSlot[R] ): Tag = {
-    def cellHeight( pxAdjust: Int ) = s"calc( ${slot.height * 1.5f}em + ${( slot.height - 1 ) * 2 + pxAdjust}px )"
-    td(
+  def stacksCell[R <: ItemFlowView.Block]( slot: RecipeSlot[R], rowIndex: RowIndex, rightSide: Boolean ): Modifier = {
+
+    def cellHeight( pxAdjust: Int ): String =
+      s"calc( ${slot.height * 1.5f}em + ${( slot.height - 1 ) * 2 + pxAdjust}px )"
+
+    def sideTag: String = if (rightSide) "R" else "L"
+
+    Table.groupedSortableCell(
+      startsGroup = false,
+      rowIndex,
+      s"flow_up_${sideTag}_${rowIndex.index}",
+      s"flow_down_${sideTag}_${rowIndex.index}",
+      s"flow_group_${sideTag}_${rowIndex.index}",
+      buttonsOnRight = rightSide
+    )(
       padding := "0",
       rowspan := slot.height.toString,
       height  := cellHeight( 0 ),
