@@ -53,13 +53,21 @@ object OutputTab {
       }.toMap
     }
 
-    case class State( currentItem: Option[ItemId] ) {
+    case class ItemState(
+        producerRecipeOrder: Vector[RecipeId],
+        consumerRecipeOrder: Vector[RecipeId]
+    )
+
+    case class State(
+        currentItem: Option[ItemId],
+        perItem: Map[ItemId, ItemState]
+    ) {
       def repr: Option[String] =
         State.stateCodec.encode( this ).toOption.map( _.toBase64UrlNoPad )
     }
 
     object State {
-      val default: State = State( None )
+      val default: State = State( None, Map.empty )
 
       def parse( str: String ): Option[State] =
         BitVector.fromBase64( str, Bases.Alphabets.Base64UrlNoPad ).flatMap( stateCodec.decodeValue( _ ).toOption )
@@ -67,13 +75,28 @@ object OutputTab {
       implicit val stateCodec: Codec[State] = {
         import scodec.codecs._
 
+        val itemIdCodec: Codec[ItemId] = int32.xmap( ItemId( _ ), _.id )
+
         val currentItemCodec: Codec[Option[ItemId]] =
           int32.xmap(
             n => Option.when( n >= 0 )( ItemId( n ) ),
             idOpt => idOpt.fold( -1 )( _.id )
           )
 
-        currentItemCodec.xmap( State( _ ), _.currentItem )
+        val recipeIdCodec: Codec[RecipeId]          = int32.xmap( RecipeId( _ ), _.id )
+        val recipeIdsCodec: Codec[Vector[RecipeId]] = vectorOfN( int32, recipeIdCodec )
+        val itemStateCodec: Codec[ItemState] =
+          ( recipeIdsCodec ~ recipeIdsCodec )
+            .xmap(
+              liftF2ToNestedTupleF( ItemState( _, _ ) ),
+              state => state.producerRecipeOrder ~ state.consumerRecipeOrder
+            )
+
+        val itemStateEntryCodec: Codec[( ItemId, ItemState )] = itemIdCodec ~ itemStateCodec
+        val itemStatesCodec: Codec[Map[ItemId, ItemState]] =
+          vectorOfN( int32, itemStateEntryCodec ).xmap( _.toMap, _.toVector )
+
+        ( currentItemCodec ~ itemStatesCodec ).xmap( State( _, _ ), state => state.currentItem ~ state.perItem )
       }
     }
 
