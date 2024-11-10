@@ -1,7 +1,9 @@
 package net.chwthewke.satisfactorytools
 package protocol
 
+import scodec.Attempt
 import scodec.Codec
+import scodec.Err
 import scodec.bits.Bases
 import scodec.bits.BitVector
 
@@ -51,11 +53,33 @@ object OutputTab {
       lazy val itemIdsByClass: Map[ClassName, ItemId] = itemIds.map {
         case ( id, item ) => ( item.className, id )
       }.toMap
+
+      lazy val recipesById: Map[RecipeId, Recipe] = recipeIds.toMap
+      lazy val recipeIdsByClass: Map[ClassName, RecipeId] = recipeIds.map {
+        case ( id, recipe ) => ( recipe.className, id )
+      }.toMap
+    }
+
+    sealed abstract class ConsumerKey {
+      def int: Int
+    }
+    object ConsumerKey {
+      case class Recipe( id: RecipeId ) extends ConsumerKey { def int: Int = id.id }
+      case object Requested             extends ConsumerKey { def int: Int = -1    }
+      case object ByProduct             extends ConsumerKey { def int: Int = -2    }
+
+      def of( int: Int ): Option[ConsumerKey] =
+        int match {
+          case id if id >= 0 => Some( Recipe( RecipeId( id ) ) )
+          case -1            => Some( Requested )
+          case -2            => Some( ByProduct )
+          case _             => None
+        }
     }
 
     case class ItemState(
         producerRecipeOrder: Vector[RecipeId],
-        consumerRecipeOrder: Vector[RecipeId]
+        consumerRecipeOrder: Vector[ConsumerKey]
     )
 
     case class State(
@@ -83,10 +107,14 @@ object OutputTab {
             idOpt => idOpt.fold( -1 )( _.id )
           )
 
-        val recipeIdCodec: Codec[RecipeId]          = int32.xmap( RecipeId( _ ), _.id )
-        val recipeIdsCodec: Codec[Vector[RecipeId]] = vectorOfN( int32, recipeIdCodec )
+        val recipeIdCodec: Codec[RecipeId] = int32.xmap( RecipeId( _ ), _.id )
+        val consumerKeyCodec: Codec[ConsumerKey] =
+          int32.narrow( n => Attempt.fromOption( ConsumerKey.of( n ), Err( "Invalid ConsumerKey" ) ), ck => ck.int )
+
+        val recipeIdsCodec: Codec[Vector[RecipeId]]       = vectorOfN( int32, recipeIdCodec )
+        val consumerKeysCodec: Codec[Vector[ConsumerKey]] = vectorOfN( int32, consumerKeyCodec )
         val itemStateCodec: Codec[ItemState] =
-          ( recipeIdsCodec ~ recipeIdsCodec )
+          ( recipeIdsCodec ~ consumerKeysCodec )
             .xmap(
               liftF2ToNestedTupleF( ItemState( _, _ ) ),
               state => state.producerRecipeOrder ~ state.consumerRecipeOrder

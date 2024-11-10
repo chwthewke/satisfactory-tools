@@ -10,6 +10,9 @@ import scalatags.Text.Tag
 
 import data.Countable
 import data.Item
+import net.chwthewke.satisfactorytools.model.Recipe
+import net.chwthewke.satisfactorytools.protocol.OutputTab.ItemFlow.ItemState
+import net.chwthewke.satisfactorytools.protocol.RecipeId
 import prod.ClockedRecipe
 import protocol.OutputTab.ItemFlow
 import web.forms.Actions
@@ -25,11 +28,15 @@ case class ItemFlowView( state: ItemFlow.State ) extends ( ( ItemFlow.Data, Int 
   private def setCurrentItem( data: ItemFlow.Data, item: Item ): Modifier =
     changeStateLink( state.copy( currentItem = data.itemIdsByClass.get( item.className ) ) )
 
-  private def showItemFlow( data: ItemFlow.Data, item: Item ): Frag = {
+  private def showItemFlow( data: ItemFlow.Data, item: Item, state: ItemState ): Frag = {
+    def indexOf( recipe: Recipe, order: Vector[RecipeId] ): Int =
+      data.recipeIdsByClass.get( recipe.className ).fold( -1 )( order.indexOf )
+
     val producers: Vector[Producer] = data.factory.allRecipes
       .mapFilter( r =>
         r.productsPerMinute.find( _.item.className == item.className ).map( x => Producer( r, x.amount ) )
       )
+      .sortBy( p => indexOf( p.recipe.recipe.item, state.producerRecipeOrder ) )
 
     val consumers: Vector[Consumer] = data.factory.allRecipes
       .mapFilter( r =>

@@ -139,7 +139,7 @@ object PlanView {
           ( "Item I/O", OutputTab.Items ),
           ( "Inter-group Item I/O", OutputTab.GroupIO ),
           ( "Tree (beta)", OutputTab.Tree ),
-          ( "Flow (alpha)", OutputTab.ItemFlow( OutputTab.ItemFlow.State( None ) ) )
+          ( "Flow (alpha)", OutputTab.ItemFlow( OutputTab.ItemFlow.State.default ) )
         ) ++
           ( 1 to solution.groupCount )
             .map( ix => ( ix.show, OutputTab.CustomGroup( ix, selected.editMode ) ) )
