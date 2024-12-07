@@ -92,8 +92,9 @@ val `web-v2-app` = project
   .enablePlugins( JavaServerAppPackaging )
   .enablePlugins( LauncherJarPlugin )
   .settings(
-    topLevelDirectory   := Some( "stw2" ),
-    Compile / mainClass := Some( "net.chwthewke.satisfactorytools.web.Main" )
+    topLevelDirectory    := Some( "stw2" ),
+    Compile / mainClass  := Some( "net.chwthewke.satisfactorytools.web.Main" ),
+    Compile / run / fork := true
   )
 
 val `production-calculator` = project
