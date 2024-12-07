@@ -1,7 +1,9 @@
 package net.chwthewke.satisfactorytools
 package web.view
 
+import cats.syntax.apply._
 import cats.syntax.foldable._
+import cats.syntax.functor._
 import cats.syntax.functorFilter._
 import scala.collection.immutable.SortedSet
 import scalatags.Text
@@ -15,11 +17,29 @@ import protocol.ItemSrcDest
 object GroupIOView extends ( ( Map[Item, ItemIO[ItemSrcDest.InterGroup]], Int ) => Tag ) {
   import Text.all._
 
+  case class Block(
+      title: String,
+      asSrc: Option[ItemSrcDest.InterGroup with ItemSrcDest.ItemSrc],
+      asDest: Option[ItemSrcDest.InterGroup with ItemSrcDest.ItemDest]
+  )
+
   private case class Page(
       items: Map[Item, ItemIO[ItemSrcDest.InterGroup]],
       groups: Map[ItemSrcDest.InterGroup, Map[Item, Double]],
       groupNumbers: SortedSet[Int]
   ) {
+
+    def groupBlock( n: Int ): Block =
+      Block( s"Group #$n", Some( ItemSrcDest.FromGroup( n ) ), Some( ItemSrcDest.ToGroup( n ) ) )
+
+    val allBlocks: Vector[Block] =
+      Vector( Block( "Extraction", Some( ItemSrcDest.Input ), None ) ) ++
+        groupNumbers.toSeq.map( groupBlock ) ++
+        Seq(
+          Block( "Requested", None, Some( ItemSrcDest.Requested ) ),
+          Block( "Byproducts", None, Some( ItemSrcDest.Byproduct ) )
+        )
+
     private def extractPeers(
         loc: Option[ItemSrcDest.InterGroup],
         peers: ItemIO[ItemSrcDest.InterGroup] => Vector[Countable[Double, ItemSrcDest.InterGroup]]
@@ -50,8 +70,8 @@ object GroupIOView extends ( ( Map[Item, ItemIO[ItemSrcDest.InterGroup]], Int ) 
         peerings.zipWithIndex.flatMap {
           case ( ( item, amount, peers ), outerIx ) =>
             def itemCells( height: Int ): Frag = Seq[Frag](
-              numCell4( amount )( rowspan := height, verticalAlign.middle ),
-              td( rowspan                 := height, verticalAlign.middle, item.displayName )
+              numCell4( amount )( rowspan := height, verticalAlign.middle, paddingRight := "0.5em" ),
+              td( rowspan                 := height, verticalAlign.middle, strong( item.displayName ) )
             )
 
             if (peers.isEmpty)
@@ -76,36 +96,113 @@ object GroupIOView extends ( ( Map[Item, ItemIO[ItemSrcDest.InterGroup]], Int ) 
         }
       )
 
-    private def block(
-        title: String,
-        src: Option[ItemSrcDest.InterGroup],
-        dest: Option[ItemSrcDest.InterGroup]
-    ): Frag = {
+    def srcDestTables( block: Block ): Frag = {
+
+      def extractFromTo(
+          from: Option[ItemSrcDest.InterGroup with ItemSrcDest.ItemSrc],
+          to: Option[ItemSrcDest.InterGroup with ItemSrcDest.ItemDest]
+      ): Vector[( Item, Double, Double )] =
+        ( from, to ).tupled
+          .foldMap {
+            case ( src, dest ) =>
+              items.to( Vector ).mapFilter {
+                case ( item, srcDests ) =>
+                  (
+                    srcDests.sources.find( c => c.item == src && c.amount.abs > AmountTolerance ).map( _.amount ),
+                    srcDests.destinations.find( c => c.item == dest && c.amount.abs > AmountTolerance ).map( _.amount )
+                  ).mapN( ( item, _, _ ) )
+              }
+          }
+
+      def tableWithPeer(
+          peer: Vector[( Item, Double, Double )],
+          withTotal: Boolean
+      ): Frag =
+        table(
+          borderCollapse.collapse,
+          peer.zipWithIndex.map {
+            case ( ( item, prod, cons ), ix ) =>
+              tr(
+                Option.when( ix > 0 )( borderTop                     := "1px solid" ),
+                numCell4( cons )( verticalAlign.middle, paddingRight := "0.5em" ),
+                td( strong( item.displayName ), verticalAlign.middle ),
+                td( "of", verticalAlign.middle, padding := "0 1em" ),
+                td( numCell4( prod ), verticalAlign.middle )
+              )
+          } ++
+            Option.when( withTotal )(
+              tr(
+                borderTop := "1px solid",
+                numCell4( peer.foldMap( _._3 ) ),
+                td( colspan := "3", "Total" )
+              )
+            )
+        )
+
+      def tablesWithPeer(
+          other: Block,
+          fromOther: Vector[( Item, Double, Double )],
+          toOther: Vector[( Item, Double, Double )]
+      ): Frag =
+        Seq[Frag](
+          h3( other.title ),
+          Option.when( fromOther.nonEmpty )(
+            Seq[Frag](
+              other.asDest.as( h4( "INPUTS" ) ),
+              tableWithPeer( fromOther, withTotal = false )
+            )
+          ),
+          Option.when( toOther.nonEmpty )(
+            Seq[Frag](
+              other.asSrc.as( h4( "OUTPUTS" ) ),
+              tableWithPeer(
+                toOther,
+                withTotal =
+                  other.asDest.contains( ItemSrcDest.Requested ) || other.asDest.contains( ItemSrcDest.Byproduct )
+              )
+            )
+          )
+        )
+
+      allBlocks
+        .filter( _ != block )
+        .mapFilter { other =>
+          val fromOther: Vector[( Item, Double, Double )] = extractFromTo( other.asSrc, block.asDest )
+          val toOther: Vector[( Item, Double, Double )]   = extractFromTo( block.asSrc, other.asDest )
+
+          Option.when( fromOther.nonEmpty || toOther.nonEmpty )(
+            tablesWithPeer( other, fromOther, toOther )
+          )
+        }
+    }
+
+    private def blockTag( block: Block ): Frag = {
       val inputs: Vector[( Item, Double, Vector[Countable[Double, ItemSrcDest.InterGroup]] )] =
-        extractPeers( dest, _.sources )
+        extractPeers( block.asDest, _.sources )
 
       val outputs: Vector[( Item, Double, Vector[Countable[Double, ItemSrcDest.InterGroup]] )] =
-        extractPeers( src, _.destinations )
+        extractPeers( block.asSrc, _.destinations )
 
       Option.when( inputs.nonEmpty || outputs.nonEmpty )(
         fieldset(
-          legend( title ),
-          Option.when( inputs.nonEmpty )( Seq( h4( "INPUTS" ), peersTable( "from", inputs ) ) ),
-          Option.when( outputs.nonEmpty )( Seq( h4( "OUTPUTS" ), peersTable( "to", outputs ) ) )
+          legend( block.title ),
+          display.flex,
+          flexDirection.row,
+          flexWrap.nowrap,
+          div(
+            flexGrow := "1",
+            Option.when( inputs.nonEmpty )( Seq( h4( "INPUTS" ), peersTable( "from", inputs ) ) ),
+            Option.when( outputs.nonEmpty )( Seq( h4( "OUTPUTS" ), peersTable( "to", outputs ) ) )
+          ),
+          div(
+            flexGrow := "1",
+            srcDestTables( block )
+          )
         )
       )
     }
 
-    def groupBlock( n: Int ): Frag =
-      block( s"Group #$n", Some( ItemSrcDest.FromGroup( n ) ), Some( ItemSrcDest.ToGroup( n ) ) )
-
-    def allBlocks: Frag =
-      Seq( block( "Extraction", Some( ItemSrcDest.Input ), None ) ) ++
-        groupNumbers.toSeq.map( groupBlock ) ++
-        Seq(
-          block( "Requested", None, Some( ItemSrcDest.Requested ) ),
-          block( "Byproducts", None, Some( ItemSrcDest.Byproduct ) )
-        )
+    def allBlockTags: Frag = allBlocks.map( blockTag )
 
   }
 
@@ -141,6 +238,6 @@ object GroupIOView extends ( ( Map[Item, ItemIO[ItemSrcDest.InterGroup]], Int ) 
   override def apply( items: Map[Item, ItemIO[ItemSrcDest.InterGroup]], groupCount: Int ): Text.Tag =
     fieldset(
       legend( "Items I/O" ),
-      div( Page( items ).allBlocks )
+      div( Page( items ).allBlockTags )
     )
 }
