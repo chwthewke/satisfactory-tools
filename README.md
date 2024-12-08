@@ -42,6 +42,10 @@ Once the requirements are met, run with `sbt run web-v2`.
 
 Point your browser at http://localhost:7282
 
+### Zip package
+
+Run `sbt web-v2-app/Universal/packageBin` to generate a .zip package (in `web-v2-app/target/universal`).
+
 ### Old text-based interface
 
 #### To run
