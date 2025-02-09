@@ -84,6 +84,15 @@ object Plans extends PlannerApi[ConnectionIO] {
   override def removeAllAlternatesFromRecipeList( planId: PlanId ): ConnectionIO[Unit] =
     plans.WriteSolverInputs.removeAllAlternatesFromRecipeList( planId )
 
+  override def removeMatterConversionFromRecipeList( planId: PlanId ): ConnectionIO[Unit] =
+    plans.Headers
+      .readPlanHeader( planId )
+      .mproduct( header => ReadModel.getModel( header.modelVersionId ) )
+      .foreachF {
+        case ( header, model ) =>
+          plans.WriteSolverInputs.removeMatterConversionFromRecipeList( header.id, model )
+      }
+
   override def addRecipesUpToTier( planId: PlanId, tier: Int, alternates: Boolean ): ConnectionIO[Unit] =
     plans.WriteSolverInputs.addRecipesUpToTier( planId, tier, alternates )
 

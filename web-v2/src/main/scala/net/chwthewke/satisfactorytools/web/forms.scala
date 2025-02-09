@@ -284,10 +284,11 @@ object forms {
     val save: String    = "save"
     val migrate: String = "migrate"
 
-    val addAllRecipes: String = "add_all_recipes"
-    val addAlts: String       = "add_alts"
-    val removeAlts: String    = "remove_alts"
-    val lockRecipes: String   = "lock_recipes"
+    val addAllRecipes: String          = "add_all_recipes"
+    val addAlts: String                = "add_alts"
+    val removeAlts: String             = "remove_alts"
+    val removeMatterConversion: String = "remove_conversion"
+    val lockRecipes: String            = "lock_recipes"
 
     object recipesUpToTier {
       def apply( tier: Int, alternates: Boolean ): String =
