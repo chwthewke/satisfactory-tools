@@ -9,17 +9,18 @@ final case class Manufacturer(
     className: ClassName,
     displayName: String,
     powerConsumption: Double,
-    powerConsumptionExponent: Double
+    powerConsumptionExponent: Double,
+    isCollider: Boolean
 )
 
 object Manufacturer {
-  implicit val manufacturerDecoder: Decoder[Manufacturer] =
+  def manufacturerDecoder( isCollider: Boolean ): Decoder[Manufacturer] =
     Decoder.forProduct4(
       "ClassName",
       "mDisplayName",
       "mPowerConsumption",
       "mPowerConsumptionExponent"
-    )( ( cn: ClassName, dn: String, pc: Double, pe: Double ) => Manufacturer( cn, dn, pc, pe ) )(
+    )( ( cn, dn, pc, pe ) => Manufacturer( cn, dn, pc, pe, isCollider ) )(
       Decoder[ClassName],
       Decoder[String],
       Decoders.doubleStringDecoder,

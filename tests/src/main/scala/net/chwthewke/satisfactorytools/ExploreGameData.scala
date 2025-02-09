@@ -17,7 +17,11 @@ object ExploreGameData extends IOApp {
   override def run( args: List[String] ): IO[ExitCode] =
     Loader.io
       .loadGameData( DataVersionStorage.Release1_0 )
-      .flatTap( printConverterRecipes )
+      .flatTap( gd =>
+        printConverterRecipes( gd ) *>
+          IO.println( "" ) *>
+          printConstructorRecipes( gd )
+      )
 //      .flatTap( data => IO.println( data ) )
 //      .flatTap( data => printExtractors( data ) *> printManufacturers( data ) )
       .as( ExitCode.Success )
@@ -39,10 +43,24 @@ object ExploreGameData extends IOApp {
     } )
   }
 
+  def printConstructorRecipes( data: GameData ): IO[Unit] =
+    IO.println(
+      data.recipes
+        .filter( _.producedIn.contains( ClassName( "Build_ConstructorMk1_C" ) ) )
+        .mkString_( "\n\n" )
+    )
+
   def printConverterRecipes( data: GameData ): IO[Unit] =
     IO.println(
       data.recipes
         .filter( _.producedIn.contains( ClassName( "Build_Converter_C" ) ) )
+        .mkString_( "\n\n" )
+    )
+
+  def printQuantumEncoderRecipes( data: GameData ): IO[Unit] =
+    IO.println(
+      data.recipes
+        .filter( _.producedIn.contains( ClassName( "Build_QuantumEncoder_C" ) ) )
         .mkString_( "\n\n" )
     )
 

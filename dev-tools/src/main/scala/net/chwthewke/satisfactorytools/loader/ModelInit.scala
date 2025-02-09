@@ -193,7 +193,7 @@ private[loader] object ModelInit {
       manufacturer.className,
       manufacturer.displayName,
       MachineType(
-        if (manufacturer.powerConsumption == 0d) ManufacturerType.VariableManufacturer
+        if (manufacturer.isCollider) ManufacturerType.VariableManufacturer
         else ManufacturerType.Manufacturer
       ),
       manufacturer.powerConsumption,

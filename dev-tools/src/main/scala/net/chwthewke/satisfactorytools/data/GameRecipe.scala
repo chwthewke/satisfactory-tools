@@ -70,6 +70,7 @@ object GameRecipe {
               |    ${products.map( _.show ).intercalate( "\n    " )}
               |  Duration $duration
               |  Producers:    ${producers.mkString_( ", " )}
+              |  Power: ${f"$powerMin%.3f-$powerRange%.3f"}
               |""".stripMargin
     }
 

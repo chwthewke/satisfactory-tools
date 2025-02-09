@@ -3,13 +3,13 @@ package web.view
 
 import cats.syntax.foldable._
 import cats.syntax.option._
-import cats.syntax.show._
 import scalatags.Text
 import scalatags.Text.Tag
 
 import data.ClassName
 import model.GroupAssignment
 import model.GroupAssignments
+import model.Power
 import model.Recipe
 import prod.ClockedRecipe
 import prod.Factory
@@ -88,7 +88,7 @@ object StepsView {
         tr(
           Option.when( groupWidth > 0 )( td( colspan := groupWidth ) ),
           td( colspan := 8, textAlign.right, "Total Power" ),
-          td( textAlign.right, factory.allRecipes.foldMap( _.power ).show ),
+          td( textAlign.right, powerCell( factory.allRecipes.foldMap( _.power ) ) ),
           td( textAlign.left, "MW" )
         )
       )
@@ -121,10 +121,25 @@ object StepsView {
       numCell3( mainProductAmountPerUnit ),
       td( " / unit @ ", textAlign.center ),
       td( f"${clockSpeedMillionth / 10000}%3d.${clockSpeedMillionth % 10000}%04d %%", textAlign.left ),
-      td( power.show, textAlign.right ),
+      td( powerCell( power ), textAlign.right ),
       td( "MW", textAlign.left )
     )
   }
+
+  def powerCell( power: Power ): Tag =
+    power match {
+      case Power.Fixed( value ) =>
+        span( f"$value%.2f", title := value.toString )
+      case Power.Variable( min, max ) =>
+        span(
+          f"${power.average}%.2f",
+          title :=
+            s"""${f"$min%.2f-$max%.2f"}
+               |min: $min
+               |max: $max
+               |""".stripMargin
+        )
+    }
 
   def recipeCell2Cols( recipe: Recipe ): Frag = {
     val recipeName  = recipe.displayName

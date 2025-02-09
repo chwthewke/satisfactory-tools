@@ -52,7 +52,7 @@ object Power {
   }
 
   implicit val powerShow: Show[Power] = Show.show {
-    case Fixed( value )       => f"$value%6.2f"
+    case Fixed( value )       => f"$value% 6.2f"
     case Variable( min, max ) => f"$min%6.2f-$max%6.2f"
   }
 
