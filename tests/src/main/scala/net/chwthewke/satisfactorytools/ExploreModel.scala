@@ -31,6 +31,14 @@ object ExploreModel extends IOApp {
         .mkString( "\n" )
     )
 
+  def printRecipePower( model: Model ): IO[Unit] =
+    IO.println(
+      model.manufacturingRecipes
+        .sortBy( _.displayName )
+        .map( recipe => show"${recipe.displayName.padTo( 48, ' ' )}${recipe.power}" )
+        .mkString( "\n" )
+    )
+
   def printRecipesByTier( model: Model ): IO[Unit] =
     IO.println(
       model.manufacturingRecipes

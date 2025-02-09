@@ -85,8 +85,10 @@ object GameData {
           NativeClass.ammoProjClassU6 | NativeClass.ammoSpreadClassU6 | NativeClass.ammoColorDescClass |
           NativeClass.powerBoosterFuelClass | NativeClass.powerShardClass =>
         decodeMap( itemDecoder.tupleRight( nativeClass ) )( _._1.className ).map( GameData.items )
-      case NativeClass.manufacturerClass | NativeClass.colliderClass =>
-        decodeMap( Decoder[Manufacturer] )( _.className ).map( GameData.manufacturers )
+      case NativeClass.manufacturerClass =>
+        decodeMap( Manufacturer.manufacturerDecoder( isCollider = false ) )( _.className ).map( GameData.manufacturers )
+      case NativeClass.colliderClass =>
+        decodeMap( Manufacturer.manufacturerDecoder( isCollider = true ) )( _.className ).map( GameData.manufacturers )
       case NativeClass.resourceExtractorClass | NativeClass.waterPumpClass | NativeClass.frackingExtractorClass =>
         decodeMap( Decoder[Extractor] )( _.className ).map( GameData.extractors )
       case NativeClass.recipeClass =>

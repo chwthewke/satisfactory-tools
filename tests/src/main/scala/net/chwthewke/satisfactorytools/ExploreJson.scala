@@ -1,6 +1,7 @@
 package net.chwthewke.satisfactorytools
 
 import cats.Monoid
+import cats.data.Ior
 import cats.data.NonEmptyVector
 import cats.effect.ExitCode
 import cats.effect.IO
@@ -18,7 +19,7 @@ import loader.Loader
 object ExploreJson extends IOApp {
 
   def loadJson: IO[Vector[Json]] =
-    loadJsonVersion( DataVersionStorage.Update8 )
+    loadJsonVersion( DataVersionStorage.Release1_0 )
 
   def loadJsonVersion( version: DataVersionStorage ): IO[Vector[Json]] =
     Loader.io
@@ -47,6 +48,41 @@ object ExploreJson extends IOApp {
         .to( SortedMap )
         .map { case ( n, f ) => s"$n: $f" }
         .mkString( "DEPENDENCY BLOCK SIZE FREQ\n", "\n", "" )
+    )
+  }
+
+  def printLiteralFieldsCsv( nativeClasses: Vector[Json], nativeClass: NativeClass ): IO[Unit] =
+    nativeClasses
+      .collectFirstSome( extractNativeClass( _ ).filter( _._1 == nativeClass ) )
+      .traverse_ { case ( _, classes ) => IO.println( literalFieldsCsv( classes ).mkString_( "\n" ) ) }
+
+  def literalFieldsCsv( classes: Vector[Json] ): NonEmptyVector[String] = {
+    import alleycats.std.iterable._
+    val fields: SortedSet[String] = classes
+      .mapFilter( _.asObject )
+      .foldLeft( Map.empty[String, Set[Boolean]] )( ( m, c ) =>
+        c.keys
+          .mapFilter( k => c( k ).map( v => !v.isArray && !v.isObject ).tupleLeft( k ) )
+          .toMap
+          .alignWith( m ) {
+            case Ior.Left( a )    => Set( a )
+            case Ior.Right( b )   => b
+            case Ior.Both( a, b ) => b + a
+          }
+      )
+      .flatMap { case ( k, v ) => Option.when( !v.contains( false ) )( k ) }
+      .to( SortedSet )
+
+    NonEmptyVector(
+      fields.mkString_( "," ),
+      classes
+        .mapFilter( _.asObject )
+        .map( obj =>
+          fields
+            .to( Iterable )
+            .fmap( k => obj( k ).filter( v => !v.isArray && !v.isObject ).fold( "" )( v => v.noSpaces ) )
+            .mkString_( "," )
+        )
     )
   }
 
@@ -157,11 +193,14 @@ object ExploreJson extends IOApp {
   override def run( args: List[String] ): IO[ExitCode] =
     for {
       array <- loadJson
-      _     <- printSchematicDependenciesCount( array )
+      _     <- printLiteralFieldsCsv( array, NativeClass.colliderClass )
+//      _     <- printSchematicDependenciesCount( array )
 //      _     <- printResources( array )
 //      _     <- IO.println( showSchemas( array ) )
 //      _ <- printNativeClasses( array )
-//      _ <- IO.println( collectNativeClassFields( NativeClass.resourceExtractorClass )( array ).intercalate( "\n" ) )
+//      _ <- IO.println( collectNativeClassFields( NativeClass.manufacturerClass )( array ).intercalate( "\n" ) )
+//      _ <- IO.println( "" )
+//      _ <- IO.println( collectNativeClassFields( NativeClass.recipeClass )( array ).intercalate( "\n" ) )
 //      _ <- IO.println(
 //            collectNativeClassFieldValues( NativeClass.resourceExtractorClass, "mDisplayName" )( array )
 //              .map( _.show )
