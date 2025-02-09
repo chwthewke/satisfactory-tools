@@ -3,7 +3,7 @@ package persistence
 
 import cats.Order
 import cats.Show
-import cats.syntax.contravariant._
+import cats.syntax.all._
 
 final case class MachineId( id: Int ) extends AnyVal
 

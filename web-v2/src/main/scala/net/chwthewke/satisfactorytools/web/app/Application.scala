@@ -7,16 +7,7 @@ import cats.Semigroup
 import cats.data.EitherT
 import cats.data.OptionT
 import cats.effect.Async
-import cats.syntax.applicative._
-import cats.syntax.apply._
-import cats.syntax.eq._
-import cats.syntax.flatMap._
-import cats.syntax.foldable._
-import cats.syntax.functor._
-import cats.syntax.nested._
-import cats.syntax.semigroup._
-import cats.syntax.semigroupk._
-import cats.syntax.show._
+import cats.syntax.all._
 import org.http4s.ContextRequest
 import org.http4s.ContextRoutes
 import org.http4s.FormDataDecoder

@@ -3,7 +3,7 @@ package model
 
 import cats.Order
 import cats.Show
-import cats.syntax.show._
+import cats.syntax.all._
 import enumeratum.Circe
 import enumeratum.Enum
 import enumeratum.EnumEntry

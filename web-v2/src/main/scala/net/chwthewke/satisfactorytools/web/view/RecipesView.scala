@@ -2,9 +2,7 @@ package net.chwthewke.satisfactorytools
 package web.view
 
 import cats.Traverse
-import cats.syntax.foldable._
-import cats.syntax.functor._
-import cats.syntax.show._
+import cats.syntax.all._
 import scalatags.Text
 import scalatags.Text.Tag
 

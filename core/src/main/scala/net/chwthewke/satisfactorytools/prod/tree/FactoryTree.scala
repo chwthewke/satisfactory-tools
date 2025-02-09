@@ -4,12 +4,7 @@ package tree
 
 import cats.Eval
 import cats.free.Cofree
-import cats.syntax.flatMap._
-import cats.syntax.foldable._
-import cats.syntax.functor._
-import cats.syntax.functorFilter._
-import cats.syntax.option._
-import cats.syntax.traverse._
+import cats.syntax.all._
 
 import data.Countable
 import prod.Calculator.Tolerance

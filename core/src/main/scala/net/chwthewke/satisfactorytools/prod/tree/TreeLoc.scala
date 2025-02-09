@@ -5,9 +5,7 @@ package tree
 import cats.data.NonEmptyVector
 import cats.PartialOrder
 import cats.Show
-import cats.syntax.foldable._
-import cats.syntax.traverse._
-import cats.syntax.vector._
+import cats.syntax.all._
 import io.circe.Decoder
 import io.circe.Encoder
 

@@ -2,13 +2,7 @@ package net.chwthewke.satisfactorytools
 package persistence
 
 import cats.data.OptionT
-import cats.syntax.applicative._
-import cats.syntax.applicativeError._
-import cats.syntax.apply._
-import cats.syntax.flatMap._
-import cats.syntax.functor._
-import cats.syntax.option._
-import cats.syntax.show._
+import cats.syntax.all._
 import doobie._
 import doobie.implicits._
 import doobie.postgres.implicits._

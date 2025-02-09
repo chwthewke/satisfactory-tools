@@ -6,11 +6,7 @@ import cats.effect.IO
 import cats.effect.IOApp
 import cats.effect.std.Console
 import cats.effect.syntax.monadCancel._
-import cats.syntax.applicative._
-import cats.syntax.applicativeError._
-import cats.syntax.flatMap._
-import cats.syntax.foldable._
-import cats.syntax.functor._
+import cats.syntax.all._
 import fs2.io.file.CopyFlag
 import fs2.io.file.CopyFlags
 import fs2.io.file.Files

@@ -2,7 +2,7 @@ package net.chwthewke.satisfactorytools
 package prod
 
 import cats.Show
-import cats.syntax.show._
+import cats.syntax.all._
 
 import model.Bill
 import model.Options

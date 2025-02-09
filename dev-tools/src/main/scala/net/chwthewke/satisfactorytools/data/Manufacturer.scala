@@ -2,7 +2,7 @@ package net.chwthewke.satisfactorytools
 package data
 
 import cats.Show
-import cats.syntax.show._
+import cats.syntax.all._
 import io.circe.Decoder
 
 final case class Manufacturer(

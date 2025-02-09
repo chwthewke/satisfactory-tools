@@ -2,9 +2,7 @@ package net.chwthewke.satisfactorytools
 package prod
 package ojsolver
 
-import cats.syntax.foldable._
-import cats.syntax.functor._
-import cats.syntax.show._
+import cats.syntax.all._
 import mouse.any._
 import org.ojalgo.optimisation.Expression
 import org.ojalgo.optimisation.ExpressionsBasedModel

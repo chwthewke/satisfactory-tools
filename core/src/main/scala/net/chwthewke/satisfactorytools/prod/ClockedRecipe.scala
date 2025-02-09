@@ -2,8 +2,7 @@ package net.chwthewke.satisfactorytools
 package prod
 
 import cats.data.NonEmptyList
-import cats.syntax.flatMap._
-import cats.syntax.traverse._
+import cats.syntax.all._
 
 import data.Countable
 import data.Item

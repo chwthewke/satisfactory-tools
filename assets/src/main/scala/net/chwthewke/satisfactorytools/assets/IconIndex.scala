@@ -2,7 +2,7 @@ package net.chwthewke.satisfactorytools
 package assets
 
 import cats.Show
-import cats.syntax.foldable._
+import cats.syntax.all._
 import pureconfig.ConfigReader
 import pureconfig.ConfigWriter
 import pureconfig.generic.semiauto

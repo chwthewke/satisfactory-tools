@@ -3,7 +3,7 @@ package protocol
 
 import cats.Show
 import cats.derived.semiauto
-import cats.syntax.apply._
+import cats.syntax.all._
 import java.time.Instant
 import org.typelevel.cats.time.instances.instant._
 

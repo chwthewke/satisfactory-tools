@@ -3,7 +3,7 @@ package net.chwthewke.satisfactorytools.model
 import cats.Order
 import cats.Show
 import cats.derived.semiauto
-import cats.syntax.apply._
+import cats.syntax.all._
 import io.circe.Decoder
 import io.circe.Encoder
 import io.circe.generic.semiauto.deriveDecoder

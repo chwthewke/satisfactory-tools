@@ -2,12 +2,7 @@ package net.chwthewke.satisfactorytools
 package web.view
 
 import cats.data.NonEmptyVector
-import cats.syntax.foldable._
-import cats.syntax.functor._
-import cats.syntax.functorFilter._
-import cats.syntax.show._
-import cats.syntax.unorderedFoldable._
-import cats.syntax.vector._
+import cats.syntax.all._
 import enumeratum.EnumEntry
 import scalatags.Text
 import scalatags.Text.Tag

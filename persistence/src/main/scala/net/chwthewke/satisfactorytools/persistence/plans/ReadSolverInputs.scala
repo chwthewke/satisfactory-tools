@@ -2,11 +2,7 @@ package net.chwthewke.satisfactorytools
 package persistence
 package plans
 
-import cats.syntax.applicativeError._
-import cats.syntax.apply._
-import cats.syntax.functor._
-import cats.syntax.functorFilter._
-import cats.syntax.traverse._
+import cats.syntax.all._
 import doobie._
 import doobie.implicits._
 import doobie.util.invariant.UnexpectedContinuation

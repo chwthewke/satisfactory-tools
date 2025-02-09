@@ -7,8 +7,7 @@ import cats.effect.IO
 import cats.effect.IOApp
 import cats.effect.Ref
 import cats.effect.Resource
-import cats.syntax.apply._
-import cats.syntax.semigroupk._
+import cats.syntax.all._
 import doobie.Transactor
 import fs2.concurrent.Signal
 import fs2.concurrent.SignallingRef

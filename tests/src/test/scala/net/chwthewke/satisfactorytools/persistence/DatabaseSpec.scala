@@ -4,7 +4,7 @@ package persistence
 import cats.effect.IO
 import cats.effect.Resource
 import cats.effect.unsafe.IORuntime
-import cats.syntax.functor._
+import cats.syntax.all._
 import doobie._
 import doobie.implicits._
 import doobie.scalatest.IOChecker

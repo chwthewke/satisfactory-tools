@@ -1,11 +1,7 @@
 package net.chwthewke.satisfactorytools
 package prod
 
-import cats.syntax.apply._
-import cats.syntax.foldable._
-import cats.syntax.functor._
-import cats.syntax.option._
-import cats.syntax.reducible._
+import cats.syntax.all._
 
 import data.Countable
 import data.Form

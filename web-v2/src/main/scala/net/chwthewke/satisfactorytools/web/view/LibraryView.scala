@@ -1,7 +1,7 @@
 package net.chwthewke.satisfactorytools
 package web.view
 
-import cats.syntax.show._
+import cats.syntax.all._
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import scalatags.Text.Tag

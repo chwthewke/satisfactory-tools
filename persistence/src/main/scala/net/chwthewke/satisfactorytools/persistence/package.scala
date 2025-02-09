@@ -1,6 +1,6 @@
 package net.chwthewke.satisfactorytools
 
-import cats.syntax.traverse._
+import cats.syntax.all._
 import doobie._
 import doobie.postgres.implicits._
 import doobie.util.invariant.InvalidEnum

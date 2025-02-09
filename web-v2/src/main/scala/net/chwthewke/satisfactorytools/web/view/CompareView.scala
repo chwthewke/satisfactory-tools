@@ -2,10 +2,7 @@ package net.chwthewke.satisfactorytools
 package web.view
 
 import cats.data.Ior
-import cats.syntax.foldable._
-import cats.syntax.option._
-import cats.syntax.semigroup._
-import cats.syntax.traverse._
+import cats.syntax.all._
 import scala.collection.immutable.SortedMap
 import scalatags.Text
 

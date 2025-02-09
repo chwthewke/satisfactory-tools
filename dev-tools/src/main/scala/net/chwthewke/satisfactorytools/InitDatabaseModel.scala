@@ -6,9 +6,7 @@ import cats.effect.IO
 import cats.effect.IOApp
 import cats.effect.Resource
 import cats.effect.std.Console
-import cats.syntax.flatMap._
-import cats.syntax.functor._
-import cats.syntax.show._
+import cats.syntax.all._
 import doobie._
 import doobie.implicits._
 import pureconfig.ConfigSource

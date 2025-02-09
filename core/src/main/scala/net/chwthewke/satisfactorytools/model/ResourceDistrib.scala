@@ -6,8 +6,7 @@ import cats.Eq
 import cats.Monoid
 import cats.Show
 import cats.derived.semiauto
-import cats.syntax.foldable._
-import cats.syntax.show._
+import cats.syntax.all._
 import io.circe.Decoder
 import io.circe.Encoder
 import io.circe.generic.semiauto.deriveDecoder

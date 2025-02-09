@@ -4,9 +4,7 @@ package data
 import alleycats.std.iterable._
 import cats.Monoid
 import cats.Show
-import cats.syntax.foldable._
-import cats.syntax.functor._
-import cats.syntax.show._
+import cats.syntax.all._
 import io.circe.Decoder
 
 final case class GameData(

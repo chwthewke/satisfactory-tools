@@ -2,12 +2,7 @@ package net.chwthewke.satisfactorytools
 package prod
 
 import cats.Id
-import cats.syntax.apply._
-import cats.syntax.flatMap._
-import cats.syntax.foldable._
-import cats.syntax.functor._
-import cats.syntax.option._
-import cats.syntax.semigroup._
+import cats.syntax.all._
 import mouse.option._
 import scala.annotation.tailrec
 

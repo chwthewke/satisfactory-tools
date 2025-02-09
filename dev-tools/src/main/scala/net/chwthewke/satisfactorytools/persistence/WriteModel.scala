@@ -3,13 +3,7 @@ package persistence
 
 import cats.Functor
 import cats.Reducible
-import cats.syntax.apply._
-import cats.syntax.foldable._
-import cats.syntax.functor._
-import cats.syntax.functorFilter._
-import cats.syntax.list._
-import cats.syntax.traverse._
-import cats.syntax.vector._
+import cats.syntax.all._
 import doobie._
 import doobie.implicits._
 import scala.concurrent.duration.FiniteDuration

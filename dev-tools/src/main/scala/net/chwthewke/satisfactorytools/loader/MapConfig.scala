@@ -2,9 +2,7 @@ package net.chwthewke.satisfactorytools
 package loader
 
 import cats.Show
-import cats.syntax.apply._
-import cats.syntax.functor._
-import cats.syntax.traverse._
+import cats.syntax.all._
 import pureconfig.ConfigReader
 import pureconfig.error.CannotConvert
 import pureconfig.generic.semiauto

@@ -3,11 +3,7 @@ package model
 
 import cats.Show
 import cats.data.NonEmptyList
-import cats.syntax.foldable._
-import cats.syntax.functor._
-import cats.syntax.option._
-import cats.syntax.semigroup._
-import cats.syntax.show._
+import cats.syntax.all._
 import io.circe.Decoder
 import io.circe.Encoder
 import io.circe.generic.semiauto.deriveDecoder

@@ -3,7 +3,7 @@ package data
 
 import cats.Order
 import cats.Show
-import cats.syntax.show._
+import cats.syntax.all._
 import io.circe.Decoder
 import io.circe.Encoder
 import io.circe.generic.semiauto.deriveDecoder

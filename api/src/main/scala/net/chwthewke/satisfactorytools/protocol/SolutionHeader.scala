@@ -7,8 +7,7 @@ import cats.Eval
 import cats.Show
 import cats.Traverse
 import cats.derived.semiauto
-import cats.syntax.applicative._
-import cats.syntax.functor._
+import cats.syntax.all._
 
 sealed trait SolutionHeader[+T] extends Product {
   import SolutionHeader._

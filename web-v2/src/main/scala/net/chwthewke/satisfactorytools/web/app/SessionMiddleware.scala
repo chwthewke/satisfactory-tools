@@ -5,7 +5,7 @@ import cats.data.EitherT
 import cats.data.Kleisli
 import cats.data.OptionT
 import cats.effect.Sync
-import cats.syntax.show._
+import cats.syntax.all._
 import java.util.UUID
 import org.http4s.BasicCredentials
 import org.http4s.Challenge

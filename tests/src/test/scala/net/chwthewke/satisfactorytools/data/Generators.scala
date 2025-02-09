@@ -2,7 +2,7 @@ package net.chwthewke.satisfactorytools
 package data
 
 import cats.Traverse
-import cats.syntax.traverse._
+import cats.syntax.all._
 import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck.Gen
 import org.scalacheck.cats.implicits._

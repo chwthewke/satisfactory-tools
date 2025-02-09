@@ -3,7 +3,7 @@ package protocol
 
 import cats.Eq
 import cats.Show
-import cats.syntax.contravariant._
+import cats.syntax.all._
 
 case class UserName( name: String ) extends AnyVal
 

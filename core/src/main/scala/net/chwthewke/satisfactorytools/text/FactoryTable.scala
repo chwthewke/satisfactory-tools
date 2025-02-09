@@ -3,10 +3,7 @@ package text
 
 import alleycats.std.iterable._
 import cats.data.ZipVector
-import cats.syntax.apply._
-import cats.syntax.foldable._
-import cats.syntax.semigroup._
-import cats.syntax.show._
+import cats.syntax.all._
 import mouse.boolean._
 import scala.collection.immutable.SortedMap
 import scala.collection.immutable.SortedSet

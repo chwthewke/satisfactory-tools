@@ -4,12 +4,7 @@ package plans
 
 import alleycats.std.iterable._
 import cats.data.NonEmptyVector
-import cats.syntax.apply._
-import cats.syntax.foldable._
-import cats.syntax.functor._
-import cats.syntax.functorFilter._
-import cats.syntax.traverse._
-import cats.syntax.vector._
+import cats.syntax.all._
 import doobie._
 import doobie.implicits._
 

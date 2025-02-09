@@ -4,10 +4,7 @@ package plans
 
 import cats.data.NonEmptyVector
 import cats.data.OptionT
-import cats.syntax.applicative._
-import cats.syntax.apply._
-import cats.syntax.functor._
-import cats.syntax.functorFilter._
+import cats.syntax.all._
 import doobie._
 import doobie.implicits._
 
@@ -56,7 +53,7 @@ object CustomGroups {
     val queriedRows: NonEmptyVector[Int] =
       if (thirdRow) NonEmptyVector.of( 0, 1, 2 ) else NonEmptyVector.of( 0, 1 )
 
-//    import cats.syntax.flatMap._
+//    import cats.syntax.all._
     OptionT(
       statements
         .selectGroupOrder( planId, group, queriedRows.map( from + _ ) )
