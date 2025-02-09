@@ -2,10 +2,7 @@ package net.chwthewke.satisfactorytools
 package persistence
 package plans
 
-import cats.syntax.applicative._
-import cats.syntax.either._
-import cats.syntax.foldable._
-import cats.syntax.functor._
+import cats.syntax.all._
 import doobie._
 import doobie.implicits._
 import doobie.postgres.circe.jsonb.implicits._

@@ -3,10 +3,7 @@ package persistence
 
 import cats.data.NonEmptyList
 import cats.data.OptionT
-import cats.syntax.applicativeError._
-import cats.syntax.apply._
-import cats.syntax.foldable._
-import cats.syntax.traverse._
+import cats.syntax.all._
 import doobie._
 import doobie.implicits._
 import doobie.util.invariant.UnexpectedContinuation

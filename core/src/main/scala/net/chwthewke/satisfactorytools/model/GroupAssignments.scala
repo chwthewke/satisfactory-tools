@@ -5,10 +5,7 @@ import cats.Eq
 import cats.Show
 import cats.data.NonEmptyVector
 import cats.derived.semiauto
-import cats.syntax.functor._
-import cats.syntax.functorFilter._
-import cats.syntax.unorderedFoldable._
-import cats.syntax.vector._
+import cats.syntax.all._
 
 final case class GroupAssignments[A]( groups: Vector[GroupAssignment[A]] ) {
   def count: Int = groups.size

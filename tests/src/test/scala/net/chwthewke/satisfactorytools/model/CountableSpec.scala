@@ -8,7 +8,7 @@ import cats.derived.semiauto
 import cats.kernel.CommutativeMonoid
 import cats.laws.discipline.MonadTests
 import cats.laws.discipline.TraverseTests
-import cats.syntax.apply._
+import cats.syntax.all._
 import org.scalacheck.Arbitrary
 import org.scalacheck.cats.implicits._
 import org.scalatest.prop.Configuration

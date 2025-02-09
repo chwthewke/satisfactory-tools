@@ -2,9 +2,7 @@ package net.chwthewke.satisfactorytools
 package persistence
 
 import cats.data.OptionT
-import cats.syntax.flatMap._
-import cats.syntax.functor._
-import cats.syntax.traverse._
+import cats.syntax.all._
 import doobie._
 
 import api.PlannerApi

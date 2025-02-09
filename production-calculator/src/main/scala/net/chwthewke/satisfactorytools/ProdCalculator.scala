@@ -3,7 +3,7 @@ package net.chwthewke.satisfactorytools
 import buildinfo.Satisfactorytools
 import cats.effect.ExitCode
 import cats.effect.IO
-import cats.syntax.either._
+import cats.syntax.all._
 import com.monovore.decline.Opts
 import com.monovore.decline.effect.CommandIOApp
 import pureconfig.module.catseffect.syntax._

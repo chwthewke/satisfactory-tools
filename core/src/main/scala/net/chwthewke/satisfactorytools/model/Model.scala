@@ -3,8 +3,7 @@ package model
 
 import alleycats.std.iterable._
 import cats.Show
-import cats.syntax.foldable._
-import cats.syntax.show._
+import cats.syntax.all._
 import io.circe.Decoder
 import io.circe.Encoder
 import io.circe.generic.semiauto.deriveDecoder

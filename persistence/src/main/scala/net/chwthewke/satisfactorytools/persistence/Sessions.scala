@@ -2,8 +2,7 @@ package net.chwthewke.satisfactorytools
 package persistence
 
 import cats.data.OptionT
-import cats.syntax.applicativeError._
-import cats.syntax.functor._
+import cats.syntax.all._
 import doobie._
 import doobie.implicits._
 import doobie.postgres.implicits._

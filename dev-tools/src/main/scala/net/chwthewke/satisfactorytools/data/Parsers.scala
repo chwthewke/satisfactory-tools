@@ -4,8 +4,7 @@ package data
 import atto.Atto._
 import atto._
 import cats.data.NonEmptyList
-import cats.syntax.either._
-import cats.syntax.functor._
+import cats.syntax.all._
 import enumeratum.Enum
 import enumeratum.EnumEntry
 import io.circe.Decoder

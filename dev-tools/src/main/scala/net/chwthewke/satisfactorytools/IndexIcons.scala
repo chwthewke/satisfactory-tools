@@ -6,11 +6,7 @@ import cats.effect.ExitCode
 import cats.effect.IO
 import cats.effect.IOApp
 import cats.effect.std.Console
-import cats.syntax.flatMap._
-import cats.syntax.foldable._
-import cats.syntax.functor._
-import cats.syntax.order._
-import cats.syntax.traverse._
+import cats.syntax.all._
 import com.typesafe.config.ConfigRenderOptions
 import fs2.Stream
 import fs2.hash

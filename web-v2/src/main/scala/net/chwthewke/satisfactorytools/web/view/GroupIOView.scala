@@ -1,10 +1,7 @@
 package net.chwthewke.satisfactorytools
 package web.view
 
-import cats.syntax.apply._
-import cats.syntax.foldable._
-import cats.syntax.functor._
-import cats.syntax.functorFilter._
+import cats.syntax.all._
 import scala.collection.immutable.SortedSet
 import scalatags.Text
 import scalatags.Text.Tag

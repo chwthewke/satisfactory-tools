@@ -1,11 +1,6 @@
 package net.chwthewke.satisfactorytools
 
-import cats.syntax.either._
-import cats.syntax.foldable._
-import cats.syntax.option._
-import cats.syntax.show._
-import cats.syntax.traverse._
-import cats.syntax.traverseFilter._
+import cats.syntax.all._
 import mouse.boolean._
 import pureconfig.ConfigReader
 import pureconfig.generic.semiauto

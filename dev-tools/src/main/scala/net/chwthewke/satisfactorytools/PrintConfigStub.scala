@@ -3,7 +3,7 @@ package net.chwthewke.satisfactorytools
 import cats.effect.ExitCode
 import cats.effect.IO
 import cats.effect.IOApp
-import cats.syntax.foldable._
+import cats.syntax.all._
 
 import data.Item
 import loader.Loader

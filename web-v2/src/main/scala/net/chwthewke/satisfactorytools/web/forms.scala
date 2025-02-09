@@ -6,16 +6,7 @@ import cats.data.Validated.Valid
 import cats.data.ValidatedNel
 import cats.effect.Async
 import cats.parse.Parser
-import cats.syntax.alternative._
-import cats.syntax.applicative._
-import cats.syntax.apply._
-import cats.syntax.either._
-import cats.syntax.foldable._
-import cats.syntax.functor._
-import cats.syntax.functorFilter._
-import cats.syntax.option._
-import cats.syntax.show._
-import cats.syntax.traverse._
+import cats.syntax.all._
 import enumeratum.Enum
 import enumeratum.EnumEntry
 import org.http4s.FormDataDecoder

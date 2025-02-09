@@ -8,10 +8,7 @@ import cats.Traverse
 import cats.data.Chain
 import cats.derived.semiauto
 import cats.free.Cofree
-import cats.syntax.foldable._
-import cats.syntax.functor._
-import cats.syntax.functorFilter._
-import cats.syntax.semigroup._
+import cats.syntax.all._
 import io.circe.Json
 import scala.collection.immutable.SortedMap
 

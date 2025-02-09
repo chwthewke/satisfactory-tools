@@ -1,8 +1,7 @@
 package net.chwthewke.satisfactorytools
 package web.view
 
-import cats.syntax.functor._
-import cats.syntax.show._
+import cats.syntax.all._
 import scalatags.Text
 import scalatags.Text.Tag
 

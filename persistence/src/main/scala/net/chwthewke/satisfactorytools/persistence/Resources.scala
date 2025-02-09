@@ -3,7 +3,7 @@ package persistence
 
 import cats.effect.Async
 import cats.effect.kernel.Resource
-import cats.syntax.functor._
+import cats.syntax.all._
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import doobie.ExecutionContexts

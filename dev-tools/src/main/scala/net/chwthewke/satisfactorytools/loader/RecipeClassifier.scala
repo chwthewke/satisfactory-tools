@@ -8,16 +8,7 @@ import cats.Show
 import cats.Traverse
 import cats.data.NonEmptyVector
 import cats.derived.semiauto
-import cats.syntax.alternative._
-import cats.syntax.foldable._
-import cats.syntax.functor._
-import cats.syntax.functorFilter._
-import cats.syntax.option._
-import cats.syntax.reducible._
-import cats.syntax.semigroupk._
-import cats.syntax.show._
-import cats.syntax.traverse._
-import cats.syntax.vector._
+import cats.syntax.all._
 import mouse.option._
 import scala.annotation.tailrec
 

@@ -1,7 +1,7 @@
 package net.chwthewke.satisfactorytools
 package data
 
-import cats.syntax.show._
+import cats.syntax.all._
 import fr.thomasdufour.autodiff.Diff
 import fr.thomasdufour.autodiff.extra.enumeratum._
 import fr.thomasdufour.autodiff.derived

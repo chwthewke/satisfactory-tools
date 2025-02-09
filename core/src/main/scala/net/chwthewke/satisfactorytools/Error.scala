@@ -1,7 +1,7 @@
 package net.chwthewke.satisfactorytools
 
 import cats.Reducible
-import cats.syntax.foldable._
+import cats.syntax.all._
 
 case class Error( msg: String ) extends RuntimeException( msg, null, false, false )
 

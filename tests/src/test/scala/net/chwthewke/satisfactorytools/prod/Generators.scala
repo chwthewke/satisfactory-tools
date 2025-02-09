@@ -2,8 +2,7 @@ package net.chwthewke.satisfactorytools
 package prod
 
 import cats.effect.unsafe.IORuntime
-import cats.syntax.apply._
-import cats.syntax.traverse._
+import cats.syntax.all._
 import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck.Gen
 import org.scalacheck.cats.implicits._

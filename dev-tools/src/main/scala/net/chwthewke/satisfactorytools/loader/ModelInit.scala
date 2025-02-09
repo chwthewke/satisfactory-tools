@@ -6,14 +6,7 @@ import cats.Id
 import cats.Traverse
 import cats.data.NonEmptyList
 import cats.data.ValidatedNel
-import cats.syntax.apply._
-import cats.syntax.either._
-import cats.syntax.foldable._
-import cats.syntax.functor._
-import cats.syntax.option._
-import cats.syntax.show._
-import cats.syntax.traverse._
-import cats.syntax.traverseFilter._
+import cats.syntax.all._
 import scala.collection.immutable.SortedMap
 import scala.concurrent.duration._
 

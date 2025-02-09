@@ -2,9 +2,7 @@ package net.chwthewke.satisfactorytools
 package model
 
 import alleycats.std.map._
-import cats.syntax.apply._
-import cats.syntax.functor._
-import cats.syntax.traverse._
+import cats.syntax.all._
 import org.scalacheck.Gen
 import org.scalacheck.cats.implicits._
 

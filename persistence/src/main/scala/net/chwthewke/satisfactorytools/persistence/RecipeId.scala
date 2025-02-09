@@ -3,7 +3,7 @@ package persistence
 
 import cats.Show
 import cats.kernel.Order
-import cats.syntax.contravariant._
+import cats.syntax.all._
 
 final case class RecipeId( id: Int ) extends AnyVal
 

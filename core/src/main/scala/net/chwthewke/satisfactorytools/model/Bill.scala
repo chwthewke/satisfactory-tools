@@ -3,7 +3,7 @@ package model
 
 import cats.Eq
 import cats.Show
-import cats.syntax.option._
+import cats.syntax.all._
 
 import data.Countable
 import data.Item

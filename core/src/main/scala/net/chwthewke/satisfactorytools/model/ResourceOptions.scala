@@ -5,10 +5,7 @@ import algebra.lattice.MeetSemilattice
 import cats.Eq
 import cats.Show
 import cats.data.Ior
-import cats.syntax.align._
-import cats.syntax.foldable._
-import cats.syntax.option._
-import cats.syntax.show._
+import cats.syntax.all._
 import io.circe.Decoder
 import io.circe.Encoder
 import io.circe.generic.semiauto.deriveDecoder

@@ -1,8 +1,7 @@
 package net.chwthewke.satisfactorytools
 package web.view
 
-import cats.syntax.foldable._
-import cats.syntax.show._
+import cats.syntax.all._
 import scala.annotation.nowarn
 import scalatags.Text.Tag
 import scalatags.Text.all._

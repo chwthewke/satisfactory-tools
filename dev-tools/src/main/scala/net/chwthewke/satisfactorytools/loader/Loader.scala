@@ -4,10 +4,7 @@ package loader
 import cats.Monoid
 import cats.effect.IO
 import cats.effect.Sync
-import cats.syntax.apply._
-import cats.syntax.flatMap._
-import cats.syntax.option._
-import cats.syntax.validated._
+import cats.syntax.all._
 import fs2.Stream
 import io.circe.Decoder
 import io.circe.fs2.byteArrayParser

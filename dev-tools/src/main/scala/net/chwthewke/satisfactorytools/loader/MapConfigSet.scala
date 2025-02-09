@@ -2,7 +2,7 @@ package net.chwthewke.satisfactorytools
 package loader
 
 import cats.Show
-import cats.syntax.apply._
+import cats.syntax.all._
 import pureconfig.ConfigReader
 
 case class MapConfigSet( configs: Map[Int, MapConfig] )

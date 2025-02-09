@@ -4,10 +4,7 @@ package prod.tree
 import cats.Eval
 import cats.Monoid
 import cats.Show
-import cats.syntax.flatMap._
-import cats.syntax.foldable._
-import cats.syntax.partialOrder._
-import cats.syntax.semigroup._
+import cats.syntax.all._
 import io.circe.Decoder
 import io.circe.Encoder
 
