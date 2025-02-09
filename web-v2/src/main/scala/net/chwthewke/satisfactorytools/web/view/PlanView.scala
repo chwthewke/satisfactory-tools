@@ -33,12 +33,18 @@ object PlanView {
       div(
         id := "main",
         div(
-          id := "input",
+          id         := "input",
+          flexBasis  := "25%",
+          flexShrink := "0",
+          flexGrow   := "1",
           inputTabs( inputTab ),
           inputView( inputTab )( model, input )
         ),
         div(
-          id := "output",
+          id         := "output",
+          flexBasis  := "50%",
+          flexShrink := "0",
+          flexGrow   := "2",
           outputTabs( outputTab, output ),
           output match {
             case SolutionHeader.NotComputed        => p( "Configure plan on the left and press Compute" )
@@ -132,7 +138,8 @@ object PlanView {
           ( "Manufacturing machines", OutputTab.Machines ),
           ( "Item I/O", OutputTab.Items ),
           ( "Inter-group Item I/O", OutputTab.GroupIO ),
-          ( "Tree (beta)", OutputTab.Tree )
+          ( "Tree (beta)", OutputTab.Tree ),
+          ( "Flow (alpha)", OutputTab.ItemFlow( OutputTab.ItemFlow.State.default ) )
         ) ++
           ( 1 to solution.groupCount )
             .map( ix => ( ix.show, OutputTab.CustomGroup( ix, selected.editMode ) ) )
@@ -178,6 +185,7 @@ object PlanView {
       case OutputTab.Machines                    => MachinesView
       case OutputTab.Inputs                      => InputsView
       case OutputTab.Tree                        => TreeView
+      case OutputTab.ItemFlow( state )           => ItemFlowView( state )
     }
 
 }

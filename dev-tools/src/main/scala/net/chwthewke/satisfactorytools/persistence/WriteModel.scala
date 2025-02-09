@@ -25,7 +25,9 @@ import model.Power
 import model.Recipe
 import model.ResourceDistrib
 import model.ResourcePurity
+import protocol.ItemId
 import protocol.ModelVersionId
+import protocol.RecipeId
 
 object WriteModel {
 

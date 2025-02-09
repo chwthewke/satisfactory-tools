@@ -39,7 +39,7 @@ val solver = project
 
 val api = project
   .settings( compilerPlugins )
-  .settings( libraryDependencies ++= catsTime ++ circe )
+  .settings( libraryDependencies ++= catsTime ++ circe ++ scodec )
   .dependsOn( core )
   .enablePlugins( ScalacPlugin, DependenciesPlugin )
 
@@ -79,7 +79,6 @@ val `web-v2` = project
     libraryDependencies ++=
       http4s ++
         http4sBlazeServer ++
-        scodec ++
         scalatags ++
         logging ++
         pureconfigCatsEffect

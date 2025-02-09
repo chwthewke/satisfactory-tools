@@ -6,7 +6,9 @@ import cats.data.NonEmptyVector
 import model.ExtractorType
 import model.ModelVersion
 import model.ResourcePurity
+import protocol.ItemId
 import protocol.ModelVersionId
+import protocol.RecipeId
 
 class WriteModelChecks extends DatabaseSpec {
   import WriteModel.RecipeIngredientId

@@ -21,14 +21,17 @@ import model.GroupAssignment
 import model.GroupAssignments
 import model.Machine
 import model.Recipe
+import net.chwthewke.satisfactorytools.protocol.InputTab
 import prod.ClockedRecipe
 import prod.Factory
 import prod.tree.FactoryTree
 import protocol.CustomGroupResult
+import protocol.ItemId
 import protocol.ItemIO
 import protocol.ItemSrcDest
 import protocol.OutputTab
 import protocol.PlanId
+import protocol.RecipeId
 import protocol.SolutionId
 
 object ReadSolution {
@@ -48,7 +51,26 @@ object ReadSolution {
       case OutputTab.Machines             => getMachines( planId, solutionId, groupCount )
       case OutputTab.Inputs               => getRawInputs( planId, solutionId, groupCount )
       case OutputTab.Tree                 => getPlanTree( planId, solutionId, groupCount )
+      case OutputTab.ItemFlow( _ )        => getItemFlowData( planId, solutionId, groupCount )
     }
+
+  private def getItemFlowData(
+      planId: PlanId,
+      solutionId: SolutionId,
+      groupCount: Int
+  ): ConnectionIO[OutputTab.ItemFlow.Data] = {
+    for {
+      ( items, recipes )  <- getItemsAndRecipes( planId )
+      bill                <- Plans.getPlanQuery( planId, InputTab.Bill )
+      ( factory, groups ) <- getSolutionWithModel( solutionId, groupCount, items, recipes )
+    } yield OutputTab.ItemFlow.Data(
+      bill,
+      factory,
+      groups,
+      recipes.toVector,
+      items.toVector
+    )
+  }
 
   private def getPlanTree( planId: PlanId, solutionId: SolutionId, groupCount: Int ): ConnectionIO[FactoryTree] =
     (
@@ -170,20 +192,40 @@ object ReadSolution {
           }
     }
 
+  private def getItemsAndRecipes( planId: PlanId ): ConnectionIO[( Map[ItemId, Item], Map[RecipeId, Recipe] )] =
+    Headers
+      .readPlanHeader( planId )
+      .semiflatMap( header =>
+        (
+          ReadModel.readItems( header.modelVersionId ),
+          ReadModel.readRecipes( header.modelVersionId )
+        ).tupled
+      )
+      .getOrElse( ( Map.empty, Map.empty ) )
+
   private def getSolution(
       planId: PlanId,
       solutionId: SolutionId,
       groupCount: Int
   ): ConnectionIO[( Factory, GroupAssignments[ClassName] )] =
+    for {
+      ( items, recipes ) <- getItemsAndRecipes( planId )
+      solution           <- getSolutionWithModel( solutionId, groupCount, items, recipes )
+    } yield solution
+
+  private def getSolutionWithModel(
+      solutionId: SolutionId,
+      groupCount: Int,
+      itemsById: Map[ItemId, Item],
+      recipesById: Map[RecipeId, Recipe]
+  ): ConnectionIO[( Factory, GroupAssignments[ClassName] )] =
     (
-      readModelIds( planId, ReadModel.readItems ),
-      readModelIds( planId, ReadModel.readRecipes ),
       statements.selectExtractionRecipes.toQuery0( solutionId ).to[Vector],
       statements.selectManufacturingRecipes.toQuery0( solutionId ).to[Vector],
       statements.selectExtraInputs.toQuery0( solutionId ).to[Vector],
       statements.selectExtraOutputs.toQuery0( solutionId ).to[Vector]
     ).mapN {
-      case ( itemsById, recipesById, extraction, manufacturing, inputs, outputs ) =>
+      case ( extraction, manufacturing, inputs, outputs ) =>
         val extractionRecipes: Vector[ClockedRecipe] =
           extraction.mapFilter {
             case ( r, s ) =>

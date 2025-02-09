@@ -25,7 +25,9 @@ import model.ResourcePurity
 import model.ResourceWeights
 import prod.SolverInputs
 import protocol.InputTab
+import protocol.ItemId
 import protocol.PlanId
+import protocol.RecipeId
 
 object ReadSolverInputs {
   def readPlanInput[D]( planId: PlanId, tab: InputTab.Aux[D] ): ConnectionIO[D] =

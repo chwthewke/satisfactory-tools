@@ -16,6 +16,7 @@ import data.Countable
 import model.GroupAssignments
 import protocol.PlanHeader
 import protocol.PlanId
+import protocol.RecipeId
 import protocol.SolutionHeader
 import protocol.SolutionId
 

@@ -125,6 +125,7 @@ object forms {
         case OutputTab.CustomGroup( ix, true )  => s"group_edit_$ix"
         case OutputTab.GroupIO                  => "group-io"
         case OutputTab.Tree                     => "tree"
+        case OutputTab.ItemFlow( state )        => s"flow_${state.repr.orEmpty}"
       }
 
       def unapply( string: String ): Option[OutputTab] =
@@ -148,6 +149,12 @@ object forms {
               .when( string.startsWith( "group_edit_" ) )( string.stripPrefix( "group_edit_" ) )
               .flatMap( Numeric[Int].parseString )
               .map( OutputTab.CustomGroup( _, editOrder = true ) )
+          )
+          .orElse(
+            Option
+              .when( string.startsWith( "flow_" ) )( string.stripPrefix( "flow_" ) )
+              .flatMap( OutputTab.ItemFlow.State.parse )
+              .map( OutputTab.ItemFlow( _ ) )
           )
     }
 

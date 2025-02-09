@@ -29,7 +29,9 @@ import model.ResourceDistrib
 import model.ResourceOptions
 import model.ResourcePurity
 import model.ResourceWeights
+import protocol.ItemId
 import protocol.ModelVersionId
+import protocol.RecipeId
 
 object ReadModel extends ModelApi[ConnectionIO] {
 
