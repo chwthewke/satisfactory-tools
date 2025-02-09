@@ -17,8 +17,9 @@ object ExploreGameData extends IOApp {
   override def run( args: List[String] ): IO[ExitCode] =
     Loader.io
       .loadGameData( DataVersionStorage.Release1_0 )
+      .flatTap( printConverterRecipes )
 //      .flatTap( data => IO.println( data ) )
-      .flatTap( data => printExtractors( data ) *> printManufacturers( data ) )
+//      .flatTap( data => printExtractors( data ) *> printManufacturers( data ) )
       .as( ExitCode.Success )
 
   def printExtractors( data: GameData ): IO[Unit] =
@@ -37,6 +38,13 @@ object ExploreGameData extends IOApp {
           items.traverse( item => None ).toString
     } )
   }
+
+  def printConverterRecipes( data: GameData ): IO[Unit] =
+    IO.println(
+      data.recipes
+        .filter( _.producedIn.contains( ClassName( "Build_Converter_C" ) ) )
+        .mkString_( "\n\n" )
+    )
 
   def printDependencies( data: GameData ): IO[Unit] = {
     val analyzer: RecipeClassifier#MilestoneAnalyzer = RecipeClassifier( data ).MilestoneAnalyzer.init

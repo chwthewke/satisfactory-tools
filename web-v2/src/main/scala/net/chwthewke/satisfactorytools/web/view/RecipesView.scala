@@ -40,6 +40,11 @@ object RecipesView extends ( ( Model, RecipeList ) => Tag ) {
         ),
         button(
           `class`    := "button is-info",
+          formaction := Actions.removeMatterConversion,
+          "- MATTER CONV."
+        ),
+        button(
+          `class`    := "button is-info",
           formaction := Actions.lockRecipes,
           "LOCK CURRENT"
         )

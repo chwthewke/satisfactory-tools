@@ -46,6 +46,13 @@ final case class Recipe(
 
   def isAlternate: Boolean = displayName.toLowerCase.startsWith( "alternate" )
 
+  // NOTE iffy, but that's what we have
+  def isMatterConversion: Boolean =
+    producedIn.className == ClassName( "Build_Converter_C" ) &&
+      ingredients.size == 2 &&
+      products.size == 1 &&
+      ingredients.exists( _.item.className == ClassName( "Desc_SAMIngot_C" ) ) &&
+      products.head.item.className != ClassName( "Desc_FicsiteIngot_C" )
 }
 
 object Recipe {

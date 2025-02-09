@@ -196,10 +196,11 @@ class Application[F[_]](
   ): F[Response[F]] =
     getHeaderAndModel( planId ).semiflatMap {
       case ( header, model ) =>
+        val actionChanges: Option[PlanId => F[Unit]] = collectRecipeActionChanges( actionPath )
         for {
           changes  <- collectAllChanges( planId, model, inputTab, outputTab, request, actionPath ).value
           targetId <- targetPlanId( header, request, changes.isDefined, actionPath )
-          _        <- changes.traverse_( act => act( targetId ) )
+          _        <- ( changes |+| actionChanges ).traverse_( act => act( targetId ) )
           _ <- planner
                  .computePlan( targetId )
                  .whenA( computeAction( changes.isDefined, header.solution, actionPath ) )
@@ -254,7 +255,7 @@ class Application[F[_]](
   ): F[Unit] =
     planner.addCustomGroup( targetId ).whenA( addCustomGroup( actionPath ) ) *>
       planner.removeCustomGroup( targetId ).whenA( removeCustomGroup( actionPath ) ) *>
-      reorderGroup( targetId, hasChanges, outputTab, actionPath )
+      reorderGroup( targetId, outputTab, actionPath ).whenA( !hasChanges )
 
   private def addCustomGroup( actionPath: Uri.Path ): Boolean =
     actionPath match {
@@ -268,14 +269,14 @@ class Application[F[_]](
       case _                        => false
     }
 
-  private def reorderGroup( planId: PlanId, hasChanges: Boolean, outputTab: OutputTab, actionPath: Uri.Path ): F[Unit] =
+  private def reorderGroup( planId: PlanId, outputTab: OutputTab, actionPath: Uri.Path ): F[Unit] =
     ( outputTab, actionPath ) match {
       case ( OutputTab.CustomGroup( ix, _ ), Actions.outputGroupMoveDown /: segment.Int( row ) /: _ ) =>
-        planner.swapCustomGroupRowWithNext( planId, ix, row ).whenA( !hasChanges )
+        planner.swapCustomGroupRowWithNext( planId, ix, row )
       case ( OutputTab.CustomGroup( ix, _ ), Actions.outputGroupMoveUp /: segment.Int( row ) /: _ ) =>
-        planner.swapCustomGroupRowWithPrevious( planId, ix, row ).whenA( !hasChanges )
+        planner.swapCustomGroupRowWithPrevious( planId, ix, row )
       case ( OutputTab.CustomGroup( ix, _ ), Actions.outputGroupSection /: segment.Int( row ) /: _ ) =>
-        planner.toggleCustomGroupSectionBefore( planId, ix, row ).whenA( !hasChanges )
+        planner.toggleCustomGroupSectionBefore( planId, ix, row )
       case _ =>
         F.unit
     }
@@ -296,8 +297,7 @@ class Application[F[_]](
       actionPath: Uri.Path
   ): OptionT[F, PlanId => F[Unit]] =
     collectInputChanges( planId, model, inputTab, request ) |+|
-      collectOutputChanges( planId, outputTab, request ) |+|
-      OptionT.fromOption[F]( collectActionChanges( actionPath ) )
+      collectOutputChanges( planId, outputTab, request )
 
   private def collectInputChanges(
       planId: PlanId,
@@ -364,7 +364,7 @@ class Application[F[_]](
           OptionT.when( newValue =!= oldValue )( writeValue( _, newValue ) )
       }
 
-  private def collectActionChanges( actionPath: Uri.Path ): Option[PlanId => F[Unit]] =
+  private def collectRecipeActionChanges( actionPath: Uri.Path ): Option[PlanId => F[Unit]] =
     actionPath match {
       case Actions.addAllRecipes /: _ =>
         Some( planner.addAllRecipes )
@@ -372,6 +372,8 @@ class Application[F[_]](
         Some( planner.addAllAlternatesToRecipeList )
       case Actions.removeAlts /: _ =>
         Some( planner.removeAllAlternatesFromRecipeList )
+      case Actions.removeMatterConversion /: _ =>
+        Some( planner.removeMatterConversionFromRecipeList )
       case Actions.lockRecipes /: _ =>
         Some( planner.lockCurrentRecipes )
       case Actions.recipesUpToTier( tier, withAlts ) /: _ =>

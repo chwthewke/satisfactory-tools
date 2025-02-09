@@ -77,6 +77,13 @@ object WriteSolverInputs {
     )
   }
 
+  def removeMatterConversionFromRecipeList( planId: PlanId, model: Model ): ConnectionIO[Unit] =
+    model.manufacturingRecipes
+      .filter( _.isMatterConversion )
+      .map( _.className )
+      .toNev
+      .traverse_( statements.deleteFromRecipeListByClassName( planId, _ ).run )
+
   def addAllAlternatesToRecipeList( planId: PlanId ): ConnectionIO[Unit] =
     statements.insertAllAlternatesToRecipeList( planId ).run.void
 
@@ -275,6 +282,16 @@ object WriteSolverInputs {
 
     def insertAllAlternatesToRecipeList( planId: PlanId ): Update0 =
       insertAllRecipes( withPlanId( planId ), notExtractionRecipe, isAlternate )
+
+    def deleteFromRecipeListByClassName( planId: PlanId, classNames: NonEmptyVector[ClassName] ): Update0 =
+      // language=SQL
+      sql"""DELETE FROM "recipe_lists" l
+           |USING "recipes" r
+           |WHERE l."plan_id" = $planId
+           |  AND r."id" = l."recipe_id"
+           |  AND ${Fragments.in( fr0"""r."class_name"""", classNames )}
+           |""".stripMargin //
+        .update
 
     def deleteAllAlternatesFromRecipeList( planId: PlanId ): Update0 =
       // language=SQL

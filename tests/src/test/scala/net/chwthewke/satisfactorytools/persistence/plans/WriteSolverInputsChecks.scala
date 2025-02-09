@@ -4,6 +4,7 @@ package plans
 
 import cats.data.NonEmptyVector
 
+import data.ClassName
 import protocol.PlanId
 
 class WriteSolverInputsChecks extends DatabaseSpec {
@@ -66,6 +67,17 @@ class WriteSolverInputsChecks extends DatabaseSpec {
     "adds all alternates to the recipe list" must {
       "type check" in {
         check( WriteSolverInputs.statements.insertAllAlternatesToRecipeList( PlanId( 1 ) ) )
+      }
+    }
+
+    "removes from the recipe list by class name" must {
+      "type check" in {
+        check(
+          WriteSolverInputs.statements.deleteFromRecipeListByClassName(
+            PlanId( 1 ),
+            NonEmptyVector.of( 1, 2, 3 ).map( n => ClassName( s"C$n" ) )
+          )
+        )
       }
     }
 

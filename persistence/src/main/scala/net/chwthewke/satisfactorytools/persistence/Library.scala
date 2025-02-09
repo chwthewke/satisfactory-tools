@@ -118,11 +118,8 @@ object Library extends LibraryApi[ConnectionIO] {
         OptionT
           .fromOption[ConnectionIO]( migrateResourceOptions )
           .semiflatMap( version => ReadModel.readDefaultResourceOptions( version ) )
-          .semiflatTap( ro => FC.delay( println( show"Migrating plan $from with default resource options $ro" ) ) )
           .map( defaultResourceOptions => resources.mergeResourceNodes( defaultResourceOptions.resourceNodes ) )
-          .semiflatTap( ro => FC.delay( println( show"Computed resource options: $ro" ) ) )
           .getOrElse( resources )
-          .flatTap( ro => FC.delay( println( show"Final resource options: $ro" ) ) )
       _ <- Plans.setResourceOptions( to, migratedResources )
     } yield ()
 
