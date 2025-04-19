@@ -6,12 +6,12 @@ import scalatags.Text
 import scalatags.Text.Tag
 
 import data.ClassName
-import model.GroupAssignment
-import model.GroupAssignments
 import model.Power
 import model.Recipe
 import prod.ClockedRecipe
 import prod.Factory
+import prod.GroupAssignment
+import prod.GroupAssignments
 import protocol.OutputTab
 import web.forms._
 

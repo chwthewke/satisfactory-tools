@@ -12,12 +12,12 @@ import data.ClassName
 import data.Countable
 import data.Item
 import model.Bill
-import model.GroupAssignment
-import model.GroupAssignments
 import model.Machine
 import model.Recipe
 import prod.ClockedRecipe
 import prod.Factory
+import prod.GroupAssignment
+import prod.GroupAssignments
 import prod.tree.FactoryTree
 import protocol.CustomGroupResult
 import protocol.ItemIO
