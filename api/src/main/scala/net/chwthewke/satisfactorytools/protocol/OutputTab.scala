@@ -4,9 +4,9 @@ package protocol
 import data.ClassName
 import data.Countable
 import data.Item
-import model.GroupAssignments
 import model.Machine
 import prod.Factory
+import prod.GroupAssignments
 import prod.tree.FactoryTree
 
 sealed abstract class OutputTab extends Product {

@@ -9,7 +9,6 @@ import doobie.util.invariant.UnexpectedEnd
 import data.ClassName
 import data.Countable
 import data.Item
-import model.GroupAssignments
 import model.Recipe
 import persistence.ItemId
 import persistence.ReadModel
@@ -17,6 +16,7 @@ import persistence.RecipeId
 import persistence.plans
 import prod.ClockedRecipe
 import prod.Factory
+import prod.GroupAssignments
 import protocol.ModelVersionId
 import protocol.PlanId
 import protocol.SolutionId

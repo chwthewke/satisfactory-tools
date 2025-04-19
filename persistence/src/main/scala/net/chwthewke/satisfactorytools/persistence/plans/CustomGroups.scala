@@ -10,7 +10,7 @@ import doobie.implicits._
 
 import data.ClassName
 import data.Countable
-import model.GroupAssignments
+import prod.GroupAssignments
 import protocol.PlanHeader
 import protocol.PlanId
 import protocol.SolutionHeader

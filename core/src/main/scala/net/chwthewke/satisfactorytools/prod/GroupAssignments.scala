@@ -1,5 +1,5 @@
 package net.chwthewke.satisfactorytools
-package model
+package prod
 
 import cats.Eq
 import cats.Show

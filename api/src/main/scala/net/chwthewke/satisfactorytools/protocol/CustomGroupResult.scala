@@ -4,9 +4,9 @@ package protocol
 import data.ClassName
 import data.Countable
 import data.Item
-import model.GroupAssignment
 import model.Machine
 import prod.Factory
+import prod.GroupAssignment
 
 case class CustomGroupResult(
     index: Int,
