@@ -8,12 +8,14 @@ import scala.collection.immutable.SortedMap
 
 import loader.Loader
 import model.Model
+import model.Recipe
+import model.RecipeCategory
 
 object ExploreModel extends IOApp {
   override def run( args: List[String] ): IO[ExitCode] =
     Loader.io
       .loadModel( DataVersionStorage.Release1_0 )
-      .flatTap( printRecipeProducers )
+      .flatTap( printNuclearWasteRecipes )
       .as( ExitCode.Success )
 
   def printExtractionRecipes( model: Model ): IO[Unit] =
@@ -37,6 +39,13 @@ object ExploreModel extends IOApp {
         .sortBy( _.displayName )
         .map( recipe => show"${recipe.displayName.padTo( 48, ' ' )}${recipe.power}" )
         .mkString( "\n" )
+    )
+
+  def printNuclearWasteRecipes( model: Model ): IO[Unit] =
+    IO.println(
+      model.manufacturingRecipes
+        .collect { case r @ Recipe( _, _, RecipeCategory.NuclearWaste, _, _, _, _, _ ) => r }
+        .mkString_( "\n\n" )
     )
 
   def printRecipesByTier( model: Model ): IO[Unit] =

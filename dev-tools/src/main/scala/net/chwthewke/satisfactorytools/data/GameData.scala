@@ -12,7 +12,7 @@ final case class GameData(
     extractors: Map[ClassName, Extractor],
     manufacturers: Map[ClassName, Manufacturer],
     recipes: Vector[GameRecipe],
-    nuclearGenerators: Map[ClassName, NuclearGenerator],
+    powerGenerators: Map[ClassName, PowerGenerator],
     schematics: Vector[Schematic]
 )
 
@@ -22,7 +22,7 @@ object GameData {
       extractors: Map[ClassName, Extractor] = Map.empty,
       manufacturers: Map[ClassName, Manufacturer] = Map.empty,
       recipes: Vector[GameRecipe] = Vector.empty,
-      nuclearGenerators: Map[ClassName, NuclearGenerator] = Map.empty,
+      nuclearGenerators: Map[ClassName, PowerGenerator] = Map.empty,
       schematics: Vector[Schematic] = Vector.empty
   ): GameData =
     GameData( items, extractors, manufacturers, recipes, nuclearGenerators, schematics )
@@ -33,7 +33,7 @@ object GameData {
   def extractors( extractors: Map[ClassName, Extractor] ): GameData          = init( extractors = extractors )
   def manufacturers( manufacturers: Map[ClassName, Manufacturer] ): GameData = init( manufacturers = manufacturers )
   def recipes( recipes: Vector[GameRecipe] ): GameData                       = init( recipes = recipes )
-  def nuclearGenerators( generators: Map[ClassName, NuclearGenerator] ): GameData =
+  def nuclearGenerators( generators: Map[ClassName, PowerGenerator] ): GameData =
     init( nuclearGenerators = generators )
   def schematics( schematics: Vector[Schematic] ): GameData = init( schematics = schematics )
 
@@ -46,7 +46,7 @@ object GameData {
         x.extractors ++ y.extractors,
         x.manufacturers ++ y.manufacturers,
         x.recipes ++ y.recipes,
-        x.nuclearGenerators ++ y.nuclearGenerators,
+        x.powerGenerators ++ y.powerGenerators,
         x.schematics ++ y.schematics
       )
   }
@@ -91,8 +91,8 @@ object GameData {
         decodeMap( Decoder[Extractor] )( _.className ).map( GameData.extractors )
       case NativeClass.recipeClass =>
         Decoder[Vector[GameRecipe]].map( GameData.recipes )
-      case NativeClass.nuclearGeneratorClass =>
-        decodeMap( Decoder[NuclearGenerator] )( _.className ).map( GameData.nuclearGenerators )
+      case NativeClass.nuclearGeneratorClass | NativeClass.generatorClass =>
+        decodeMap( Decoder[PowerGenerator] )( _.className ).map( GameData.nuclearGenerators )
       case NativeClass.schematicClass =>
         Decoder[Vector[Schematic]].map( GameData.schematics )
       case _ => Decoder.const( GameData.empty )

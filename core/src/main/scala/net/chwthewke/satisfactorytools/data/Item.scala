@@ -13,7 +13,7 @@ final case class Item(
     className: ClassName,
     displayName: String,
     form: Form,
-    energyValue: Double,
+    energyValue: Double, // MJ
     sinkPoints: Int,
     smallIcon: IconData
 ) {
