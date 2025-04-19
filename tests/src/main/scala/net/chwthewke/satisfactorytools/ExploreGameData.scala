@@ -9,6 +9,7 @@ import data.ClassName
 import data.GameData
 import data.Schematic
 import loader.Loader
+import loader.ModelInit
 import loader.RecipeClassifier
 import loader.RecipeClassifier.AllOf
 import loader.RecipeClassifier.AnalysisItem
@@ -17,14 +18,28 @@ object ExploreGameData extends IOApp {
   override def run( args: List[String] ): IO[ExitCode] =
     Loader.io
       .loadGameData( DataVersionStorage.Release1_0 )
-      .flatTap( gd =>
-        printConverterRecipes( gd ) *>
-          IO.println( "" ) *>
-          printConstructorRecipes( gd )
-      )
+      .flatTap( printPowerRecipes )
+//      .flatTap( gd =>
+//        printConverterRecipes( gd ) *>
+//          IO.println( "" ) *>
+//          printConstructorRecipes( gd )
+//      )
 //      .flatTap( data => IO.println( data ) )
 //      .flatTap( data => printExtractors( data ) *> printManufacturers( data ) )
       .as( ExitCode.Success )
+
+  def printBeltsAndPipes( data: GameData ): IO[Unit] =
+    IO.println(
+      data.conveyorBelts.mkString_( "\n" ) +
+        "\n\n" +
+        data.pipelines.mkString_( "\n" )
+    )
+
+  def printBuildingDescriptors( data: GameData ): IO[Unit] =
+    IO.println( data.buildingDescriptors.values.toVector.mkString_( "\n" ) )
+
+  def printPowerRecipes( data: GameData ): IO[Unit] =
+    IO.println( ModelInit.powerRecipes( data ).mkString_( "\n\n" ) )
 
   def printExtractors( data: GameData ): IO[Unit] =
     IO.println( data.extractors.map { case ( _, x ) => x.show }.mkString( "EXTRACTORS\n\n", "\n", "\n\n" ) )
@@ -62,6 +77,23 @@ object ExploreGameData extends IOApp {
       data.recipes
         .filter( _.producedIn.contains( ClassName( "Build_QuantumEncoder_C" ) ) )
         .mkString_( "\n\n" )
+    )
+
+  def printPowerGenerators( data: GameData ): IO[Unit] =
+    IO.println( data.powerGenerators.values.toVector.mkString_( "\n\n" ) )
+
+  def printFuelValues( data: GameData ): IO[Unit] =
+    IO.println(
+      data.powerGenerators.values.toVector
+        .foldMap( _.fuels.map( _.fuel ) )
+        .distinct
+        .mapFilter( cn =>
+          data.items.get( cn ).map {
+            case ( item, _ ) => f"${item.displayName} ${item.fuelValue}%.3f"
+          }
+        )
+        .sorted
+        .mkString( "\n" )
     )
 
   def printDependencies( data: GameData ): IO[Unit] = {

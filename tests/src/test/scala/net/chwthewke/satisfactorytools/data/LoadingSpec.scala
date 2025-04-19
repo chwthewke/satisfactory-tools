@@ -23,75 +23,112 @@ class LoadingSpec extends AnyWordSpec with Matchers {
     }
   }
 
+  def forAllVersions( behaviour: DataVersionStorage => Unit ): Unit = {
+    DataVersionStorage.values.foreach { version =>
+      s"loading ${version.modelVersion.name}" should {
+        behaviour( version )
+      }
+    }
+  }
+
   "The GameData" when {
 
-    "loading Update 4 data" should {
-      behave like gameDataProperties( DataVersionStorage.Update4 )
-    }
-
-    "loading Update 5 data" should {
-      behave like gameDataProperties( DataVersionStorage.Update5 )
-    }
-
-    "loading Update 6 data" should {
-      behave like gameDataProperties( DataVersionStorage.Update6 )
-    }
-
-    "loading Update 7 data" should {
-      behave like gameDataProperties( DataVersionStorage.Update7 )
+    forAllVersions {
+      behave like gameDataProperties( _ )
     }
 
     def gameDataProperties( storage: DataVersionStorage ): Unit = {
+      var gameData: GameData = null // Ugh, but rather this than loading every test
+
       "be loadable from resources" in {
         Inside.inside( Loader.io.loadResource[GameData]( storage ).attempt.unsafeRunSync() ) {
-          case Right( _ ) => succeed
+          case Right( data ) =>
+            gameData = data
+            succeed
         }
       }
 
       "have class names less than 256 characters long" in {
 
-        Inside.inside( Loader.io.loadResource[GameData]( storage ).unsafeRunSync() ) {
-          case GameData( items, extractors, manufacturers, recipes, nuclearGenerators, schematics ) =>
+        Inside.inside( gameData ) {
+          case GameData(
+                items,
+                extractors,
+                manufacturers,
+                powerGenerators,
+                recipes,
+                schematics,
+                conveyorBelts,
+                pipelines,
+                buildingDescriptors
+              ) =>
             all( items.keys.map( _.name.length ) ) shouldBe <=( 256 )
             all( extractors.keys.map( _.name.length ) ) shouldBe <=( 256 )
             all( manufacturers.keys.map( _.name.length ) ) shouldBe <=( 256 )
             all( recipes.map( _.className.name.length ) ) shouldBe <=( 256 )
-            all( nuclearGenerators.keys.map( _.name.length ) ) shouldBe <=( 256 )
+            all( powerGenerators.keys.map( _.name.length ) ) shouldBe <=( 256 )
             all( schematics.map( _.className.name.length ) ) shouldBe <=( 256 )
+            all( conveyorBelts.map( _.className.name.length ) ) shouldBe <=( 256 )
+            all( pipelines.map( _.className.name.length ) ) shouldBe <=( 256 )
+            all( buildingDescriptors.keys.map( _.name.length ) ) shouldBe <=( 256 )
         }
 
+      }
+
+      "have icon data for all extractors" in {
+        Inside.inside( gameData ) {
+          case GameData( _, extractors, _, _, _, _, _, _, _ ) =>
+            all( extractors.keys.map( cn => gameData.getBuildingIcon( cn ) ) ) should not be empty
+        }
+      }
+
+      "have icon data for all manufacturers" in {
+        Inside.inside( gameData ) {
+          case GameData( _, _, manufacturers, _, _, _, _, _, _ ) =>
+            all( manufacturers.keys.map( cn => gameData.getBuildingIcon( cn ) ) ) should not be empty
+        }
+      }
+
+      "have icon data for all power generators" in {
+        Inside.inside( gameData ) {
+          case GameData( _, _, _, powerGenerators, _, _, _, _, _ ) =>
+            all( powerGenerators.keys.map( cn => gameData.getBuildingIcon( cn ) ) ) should not be empty
+        }
+      }
+
+      "have icon data for all conveyor belts" in {
+        Inside.inside( gameData ) {
+          case GameData( _, _, _, _, _, _, conveyorBelts, _, _ ) =>
+            all( conveyorBelts.map( cb => gameData.getBuildingIcon( cb.className ) ) ) should not be empty
+        }
+      }
+
+      "have icon data for all pipelines" in {
+        Inside.inside( gameData ) {
+          case GameData( _, _, _, _, _, _, _, pipelines, _ ) =>
+            all( pipelines.map( cb => gameData.getBuildingIcon( cb.className ) ) ) should not be empty
+        }
       }
     }
   }
 
   "The model" when {
-    "loading Update 4 data" should {
-      behave like modelProperties( DataVersionStorage.Update4 )
-    }
-
-    "loading Update 5 data" should {
-      behave like modelProperties( DataVersionStorage.Update5 )
-    }
-
-    "loading Update 6 data" should {
-      behave like modelProperties( DataVersionStorage.Update6 )
-    }
-
-    "loading Update 7 data" should {
-      behave like modelProperties( DataVersionStorage.Update7 )
+    forAllVersions {
+      behave like modelProperties( _ )
     }
 
     def modelProperties( storage: DataVersionStorage ): Unit =
       "be loadable from resources" in {
 
         Inside.inside( Loader.io.loadModel( storage ).attempt.unsafeRunSync() ) {
-          case Right( model ) =>
-            model.items.size shouldBe <=( 256 )
-            model.manufacturingRecipes.size shouldBe <=( 256 )
-            model.extractionRecipes.size shouldBe <=( 256 )
+          case Right( _ ) =>
+            succeed
+// left-over from when we had a scodec protocol
+//            model.items.size shouldBe <=( 256 )
+//            model.manufacturingRecipes.size shouldBe <=( 256 )
+//            model.extractionRecipes.size shouldBe <=( 256 )
         }
 
       }
   }
-
 }

@@ -11,10 +11,24 @@ final case class GameData(
     items: Map[ClassName, ( Item, NativeClass )],
     extractors: Map[ClassName, Extractor],
     manufacturers: Map[ClassName, Manufacturer],
+    powerGenerators: Map[ClassName, PowerGenerator],
     recipes: Vector[GameRecipe],
-    nuclearGenerators: Map[ClassName, NuclearGenerator],
-    schematics: Vector[Schematic]
-)
+    schematics: Vector[Schematic],
+    conveyorBelts: Vector[LogisticsData],
+    pipelines: Vector[LogisticsData],
+    buildingDescriptors: Map[ClassName, BuildingDescriptor]
+) {
+  def getBuildingIcon( className: ClassName ): Option[IconData] = {
+    Option
+      .when( className.name.startsWith( GameData.buildingPrefix ) )(
+        GameData.descriptorPrefix + className.name.stripPrefix( GameData.buildingPrefix )
+      )
+      .map( ClassName( _ ) )
+      .flatMap( buildingDescriptors.get )
+      .flatMap( _.smallIcon )
+  }
+
+}
 
 object GameData {
   private def init(
@@ -22,10 +36,23 @@ object GameData {
       extractors: Map[ClassName, Extractor] = Map.empty,
       manufacturers: Map[ClassName, Manufacturer] = Map.empty,
       recipes: Vector[GameRecipe] = Vector.empty,
-      nuclearGenerators: Map[ClassName, NuclearGenerator] = Map.empty,
-      schematics: Vector[Schematic] = Vector.empty
+      powerGenerators: Map[ClassName, PowerGenerator] = Map.empty,
+      schematics: Vector[Schematic] = Vector.empty,
+      conveyorBelts: Vector[LogisticsData] = Vector.empty,
+      pipelines: Vector[LogisticsData] = Vector.empty,
+      buildingDescriptors: Map[ClassName, BuildingDescriptor] = Map.empty
   ): GameData =
-    GameData( items, extractors, manufacturers, recipes, nuclearGenerators, schematics )
+    GameData(
+      items,
+      extractors,
+      manufacturers,
+      powerGenerators,
+      recipes,
+      schematics,
+      conveyorBelts,
+      pipelines,
+      buildingDescriptors
+    )
 
   val empty: GameData = init()
 
@@ -33,9 +60,13 @@ object GameData {
   def extractors( extractors: Map[ClassName, Extractor] ): GameData          = init( extractors = extractors )
   def manufacturers( manufacturers: Map[ClassName, Manufacturer] ): GameData = init( manufacturers = manufacturers )
   def recipes( recipes: Vector[GameRecipe] ): GameData                       = init( recipes = recipes )
-  def nuclearGenerators( generators: Map[ClassName, NuclearGenerator] ): GameData =
-    init( nuclearGenerators = generators )
+  def nuclearGenerators( generators: Map[ClassName, PowerGenerator] ): GameData =
+    init( powerGenerators = generators )
   def schematics( schematics: Vector[Schematic] ): GameData = init( schematics = schematics )
+  def buildingDescriptors( descriptors: Map[ClassName, BuildingDescriptor] ): GameData =
+    init( buildingDescriptors = descriptors )
+  def conveyorBelts( logisticsData: Vector[LogisticsData] ): GameData = init( conveyorBelts = logisticsData )
+  def pipelines( logisticsData: Vector[LogisticsData] ): GameData     = init( pipelines = logisticsData )
 
   implicit val gameDataMonoid: Monoid[GameData] = new Monoid[GameData] {
     override def empty: GameData = GameData.empty
@@ -45,9 +76,12 @@ object GameData {
         x.items ++ y.items,
         x.extractors ++ y.extractors,
         x.manufacturers ++ y.manufacturers,
+        x.powerGenerators ++ y.powerGenerators,
         x.recipes ++ y.recipes,
-        x.nuclearGenerators ++ y.nuclearGenerators,
-        x.schematics ++ y.schematics
+        x.schematics ++ y.schematics,
+        x.conveyorBelts ++ y.conveyorBelts,
+        x.pipelines ++ y.pipelines,
+        x.buildingDescriptors ++ y.buildingDescriptors
       )
   }
 
@@ -91,10 +125,16 @@ object GameData {
         decodeMap( Decoder[Extractor] )( _.className ).map( GameData.extractors )
       case NativeClass.recipeClass =>
         Decoder[Vector[GameRecipe]].map( GameData.recipes )
-      case NativeClass.nuclearGeneratorClass =>
-        decodeMap( Decoder[NuclearGenerator] )( _.className ).map( GameData.nuclearGenerators )
+      case NativeClass.nuclearGeneratorClass | NativeClass.generatorClass =>
+        decodeMap( Decoder[PowerGenerator] )( _.className ).map( GameData.nuclearGenerators )
       case NativeClass.schematicClass =>
         Decoder[Vector[Schematic]].map( GameData.schematics )
+      case NativeClass.buildingDescriptorClass =>
+        decodeMap( Decoder[BuildingDescriptor] )( _.className ).map( GameData.buildingDescriptors )
+      case NativeClass.conveyorBeltClass =>
+        Decoder.decodeVector( Decoder[LogisticsData.ConveyorBelt].map( _.data ) ).map( GameData.conveyorBelts )
+      case NativeClass.pipelineClass =>
+        Decoder.decodeVector( Decoder[LogisticsData.Pipeline].map( _.data ) ).map( GameData.pipelines )
       case _ => Decoder.const( GameData.empty )
     }
 
@@ -127,4 +167,7 @@ object GameData {
                          |${model.manufacturers.values.map( _.show ).intercalate( "\n" )}
                          |
                          |""".stripMargin )
+
+  private val buildingPrefix: String   = "Build_"
+  private val descriptorPrefix: String = "Desc_"
 }

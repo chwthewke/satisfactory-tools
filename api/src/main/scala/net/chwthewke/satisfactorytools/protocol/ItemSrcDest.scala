@@ -26,7 +26,7 @@ object ItemSrcDest {
 
   // global: Extract | Step | Input | Byproduct | Requested
   // intra: *
-  // inter: FromGroup | ToGroup | Input | ByProduct | Requested
+  // inter: FromGroup | ToGroup | Input | Byproduct | Requested
 
   private def index( srcDest: ItemSrcDest ): ( Int, String, Option[Int] ) = srcDest match {
     case Input             => ( -2, "", None )

@@ -115,6 +115,18 @@ object ExploreJson extends IOApp {
       )
     )
 
+  def printClassDisplayNames( nativeClassesJson: Vector[Json] ): IO[Unit] =
+    IO.println(
+      exploreNativeClasses( nc =>
+        cls => cls( "mDisplayName" ).flatMap( _.asString ).map( dn => SortedMap( nc -> Vector( dn ) ) )
+      )( nativeClassesJson ).orEmpty
+        .map {
+          case ( nc, names ) =>
+            names.mkString( show"$nc\n  ", "\n  ", "" )
+        }
+        .mkString( "\n\n" )
+    )
+
   def exploreResources( array: Vector[Json] ): Map[String, ( Json, NonEmptyVector[String] )] =
     exploreNativeClasses( nc =>
       obj =>
@@ -193,20 +205,26 @@ object ExploreJson extends IOApp {
   override def run( args: List[String] ): IO[ExitCode] =
     for {
       array <- loadJson
-      _     <- printLiteralFieldsCsv( array, NativeClass.colliderClass )
+
+//      _     <- printClassDisplayNames( array )
+//      _     <- printLiteralFieldsCsv( array, NativeClass.colliderClass )
 //      _     <- printSchematicDependenciesCount( array )
 //      _     <- printResources( array )
 //      _     <- IO.println( showSchemas( array ) )
 //      _ <- printNativeClasses( array )
-//      _ <- IO.println( collectNativeClassFields( NativeClass.manufacturerClass )( array ).intercalate( "\n" ) )
-//      _ <- IO.println( "" )
+      _ <- IO.println( collectNativeClassFields( NativeClass.generatorClass )( array ).intercalate( "\n" ) )
+      _ <- IO.println( "" )
 //      _ <- IO.println( collectNativeClassFields( NativeClass.recipeClass )( array ).intercalate( "\n" ) )
-//      _ <- IO.println(
-//            collectNativeClassFieldValues( NativeClass.resourceExtractorClass, "mDisplayName" )( array )
-//              .map( _.show )
-//              .toVector
-//              .intercalate( "\n" )
-//          )
+      _ <- IO.println(
+             collectNativeClassFieldValues(
+               NativeClass.generatorClass,
+               "mFuel",
+               "mPowerProduction"
+             )( array )
+               .map( _.show )
+               .toVector
+               .intercalate( "\n" )
+           )
     } yield ExitCode.Success
 
 }

@@ -3,6 +3,7 @@ package loader
 
 import alleycats.std.map._
 import cats.Id
+import cats.Show
 import cats.Traverse
 import cats.data.NonEmptyList
 import cats.data.ValidatedNel
@@ -32,7 +33,7 @@ import model.ResourceOptions
 import model.ResourcePurity
 import model.ResourceWeights
 
-private[loader] object ModelInit {
+object ModelInit {
   def apply( version: ModelVersion, data: GameData, mapConfig: MapConfig ): ValidatedNel[String, Model] = {
     val ( rawSelfExtraction, rawManufacturing ) = data.recipes.partition( _.isSelfExtraction )
 
@@ -47,7 +48,7 @@ private[loader] object ModelInit {
     val manufacturing: ValidatedNel[String, Vector[Recipe]] =
       rawManufacturing
         .traverseFilter( validateManufacturingRecipe( data, manufacturingRecipeClassification, _ ) )
-        .map( _ ++ nuclearWastePseudoRecipes( data.items, data ) )
+        .map( _ ++ nuclearWastePseudoRecipes( data ) )
 
     val defaultResourceOptions: ValidatedNel[String, ResourceOptions] =
       initResourceOptions( data.items, mapConfig ).toValidatedNel
@@ -239,30 +240,85 @@ private[loader] object ModelInit {
         )
       )
 
-  def nuclearWastePseudoRecipes( items: Map[ClassName, ( Item, NativeClass )], gameData: GameData ): Vector[Recipe] =
-    gameData.nuclearGenerators.values.flatMap { g =>
-      g.fuels.flatMap {
-        case ( src, prod ) =>
-          ( items.get( src ), items.get( prod.item ) ).mapN {
-            case ( ( s, _ ), ( p, _ ) ) =>
-              Recipe(
-                ClassName( s"${g.className.name}__${s.className.name}" ),
-                p.displayName,
-                RecipeCategory.NuclearWaste,
-                Countable( s, 1d ) :: Nil,
-                NonEmptyList.of( Countable( p, prod.amount.toDouble ) ),
-                math.ceil( 1000 * s.fuelValue / g.powerProduction ).toLong.milliseconds,
-                Machine(
-                  g.className,
-                  g.displayName,
-                  MachineType( ManufacturerType.Manufacturer ),
-                  0d,
-                  g.powerConsumptionExponent
-                ),
-                Power.Fixed( -g.powerProduction )
-              )
-          }
+  // TODO is there some way to (somewhat) dedup with Recipe?
+  case class PowerRecipe(
+      className: ClassName,
+      displayName: String,
+      category: RecipeCategory,
+      ingredients: List[Countable[Double, Item]],
+      products: List[Countable[Double, Item]],
+      duration: FiniteDuration,
+      producedIn: Machine,
+      power: Power
+  ) {
+    def asRecipe: Option[Recipe] =
+      products.toNel.map( nel =>
+        Recipe(
+          className,
+          nel.head.item.displayName,
+          category,
+          ingredients,
+          nel,
+          duration,
+          producedIn,
+          power
+        )
+      )
+  }
+
+  object PowerRecipe {
+    implicit val powerRecipeShow: Show[PowerRecipe] =
+      Show.show {
+        case PowerRecipe( className, displayName, category, ingredients, products, duration, producer, power ) =>
+          show"""  $displayName # $className ${category.tierOpt.map( t => s"(tier $t)" ).orEmpty}
+                |  Ingredients:
+                |    ${ingredients.map( _.map( _.displayName ).show ).intercalate( "\n    " )}
+                |  Products:
+                |    ${products.map( _.map( _.displayName ).show ).intercalate( "\n    " )}
+                |  Duration: $duration
+                |  Power: $power
+                |  Produced in: ${producer.displayName}
+                |""".stripMargin
       }
-    }.toVector
+  }
+
+  def nuclearWastePseudoRecipes( gameData: GameData ): Vector[Recipe] =
+    powerRecipes( gameData ).mapFilter( _.asRecipe )
+
+  def powerRecipes( gameData: GameData ): Vector[PowerRecipe] =
+    gameData.powerGenerators.values.toVector.foldMap { generator =>
+      generator.fuels.mapFilter { fuel =>
+        (
+          gameData.items.get( fuel.fuel )._1F,
+          fuel.byproduct.traverse( bp =>
+            gameData.items.get( bp.item ).map { case ( b, _ ) => Countable( b, bp.amount ) }
+          ),
+          fuel.supplementalResource.traverse( gameData.items.get( _ )._1F )
+        ).mapN { ( f, bp, so ) =>
+          val powerGenMW: Frac  = Frac.decimal( generator.powerProduction )
+          val fuelValueMJ: Frac = Frac.decimal( f.fuelValue )
+
+          val Frac( fAm, durMs ) = powerGenMW / ( 1000 *: fuelValueMJ )
+          def sAm: Double        = fAm * f.fuelValue * generator.supplementalToPowerRatio / 1000
+
+          PowerRecipe(
+            ClassName( s"${generator.className.name}__${f.className.name}" ),
+            show"${f.displayName} in ${generator.displayName}",
+            RecipeCategory.NuclearWaste,
+            Countable( f, fAm.toDouble ) :: so.map( Countable( _, sAm ) ).toList,
+            bp.map( _.mapAmount( fAm.toDouble * _ ) ).toList,
+            durMs.milliseconds,
+            Machine(
+              generator.className,
+              generator.displayName,
+              MachineType( ManufacturerType.Manufacturer ),
+              0d,
+              generator.powerConsumptionExponent
+            ),
+            Power.Fixed( -generator.powerProduction )
+          )
+        }
+      }
+    }
 
 }

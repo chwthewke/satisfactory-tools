@@ -17,7 +17,7 @@ final case class Item(
     sinkPoints: Int,
     smallIcon: IconData
 ) {
-  def fuelValue: Double = energyValue * form.simpleAmountFactor
+  def fuelValue: Double = energyValue * form.simpleAmountFactor // MJ
 
   override def toString: String = Item.showItem.show( this )
 }
